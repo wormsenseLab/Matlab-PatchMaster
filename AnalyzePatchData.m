@@ -11,7 +11,7 @@ dataFields = fieldnames(ephysData);
 validProject = zeros(length(dataFields),1);
 
 for iProj = 1:length(projects)
-    isValid = strncmpi(dataFields,projects{iProj},3);
+    isValid = strncmpi(dataFields,projects{iProj},length(projects{iProj}));
     validProject = validProject + isValid;
 end
 
