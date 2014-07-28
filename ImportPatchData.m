@@ -86,7 +86,8 @@ for iFile = 1:length(filename)
 %     eval([['tree' saveName] ' = tree;']);
 %     eval([['data' saveName] ' = data;']);
     
-    % TODO: Get this function working
+    % Split the data into series by recording name, etc. and assign into
+    % the final data structure
     ephysData = SplitSeries(tree, dCollapse, ephysData, saveName);
     
 end
