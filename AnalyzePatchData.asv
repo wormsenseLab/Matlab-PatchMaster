@@ -39,7 +39,7 @@ Ct = zeros(1,length(protLoc));
 tau = zeros(1,length(protLoc));
 Rs = zeros(1,length(protLoc));
 
-% TO DO: fliplr for matching longer names ending in "ct_neg".
+
 protName = 'WC_ct_neg';
 % two alternatives for finding instances of the desired protocol
 % find(~cellfun('isempty',strfind(ephysData.(cellName).protocols,'ct_neg')));

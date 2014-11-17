@@ -7,7 +7,7 @@ function [ephysData, tree] = ImportPatchData(varargin)
 % EXAMPLE:
 %   ephysData = ImportPatchData()
 %   ephysData = ImportPatchData(previousData)
-%   [ephysData, tree] = ImportPatch(data)
+%   [ephysData, tree] = ImportPatchdata()
 % 
 % OPTIONAL INPUTS: 
 %   previousData    struct        If you have previously created a data
