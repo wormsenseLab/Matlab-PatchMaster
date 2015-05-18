@@ -80,7 +80,8 @@ for iGr = 1:length(grLoc)
         chanUnit = cell(6,1);
         
         while isTrace == 1
-            if isempty(tree{seLoc(serTot)+2+nChan,5})
+            if seLoc(serTot)+2+nChan > size(tree,1) ||...
+                    isempty(tree{seLoc(serTot)+2+nChan,5})
                 isTrace = 0;
             else
                 nChan = nChan + 1;

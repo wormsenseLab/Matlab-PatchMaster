@@ -1,4 +1,5 @@
-function [ephysData, tree] = ImportPatchData(varargin)
+% ImportPatchData.m
+% 
 % ImportPatchData runs a modified HEKA import function (through sigTOOL) 
 % that imports Patchmaster .dat files variables and puts them into a Matlab
 % variable. The traces inside are broken down by group (a biological cell) 
@@ -40,6 +41,8 @@ function [ephysData, tree] = ImportPatchData(varargin)
 % 'sigTOOL\sigTOOL Neuroscience Toolkit\File\menu_Import\group_NeuroScience File Formats'
 % 
 % Created by Sammy Katta, 28-May-2014
+
+function [ephysData, tree] = ImportPatchData(varargin)
 
 % Pick Patchmaster files to import
 [filename, pathname] = uigetfile('*.dat', 'Pick Patchmaster files', 'MultiSelect', 'on');
