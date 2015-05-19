@@ -6,13 +6,14 @@
 %% Import Data
 
 % Don't forget to run sigTOOL first!
-ephysData = ImportPatchData(ephysData);
+ephysData = ImportPatchData();
 
 % Keep only data with given project prefixes/names.
 projects = {'FAT'};
 
 ephysData = FilterProjectData(ephysData, projects);
 
+clear projects
 %% Analyze capacity transient for C, Rs, and tau
 
 ephysData = CtAnalysis(ephysData);
@@ -21,7 +22,7 @@ ephysData = CtAnalysis(ephysData);
 
 % TODO: Read these in from a separate file.
 
-allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';'FAT029';'FAT030';'FAT031'};
+allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';'FAT029';'FAT030';'FAT031'; 'FAT032'};
 
 
 % List which sets of ct_ivqs to use for on cell (row 1)/whole cell (row 2)
@@ -29,28 +30,43 @@ allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';'FAT029';'FAT0
 % ct_ivq protocol run for that recording was the one you want to use for  
 % whole-cell, put "2" in row 1). Make sure it has three sequential ivq
 % pgfs.
-protStart = [1 1 1 4 1 1 1 1 1 1; ...
-             4 4 4 7 4 7 6 4 4 4];
-
+protStart = [1 1 1 4 1 1 1 1 1 1 1; ...
+             4 4 4 7 4 7 6 4 4 4 4];
+         
+% Which Rs value to use for IV Rs correction
+protRs = ceil(protStart(2,:)./3);
+protRs(7) = 3;
+         
 for i = 1:length(allCells)
     ephysData.(allCells{i}).protOC = protStart(1,i);
     ephysData.(allCells{i}).protWC = protStart(2,i);    
+    ephysData.(allCells{i}).protRs = protRs(i);
 end
-clear i protStart allCells
+clear i protStart allCells protRs
 %% Process voltage steps
-allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';'FAT029';'FAT030';'FAT031';'FAT032'};
 
-testingAll = IVAnalysis(ephysData,allCells);
+% allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';'FAT029';'FAT030';'FAT031';'FAT032'};
+% 
+% allIVs = IVAnalysis(ephysData,allCells);
 
-% TODO: Get multi-group working. Problem = format for outputting groups,
-% since current output is a single struct with 
 wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT032'};
 fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT031'};
 
-testingSplit = IVAnalysis(ephysData,allCells);
+testingSplit = IVAnalysis(ephysData,wtCells,fatCells);
+wtIVs = testingSplit{1};
+fatIVs = testingSplit{2};
+
+clear testingSplit wtCells fatCells
+
+%% Correct voltage steps based on series resistance
+
+wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT032'};
+fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT031'};
+
+wtIVs = IVRsCorrection(ephysData,wtIVs,wtCells);
 
 
-%% Plot I-V Curves (after processing voltage sgteps)
+%% Plot I-V Curves (after processing voltage steps without Rs correction)
 steadyStateTime = 400:550;
 
 TU2769mean = mean(mean(wtCapCorr(steadyStateTime,:,:),1),3);
