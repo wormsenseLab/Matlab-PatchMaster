@@ -25,6 +25,7 @@ for iCell = 1:length(names)
         rs = ephysData.(cellName).Rs(protRs)*1E6; % Rs for that WC_IVq in Ohms
         inIV.(cellName).actualV(iStep) = ...
             commandV - mean(inIV.(cellName).capCorrIV(steadyStateTime,iStep)*rs);
+        inIV.(cellName).meanI(iStep) = mean(inIV.(cellName).capCorrIV(steadyStateTime,iStep));
     end
     
 end
