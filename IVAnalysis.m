@@ -69,12 +69,6 @@ for iGroup = 1:nGroups
     end
     
     capCorrIV{iGroup} = capCorrCells;
-    % TODO: Output cell array of capCorrIV structs, one cell per group (to
-    % be named by the caller outside the function)? Or varargout?
-    % Or nested structs, so that I can output both the group mean and the
-    % whole capCorrCells struct containing each cell's mean?
-    % ( I do need the means per cell in order to do Rs V correction later)
-    
     clear capCorrCells;
 end
 
