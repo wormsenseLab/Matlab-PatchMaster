@@ -9,4 +9,4 @@ The ImportHEKAtoMAT function must then be placed in the sigTOOL folder (a copy i
 
 sigTOOL must be run at least once in a given Matlab session before the function can be used.
 
-Start with ImportPatchData.m, which calls on SplitSeries.m. AnalyzePatchData is currently a work in progress for my specific analysis.
+Start with ImportPatchData.m, which calls on SplitSeries.m. AnalyzePatchData and the rest of the functions are currently a work in progress for my specific analysis.
