@@ -105,7 +105,7 @@ mechPeaksFat = IdAnalysis(ephysData,fatCells);
 %% Plot single MRC sets
 % Draw stim protocol for MRCs
 dt = 0.2; % ms, based on sampling frequency (5kHz in current WC_Probe)
-tVec = 0:dt:750-dt;
+tVec = 0:dt:500-dt;
 dVec = zeros(length(tVec),12);
 
 % for i = 1:6
@@ -137,7 +137,7 @@ dVec = zeros(length(tVec),12);
 % plot(tVec,toPlot/1E-12);
 
 figure()
-toPlot = ephysData.FAT032.data{1,18};
+toPlot = ephysData.FAT029.data{1,11}(:,6);
 plot(tVec,toPlot/1E-12,'b');
 plotfixer;
 
@@ -160,10 +160,10 @@ allCells = {'FAT032'};
 OnDtTest = OnDtAnalysis(ephysData,allCells);
 
 figure()
-scatter(OnDtTest{1}(:,1),OnDtTest{1}(:,3))
+scatter(OnDtTest.FAT032.dts,mean(OnDtTest.FAT032.on1))
 hold on;
-scatter(OnDtTest{1}(:,1),OnDtTest{1}(:,2),'d')
-% scatter(OnDtTest{1}(:,1),OnDtTest{1}(:,4),'s')
+scatter(OnDtTest.FAT032.dts,mean(OnDtTest.FAT032.on2),'d')
+scatter(OnDtTest.FAT032.dts,mean(OnDtTest.FAT032.off),'s')
 
 
 %% Look at current clamp

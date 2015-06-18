@@ -6,7 +6,7 @@ function dtPeaks = OnDtAnalysis(ephysData, allCells)
 
 sf = 5; %sampling frequency, in kHz
 stepThresh = 0.05; % step detection threshold in um, could be smaller
-dtPeaks = cell(length(allCells),1);
+% dtPeaks = cell(length(allCells),1);
 
 for iCell = 1:length(allCells)
     cellName = allCells{iCell};
@@ -79,7 +79,14 @@ for iCell = 1:length(allCells)
         allOn2s = [allOn2s; on2Peaks];
         allOffs = [allOffs; offPeaks];
     end
-    
-    dtPeaks{iCell} = [allDts allOn1s allOn2s allOffs];
-     
+    cellPeaks = [allDts allOn1s allOn2s allOffs];
+    whichSteps = unique(allDts);
+        dtPeaks.(cellName).dts = whichSteps';
+        for i=1:length(whichSteps)
+            testPeak = find(cellPeaks(:,1)==whichSteps(i));
+            dtPeaks.(cellName).on1(:,i) = cellPeaks(testPeak,2);
+            dtPeaks.(cellName).on2(:,i) = cellPeaks(testPeak,3);
+            dtPeaks.(cellName).off(:,i) = cellPeaks(testPeak,4);           
+        end
+    end
 end
