@@ -189,3 +189,29 @@ for iCell = 1:length(allCells)
 end
 
 clear allCells iCell cellName protName protLoc i gapfree;
+
+
+%% Check linearity of photodiode response
+
+% % Import file '150702_photodiodetest1.dat', then:
+% testMed = ephysData.E1.data{3,43};
+% testSml = ephysData.E1.data{3,45};
+% testLrg = ephysData.E1.data{3,44};
+
+testMedBase = mean(testMed(1:500,:));
+testMedStep = mean(testMed(1000:2000,:));
+testMedSub = testMedStep-testMedBase;
+
+testSmlBase = mean(testSml(1:500,:));
+testSmlStep = mean(testSml(1000:2000,:));
+testSmlSub = testSmlStep-testSmlBase;
+
+testLrgBase = mean(testLrg(1:500,:));
+testLrgStep = mean(testLrg(1000:2000,:));
+testLrgSub = testLrgStep-testLrgBase;
+
+controlStim = [1 3 5 7 9 11 0.5 1.5 8 10];
+pdResp = [testMedSub testSmlSub testLrgSub];
+toExcel = [controlStim; pdResp]';
+
+scatter(controlStim, pdResp);

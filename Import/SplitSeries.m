@@ -54,8 +54,8 @@ for iGr = 1:length(grLoc)
         nSer = tree{seLoc(end),3}.SeSeriesCount;
     end
     
-    % Initialize cell array with space for 4 channels worth of data from a 
-    % given series. For series where fewer than 4 channels are recorded, 
+    % Initialize cell array with space for 6 channels worth of data from a 
+    % given series. For series where fewer than 6 channels are recorded, 
     % the cells in the last few rows will remain empty.
     grpData = cell(6,nSer);
     grpProt = cell(1,nSer);
@@ -85,8 +85,8 @@ for iGr = 1:length(grLoc)
                 isTrace = 0;
             else
                 nChan = nChan + 1;
-                chanType{nChan} = tree{seLoc(serTot)+2,5}.TrLabel;
-                chanUnit{nChan} = tree{seLoc(serTot)+2,5}.TrYUnit;
+                chanType{nChan} = tree{seLoc(serTot)+1+nChan,5}.TrLabel;
+                chanUnit{nChan} = tree{seLoc(serTot)+1+nChan,5}.TrYUnit;
             end
         end
         
