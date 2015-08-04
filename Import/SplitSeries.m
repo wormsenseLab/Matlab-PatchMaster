@@ -61,7 +61,8 @@ for iGr = 1:length(grLoc)
     grpProt = cell(1,nSer);
     grpType = cell(6,nSer);
     grpUnit = cell(6,nSer);
-    
+    grpFs = cell(1,nSer);
+
     
     % Now let's figure out how many channels each series has and move the
     % corresponding data into our cell array.
@@ -69,7 +70,8 @@ for iGr = 1:length(grLoc)
         
         % Name of pgf stim file used in each series
         grpProt{iSer} = tree{seLoc(serTot),3}.SeLabel;
-        
+        grpFs{iSer} = 1/tree{seLoc(serTot)+2,5}.TrXInterval;
+
         % Start at first trace in a series and move down until you hit a
         % blank to count number of channels/traces (this is not recorded in
         % either sweep or trace metadata, and is necessary for prying apart
@@ -113,6 +115,8 @@ for iGr = 1:length(grLoc)
     structA.(currGr).protocols = grpProt;
     structA.(currGr).channel = grpType;
     structA.(currGr).dataunit = grpUnit;
+    structA.(currGr).samplingFreq = grpFs;
+
 end
 
 end
