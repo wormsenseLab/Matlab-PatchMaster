@@ -2,6 +2,7 @@
 ###########
 *.kcl
 *.dat
+*.asv
 
 # Compiled source #
 ###################
