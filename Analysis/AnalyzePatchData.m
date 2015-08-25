@@ -7,6 +7,7 @@
 % those series and pass error if not).
 
 %% Import Data
+%this is a test
 
 % Don't forget to run sigTOOL first!
 ephysData = ImportPatchData();
