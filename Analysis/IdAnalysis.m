@@ -25,6 +25,8 @@ for iCell = 1:length(allCells)
     allSteps = [];
     allOns = [];
     allOffs = [];
+    allOnTaus = [];
+    allOffTaus = [];
     
     nSeries = length(allSeries);
 %     nSteps = size(ephysData.(cellName).data{2,allSeries(1)},2);
@@ -40,6 +42,8 @@ for iCell = 1:length(allCells)
         stepSize = zeros(nSteps,1);
         onPeaks = zeros(nSteps,1);
         offPeaks = zeros(nSteps,1);
+        onTau = zeros(nSteps,1);
+        offTau = zeros(nSteps,1);
 
         % Find timepoint in sweep at which probe starts pushing (on) and when it
         % goes back to neutral position (off). Use that timepoint to find nearby
@@ -78,8 +82,8 @@ for iCell = 1:length(allCells)
             peakOffLoc = find(offSubtract(stepEnd+1:stepEnd+500) == max(offSubtract(stepEnd+2:stepEnd+500)));
             peakOffLoc = peakOffLoc(1)+stepEnd;
             
-            onPeaks(iStep) = -onSubtract(peakOnLoc);
-            offPeaks(iStep) = -offSubtract(peakOffLoc);
+            onPeaks(iStep) = -onSubtract(peakOnLoc)*1E12;
+            offPeaks(iStep) = -offSubtract(peakOffLoc)*1E12;
             
             [~,onFitInd] = min(abs(onSubtract(peakOnLoc:75*sf+peakOnLoc)-(onSubtract(peakOnLoc)/(2*exp(1)))));
             [~,offFitInd] = min(abs(offSubtract(peakOffLoc:75*sf+peakOffLoc)-(offSubtract(peakOffLoc)/(2*exp(1)))));
@@ -104,9 +108,11 @@ for iCell = 1:length(allCells)
         allSteps = [allSteps; stepSize];
         allOns = [allOns; onPeaks];
         allOffs = [allOffs; offPeaks];
+        allOnTaus = [allOnTaus; onTau];
+        allOffTaus = [allOffTaus; offTau];
     end
     
-    mechPeaks{iCell} = [allSteps allOns allOffs];
+    mechPeaks{iCell} = [allSteps allOns allOffs allOnTaus allOffTaus];
     
     % TODO: Figure out how to fit this to the four-parameter sigmoidal
     % function used in O'Hagan: @(X,a,b,c,d) ((a-d)/(1+((X/c)^b)))+d

@@ -46,21 +46,31 @@ for iGroup = 1:nGroups
             % Take all the iv steps gathered for the given cell
             ivSteps{iCell} = ivq;
             
-            % Pull out the desired two OC and WC iv steps and save by cell name
-            % to make it more user friendly when later separating/replotting
-            % particular cells of interest. Turn cells into matrix, then split
-            % matrix up so you can later take the mean of the three sets of
-            % capacitance-corrected iv steps.
-            currSteps = ivSteps{iCell}(protOC:protOC+nReps-1);
-            protSize = size(ivSteps{iCell}{protOC});
-            eval(sprintf('%s_OC = reshape(cell2mat(currSteps),[protSize nReps]);',cellName))
-            currSteps = ivSteps{iCell}(protWC:protWC+nReps-1);
-            eval(sprintf('%s_WC = reshape(cell2mat(currSteps),[protSize nReps]);',cellName))
+            if protOC ~= 0 % only do cap correct if OC_ivq exists
+                % Pull out the desired two OC and WC iv steps and save by cell name
+                % to make it more user friendly when later separating/replotting
+                % particular cells of interest. Turn cells into matrix, then split
+                % matrix up so you can later take the mean of the three sets of
+                % capacitance-corrected iv steps.
+                currSteps = ivSteps{iCell}(protOC:protOC+nReps-1);
+                protSize = size(ivSteps{iCell}{protOC});
+                eval(sprintf('%s_OC = reshape(cell2mat(currSteps),[protSize nReps]);',cellName))
+                currSteps = ivSteps{iCell}(protWC:protWC+nReps-1);
+                eval(sprintf('%s_WC = reshape(cell2mat(currSteps),[protSize nReps]);',cellName))
+                
+                
+                % Capacitance correction by subtracting the on-cell from the
+                % whole-cell (both as the mean of three technical replicates)
+                eval(sprintf('capCorrCells.(cellName).capCorrIV = mean(%s_WC,3)-mean(%s_OC,3);',cellName,cellName))
+            else
+                protSize = size(ivSteps{iCell}{protWC});
+                currSteps = ivSteps{iCell}(protWC:protWC+nReps-1);
+                eval(sprintf('%s_WC = reshape(cell2mat(currSteps),[protSize nReps]);',cellName))                
+                eval(sprintf('%s_OC = zeros(2,2,2);',cellName))
+                
+                eval(sprintf('capCorrCells.(cellName).capUnCorrIV = mean(%s_WC,3);',cellName))
+            end
             
-            
-            % Capacitance correction by subtracting the on-cell from the 
-            % whole-cell (both as the mean of three technical replicates)
-            eval(sprintf('capCorrCells.(cellName).capCorrIV = mean(%s_WC,3)-mean(%s_OC,3);',cellName,cellName))
         end
         
         eval(sprintf('capCorrCells.(cellName).OCmean = mean(%s_OC,3);', cellName))

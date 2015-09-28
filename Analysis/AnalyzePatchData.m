@@ -9,7 +9,7 @@
 %% Import Data
 
 % Don't forget to run sigTOOL first!
-ephysData = ImportPatchData();
+ephysData = ImportPatchData(ephysData);
 
 % Keep only data with given project prefixes/names.
 projects = {'FAT'};
@@ -25,7 +25,10 @@ ephysData = CtAnalysis(ephysData);
 
 % TODO: Read these in from a separate file.
 
-allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';'FAT029';'FAT030';'FAT031'; 'FAT032'};
+allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';
+    'FAT029';'FAT030';'FAT031'; 'FAT032'; 'FAT033'; 'FAT034';'FAT035';
+    'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
+    'FAT043';'FAT044'};
 
 
 % List which sets of ct_ivqs to use for on cell (row 1)/whole cell (row 2)
@@ -33,8 +36,8 @@ allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';'FAT029';'FAT0
 % ct_ivq protocol run for that recording was the one you want to use for  
 % whole-cell, put "2" in row 1). Make sure it has three sequential ivq
 % pgfs.
-protStart = [1 1 1 4 1 1 1 1 1 1 1; ...
-             4 4 4 7 4 7 6 4 4 4 4];
+protStart = [1 1 1 4 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0; ...
+             4 4 4 7 4 7 6 4 4 4 4 4 4 4 4 4 4 4 4 4 4 1];
          
 % Which Rs value to use for IV Rs correction
 protRs = ceil(protStart(2,:)./3);
@@ -52,8 +55,10 @@ clear i protStart allCells protRs
 % 
 % allIVs = IVAnalysis(ephysData,allCells);
 
-wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031'};
-fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032'};
+wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031';'FAT033';'FAT034';'FAT035'};
+fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032';
+    'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
+    'FAT043';'FAT044'};
 
 testingSplit = IVAnalysis(ephysData,wtCells,fatCells);
 wtIVs = testingSplit{1};
@@ -63,8 +68,10 @@ clear testingSplit wtCells fatCells
 
 %% Correct voltage steps based on series resistance and plot as scatter
 
-wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031'};
-fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032'};
+wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031'; 'FAT033';'FAT034';'FAT035'};
+fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032';
+    'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
+    'FAT043';'FAT044'};
 
 wtIVs = IVRsCorrection(ephysData,wtIVs,wtCells);
 fatIVs = IVRsCorrection(ephysData,fatIVs,fatCells);
@@ -80,7 +87,7 @@ for i = 1:length(wtCells)
     wtI = [wtI;wtIVs.(cellName).meanI'];
 end
 
-for i = 1:length(wtCells)
+for i = 1:length(fatCells)
     cellName = fatCells{i};
     fatV = [fatV;fatIVs.(cellName).actualV'];
     fatI = [fatI;fatIVs.(cellName).meanI'];
@@ -92,12 +99,13 @@ scatter(wtV*1E3,wtI*1E12);
 scatter(fatV*1E3,fatI*1E12,'d');
 plotfixer;
 % FAT027 and FAT030 are the weird ones
-
+clear i cellName
 %% Plot mechanically evoked currents in response to single steps
 % IdAnalysis
 
-wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031'};
-fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032'};
+wtCells = {'FAT031';'FAT034';'FAT035'};
+fatCells = {'FAT029'; 'FAT030'; 'FAT032';
+    'FAT036';'FAT038';'FAT041';'FAT042';'FAT043';'FAT044'};
 
 mechPeaksWT = IdAnalysis(ephysData,wtCells);
 mechPeaksFat = IdAnalysis(ephysData,fatCells);
