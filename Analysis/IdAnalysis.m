@@ -129,6 +129,7 @@ for iCell = 1:length(allCells)
     [sortedSizes, sortIdx] = sort(allSizes);
     [eachSize,sizeStartIdx,~] = unique(sortedSizes,'first');
     [~,sizeEndIdx,~] = unique(sortedSizes,'last');
+    nSizes = sum(~isnan(eachSize));
     
     sortedStarts = allStarts(sortIdx);
     sortedEnds = allEnds(sortIdx);
@@ -142,10 +143,19 @@ for iCell = 1:length(allCells)
     startsBySize = sortedStarts(sizeStartIdx);
     endsBySize = sortedEnds(sizeStartIdx);
     
+    
+    pkThresh = zeros(nSizes,1);
+    pkOn = zeros(nSizes,1);
+    pkOff = zeros(nSizes,1);
+    pkOnLoc = NaN(nSizes,1);
+    pkOffLoc = NaN(nSizes,1);
+    onsetTau = NaN(nSizes,1);
+    offsetTau = NaN(nSizes,1);
+    
     % Use start and end indices for each step size to take the mean of the
     % leak-subtracted trace corresponding to that step size. Then smooth
     % and find peaks near the step times.
-    for iSize = 1:sum(~isnan(eachSize))
+    for iSize = 1:nSizes
         meansBySize(iSize,:) = mean(sortedLeakSub(sizeStartIdx(iSize):sizeEndIdx(iSize),:));
         
         % Smooth data with a moving average for peak finding
@@ -155,81 +165,63 @@ for iCell = 1:length(allCells)
         pkThresh(iSize) = 1.5*thselect(smooMean(1:100*sf),'rigrsure');
         
         % Find MRC peaks if they exist at the onset of the step, otherwise
-        % set peak amplitude as NaN
+        % set peak amplitude as NaN. Calculate decay constant tau based on
+        % single exponent fit for onset and offset currents.
         % TODO: Consider whether you want to just take pkLoc and find the
         % amplitude from the original trace, with a baseline subtracted
         % from the immediate pre-stimulus time period (original plan).
-        [pk, pkLoc] = findpeaks(smooMean(startsBySize(iSize)-100:startsBySize(iSize)+300),...
+        [pk, pkLoc] = findpeaks(smooMean(startsBySize(iSize)-100:startsBySize(iSize)+100),...
             'minpeakheight',pkThresh(iSize));
         if ~isempty(pk)
-            pkOn(iSize) = max(pk);
+            
+            pkOn(iSize) = max(pk)*1E12;
             pkLoc = pkLoc(pk==max(pk));
             pkOnLoc(iSize) = pkLoc(1) + startsBySize(iSize)-100; %account for start position
+            
+            % Find time for current to decay to 2/e of the peak or 75ms
+            % after the peak, whichever comes first. Use that for fitting
+            % the single exponential. Fit the unsmoothed mean trace.
+            [~,onFitInd] = min(abs(meansBySize(iSize,pkOnLoc(iSize):75*sf+pkOnLoc(iSize))...
+                 - (meansBySize(pkOnLoc(iSize))/(2*exp(1)))));
+            
+            onFitTime = onFitInd/sf; % seconds
+            onT = 0:1/sf:onFitTime;
+            
+            onFit = fit(onT',meansBySize(iSize,pkOnLoc(iSize):pkOnLoc(iSize)+onFitInd)','exp1');
+            onsetTau(iSize) = -1/onFit.b;
+
         else
             pkOn(iSize) = 0;
             pkOnLoc(iSize) = nan;
         end
         
         % Find MRC peaks at the offset of the step
-        [pk, pkLoc] = findpeaks(smooMean(endsBySize(iSize)-100:endsBySize(iSize)+300),...
+        [pk, pkLoc] = findpeaks(smooMean(endsBySize(iSize)-100:endsBySize(iSize)+100),...
             'minpeakheight',pkThresh(iSize));
         if ~isempty(pk)
-            pkOff(iSize) = max(pk);
+            pkOff(iSize) = max(pk)*1E12;
             pkLoc = pkLoc(pk==max(pk));
             pkOffLoc(iSize) = pkLoc(1) + endsBySize(iSize)-100;
+            
+            [~,offFitInd] = min(abs(meansBySize(iSize,pkOffLoc(iSize):75*sf+pkOffLoc(iSize))...
+                - (meansBySize(pkOffLoc(iSize))/(2*exp(1)))));
+            
+            offFitTime = offFitInd/sf; % seconds
+            offT = 0:1/sf:offFitTime;
+            
+            offFit = fit(offT',meansBySize(iSize,pkOffLoc(iSize):pkOffLoc(iSize)+offFitInd)','exp1');
+            offsetTau(iSize) = -1/offFit.b;
+
         else
             pkOff(iSize) = 0;
             pkOffLoc(iSize) = nan;
         end
         
-        
+
     end
     
- 
-    % Get baseline for each step by grabbing the mean of the 150 points before
-    % the probe displacement.
     
-    baseProbeI_on = mean(sortedLeakSub(:,startsBySize-baseLength:startsBySize),2);
-    baseProbeI_off = mean(sortedLeakSub(:,endsBySize-baseLength:endsBySize),2);
-    
-    
-    % Find the peak current for the on step and the off step for this sweep
-    
-% onSubtract(stepStart+1:stepStart+500) == max(onSubtract(stepStart+1:stepStart+500)));
-    peakOnLoc = peakOnLoc(1) + stepStart;
-    
-    peakOffLoc = find(offSubtract(stepEnd+1:stepEnd+500) == max(offSubtract(stepEnd+2:stepEnd+500)));
-    peakOffLoc = peakOffLoc(1)+stepEnd;
-    
-    onPeaks(iStep) = -onSubtract(peakOnLoc)*1E12;
-    offPeaks(iStep) = -offSubtract(peakOffLoc)*1E12;
-    
-    [~,onFitInd] = min(abs(onSubtract(peakOnLoc:75*sf+peakOnLoc)-(onSubtract(peakOnLoc)/(2*exp(1)))));
-    [~,offFitInd] = min(abs(offSubtract(peakOffLoc:75*sf+peakOffLoc)-(offSubtract(peakOffLoc)/(2*exp(1)))));
-    
-    onFitTime = onFitInd/sf; % seconds
-    onT = 0:1/sf:onFitTime;
-    offFitTime = offFitInd/sf; % seconds
-    offT = 0:1/sf:offFitTime;
-    
-    
-    onFit = fit(onT',onSubtract(peakOnLoc:peakOnLoc+onFitInd),'exp1');
-    offFit = fit(offT',onSubtract(peakOffLoc:peakOffLoc+offFitInd),'exp1');
-    %     plot(capFit,t,ICt(intStart:intStart+minInd));
-    
-    % Calculate time constant in seconds for calculation
-    onTau(iStep) = -1/onFit.b;
-    offTau(iStep) = -1/offFit.b;
-    % TODO: Output taus
-    % TODO: Fit with an alpha function instead of exp1 to get tau1 and tau2
-    
-    
-    
-    
-    
-    
-    
-    mechPeaks{iCell} = [allSteps allOns allOffs allOnTaus allOffTaus];
+    mechPeaks{iCell} = [eachSize(~isnan(eachSize)) pkOn pkOff onsetTau offsetTau];
     
     % TODO: Figure out how to fit this to the four-parameter sigmoidal
     % function used in O'Hagan: @(X,a,b,c,d) ((a-d)/(1+((X/c)^b)))+d
