@@ -9,7 +9,9 @@ function mechPeaks = IdAnalysis(ephysData, allCells)
 mechPeaks = cell(length(allCells),1);
 sf = 5; %sampling frequency, in kHz
 stepThresh = 0.05; % step detection threshold in um, could be smaller
-
+baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
+baseLength = baseTime*sf;
+smoothWindow = 5; % n timepoints for moving average window for findPeaks
 
 % Load Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -76,6 +78,7 @@ for iCell = 1:length(allCells)
         stepSize = NaN(nSteps,1);
         stepStarts = NaN(nSteps,1);
         stepEnds = NaN(nSteps,1);
+        leakSubtract = NaN(length(stimComI),nSteps);
         %             onPeaks = NaN(nSteps,1);
         %             offPeaks = NaN(nSteps,1);
         %             onTau = NaN(nSteps,1);
@@ -131,6 +134,8 @@ for iCell = 1:length(allCells)
     sortedEnds = allEnds(sortIdx);
     sortedLeakSub = allLeakSub(sortIdx,:);
     
+    % TODO: Store nReps as endIdx-StartIdx for each step size
+    
     % Use start index for the start and end times, assuming they don't
     % change within a given step size (or whatever grouping you are using;
     % should work with different step lengths/intervals as well).
@@ -138,25 +143,59 @@ for iCell = 1:length(allCells)
     endsBySize = sortedEnds(sizeStartIdx);
     
     % Use start and end indices for each step size to take the mean of the
-    % leak-subtracted trace corresponding to that step size.
+    % leak-subtracted trace corresponding to that step size. Then smooth
+    % and find peaks near the step times.
     for iSize = 1:sum(~isnan(eachSize))
         meansBySize(iSize,:) = mean(sortedLeakSub(sizeStartIdx(iSize):sizeEndIdx(iSize),:));
+        
+        % Smooth data with a moving average for peak finding
+        smooMean = -smooth(meansBySize(iSize,:)',smoothWindow,'moving');
+        % Set threshold based on noise of the first 100ms of the trace
+        % (i.e., size of signal needed to be seen above that noise)
+        pkThresh(iSize) = 1.5*thselect(smooMean(1:100*sf),'rigrsure');
+        
+        % Find MRC peaks if they exist at the onset of the step, otherwise
+        % set peak amplitude as NaN
+        % TODO: Consider whether you want to just take pkLoc and find the
+        % amplitude from the original trace, with a baseline subtracted
+        % from the immediate pre-stimulus time period (original plan).
+        [pk, pkLoc] = findpeaks(smooMean(startsBySize(iSize)-100:startsBySize(iSize)+300),...
+            'minpeakheight',pkThresh(iSize));
+        if ~isempty(pk)
+            pkOn(iSize) = max(pk);
+            pkLoc = pkLoc(pk==max(pk));
+            pkOnLoc(iSize) = pkLoc(1) + startsBySize(iSize)-100; %account for start position
+        else
+            pkOn(iSize) = 0;
+            pkOnLoc(iSize) = nan;
+        end
+        
+        % Find MRC peaks at the offset of the step
+        [pk, pkLoc] = findpeaks(smooMean(endsBySize(iSize)-100:endsBySize(iSize)+300),...
+            'minpeakheight',pkThresh(iSize));
+        if ~isempty(pk)
+            pkOff(iSize) = max(pk);
+            pkLoc = pkLoc(pk==max(pk));
+            pkOffLoc(iSize) = pkLoc(1) + endsBySize(iSize)-100;
+        else
+            pkOff(iSize) = 0;
+            pkOffLoc(iSize) = nan;
+        end
+        
+        
     end
     
-
-    % TODO: find the peak
-
-
-    
+ 
     % Get baseline for each step by grabbing the mean of the 150 points before
     % the probe displacement.
-    baseProbeI_on = mean(probeI(stepStart-150+1:stepStart-1,iStep));
-    baseProbeI_off = mean(probeI(stepEnd-150+1:stepEnd-1,iStep));
+    
+    baseProbeI_on = mean(sortedLeakSub(:,startsBySize-baseLength:startsBySize),2);
+    baseProbeI_off = mean(sortedLeakSub(:,endsBySize-baseLength:endsBySize),2);
     
     
     % Find the peak current for the on step and the off step for this sweep
     
-    peakOnLoc = find(onSubtract(stepStart+1:stepStart+500) == max(onSubtract(stepStart+1:stepStart+500)));
+% onSubtract(stepStart+1:stepStart+500) == max(onSubtract(stepStart+1:stepStart+500)));
     peakOnLoc = peakOnLoc(1) + stepStart;
     
     peakOffLoc = find(offSubtract(stepEnd+1:stepEnd+500) == max(offSubtract(stepEnd+2:stepEnd+500)));
