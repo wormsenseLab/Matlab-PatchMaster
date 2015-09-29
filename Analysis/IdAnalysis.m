@@ -79,21 +79,15 @@ for iCell = 1:length(allCells)
         stepStarts = NaN(nSteps,1);
         stepEnds = NaN(nSteps,1);
         leakSubtract = NaN(length(stimComI),nSteps);
-        %             onPeaks = NaN(nSteps,1);
-        %             offPeaks = NaN(nSteps,1);
-        %             onTau = NaN(nSteps,1);
-        %             offTau = NaN(nSteps,1);
-        %
-        % Find timepoint in sweep at which probe starts pushing (on) and when it
-        % goes back to neutral position (off). Use that timepoint to find nearby
-        % peak current
         
+        % Find timepoint in sweep at which probe starts pushing (on) and when it
+        % goes back to neutral position (off).
         for iStep = 1:nSteps
             
             % Analyze only desired traces within this series
             if any(pickedTraces == iStep)
                 
-                % Figure out timepoints when stimulus command for step 
+                % Figure out timepoints when stimulus command for step
                 % starts and ends
                 stepOn = stimComI(:,iStep) - mean(stimComI(1:10*sf,iStep));
                 stepStart = find(stepOn > stepThresh);
@@ -104,7 +98,7 @@ for iCell = 1:length(allCells)
                 stepStarts(iStep) = stepStart(1);
                 stepEnds(iStep) = stepStart(1) + stepLength;
                 stepSize(iStep) = mean(stepOn(stepStarts(iStep)+1:stepEnds(iStep)-1));
-                              
+                
                 % Subtract leak/baseline
                 leak = mean(probeI(1:100,iStep));
                 leakSubtract(:,iStep) = probeI(:,iStep) - leak;
@@ -118,8 +112,7 @@ for iCell = 1:length(allCells)
         allStarts = [allStarts; stepStarts];
         allEnds = [allEnds; stepEnds];
         allLeakSub = [allLeakSub; leakSubtract'];
-        clear leakSubtract;
-              
+        
     end
     
     % Round step size to nearest 0.1 to allow grouping data by step size
@@ -143,7 +136,7 @@ for iCell = 1:length(allCells)
     startsBySize = sortedStarts(sizeStartIdx);
     endsBySize = sortedEnds(sizeStartIdx);
     
-    
+    meansBySize = NaN(nSizes,length(sortedLeakSub));
     pkThresh = zeros(nSizes,1);
     pkOn = zeros(nSizes,1);
     pkOff = zeros(nSizes,1);
@@ -156,7 +149,11 @@ for iCell = 1:length(allCells)
     % leak-subtracted trace corresponding to that step size. Then smooth
     % and find peaks near the step times.
     for iSize = 1:nSizes
-        meansBySize(iSize,:) = mean(sortedLeakSub(sizeStartIdx(iSize):sizeEndIdx(iSize),:));
+        if sizeEndIdx(iSize)-sizeStartIdx(iSize)>0
+            meansBySize(iSize,:) = mean(sortedLeakSub(sizeStartIdx(iSize):sizeEndIdx(iSize),:));
+        else
+            meansBySize(iSize,:) = sortedLeakSub(sizeStartIdx(iSize):sizeEndIdx(iSize),:);
+        end
         
         % Smooth data with a moving average for peak finding
         smooMean = -smooth(meansBySize(iSize,:)',smoothWindow,'moving');
@@ -182,14 +179,14 @@ for iCell = 1:length(allCells)
             % after the peak, whichever comes first. Use that for fitting
             % the single exponential. Fit the unsmoothed mean trace.
             [~,onFitInd] = min(abs(meansBySize(iSize,pkOnLoc(iSize):75*sf+pkOnLoc(iSize))...
-                 - (meansBySize(pkOnLoc(iSize))/(2*exp(1)))));
+                - (meansBySize(pkOnLoc(iSize))/(2*exp(1)))));
             
             onFitTime = onFitInd/sf; % seconds
             onT = 0:1/sf:onFitTime;
             
             onFit = fit(onT',meansBySize(iSize,pkOnLoc(iSize):pkOnLoc(iSize)+onFitInd)','exp1');
             onsetTau(iSize) = -1/onFit.b;
-
+            
         else
             pkOn(iSize) = 0;
             pkOnLoc(iSize) = nan;
@@ -211,26 +208,23 @@ for iCell = 1:length(allCells)
             
             offFit = fit(offT',meansBySize(iSize,pkOffLoc(iSize):pkOffLoc(iSize)+offFitInd)','exp1');
             offsetTau(iSize) = -1/offFit.b;
-
+            
         else
             pkOff(iSize) = 0;
             pkOffLoc(iSize) = nan;
         end
         
-
+        
     end
     
     
-    mechPeaks{iCell} = [eachSize(~isnan(eachSize)) pkOn pkOff onsetTau offsetTau];
+    mechPeaks{iCell} = [eachSize(~isnan(eachSize)) pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
     
     % TODO: Figure out how to fit this to the four-parameter sigmoidal
     % function used in O'Hagan: @(X,a,b,c,d) ((a-d)/(1+((X/c)^b)))+d
     % Using optimtool? fmincon? nlinfit if you add the statistics toolbox.
     
-    
-    
-    
-    
+   
 end
 
 end
