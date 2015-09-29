@@ -71,7 +71,8 @@ clear testingSplit wtCells fatCells
 wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031'; 'FAT033';'FAT034';'FAT035'};
 fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032';
     'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
-    'FAT043';'FAT044'};
+    'FAT043'};
+% FAT044 has no OC
 
 wtIVs = IVRsCorrection(ephysData,wtIVs,wtCells);
 fatIVs = IVRsCorrection(ephysData,fatIVs,fatCells);
@@ -103,9 +104,9 @@ clear i cellName
 %% Plot mechanically evoked currents in response to single steps
 % IdAnalysis
 
-wtCells = {'FAT031';'FAT034';'FAT035'};
-fatCells = {'FAT029'; 'FAT030'; 'FAT032';
-    'FAT036';'FAT038';'FAT041';'FAT042';'FAT043';'FAT044'};
+wtCells = {'FAT034';'FAT035'};
+fatCells = {'FAT036';'FAT038';'FAT042';'FAT043';'FAT044'};
+% FAT041 has high leak
 
 mechPeaksWT = IdAnalysis(ephysData,wtCells);
 mechPeaksFat = IdAnalysis(ephysData,fatCells);
