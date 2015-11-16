@@ -12,12 +12,12 @@ close all %% closes all figures
 %%% hardcoding part:
 %%%% change: Files; STF0XX; rawStiff %%%%%%
 Files = 16:46;
-name = 'STF010';
+%name = 'STF010';
 rawStiff = 2; %% change if two different cantilevers were used
 %%%%% load Current, Actuator Sensor, And Cantilver Signal of each step
 A=[];B=[]; C=[];   %% to get an empty array, if I analyzed different files before
 for i = Files(:,1):Files(:,end);
-A(:,i) = ephysData.(name).data{1, i}; %Current
+A(:,i) = ephysData.STF010.data{1, i}; %Current
 B(:,i) = ephysData.STF010.data{3, i}; % actuator Sensor
 C(:,i) = ephysData.STF010.data{4, i}; % Cantilever Signal
 end
@@ -49,20 +49,11 @@ AverageMaxCurrent(i) = mean(Values(CellMin(i)-5:CellMin(i)+5));
 end
  
 
-
-
-
-
-
-
-
-
 figure() % plot all Current leak Subtracted signals in one plot
 plot(Time,ASubtract(:,Files))
 title('Current')
 
-
-%% to get Displacment of Actuator: multiply actuator sensor signal times 
+ to get Displacment of Actuator: multiply actuator sensor signal times 
 %%%% sensitivity of actuator: 1.5 %%%
 ActuSensor = []; AmplitudeDispl = [];
 for i = Files(:,1):Files(:,end)
