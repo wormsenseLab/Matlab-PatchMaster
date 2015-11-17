@@ -10,7 +10,7 @@
 %this is a test
 
 % Don't forget to run sigTOOL first!
-ephysData = ImportPatchData(ephysData);
+ephysData = ImportPatchData();
 
 % Keep only data with given project prefixes/names.
 projects = {'FAT'};
@@ -111,6 +111,13 @@ fatCells = {'FAT036';'FAT038';'FAT042';'FAT043';'FAT044'};
 
 mechPeaksWT = IdAnalysis(ephysData,wtCells);
 mechPeaksFat = IdAnalysis(ephysData,fatCells);
+
+
+%% Look at interstimulus interval
+allCells = {'FAT059'; 'FAT061';'FAT062';'FAT063'};
+    
+ISIs = ISIAnalysis(ephysData,allCells);
+
 
 %% Plot single MRC sets
 % Draw stim protocol for MRCs

@@ -44,6 +44,7 @@ mechTracePicks = mechTracePicks(:, [1 2 4]);
 % (this allows a cross-check on the protocol name) before analyzing
 % Values for traces not on the list will be stored as NaN.
 for iCell = 1:length(allCells)
+    
     cellName = allCells{iCell};
     protName = 'WC_Probe';
     allSeries = find(strcmp(protName,ephysData.(cellName).protocols));
@@ -61,7 +62,6 @@ for iCell = 1:length(allCells)
     nSeries = length(allSeries);
     
     for iSeries = 1:nSeries
-        
         % Carry out analysis if this series is on the list
         try pickedTraces = pickedSeries{[pickedSeries{:,1}]==allSeries(iSeries),2};
         catch
@@ -83,7 +83,7 @@ for iCell = 1:length(allCells)
         % Find timepoint in sweep at which probe starts pushing (on) and when it
         % goes back to neutral position (off).
         for iStep = 1:nSteps
-            
+
             % Analyze only desired traces within this series
             if any(pickedTraces == iStep)
                 
