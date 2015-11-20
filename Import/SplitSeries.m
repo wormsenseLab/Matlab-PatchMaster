@@ -1,4 +1,3 @@
-function [structA] = SplitSeries(tree, data, structA, saveName)
 % SplitSeries.m
 % This function takes the collapsed data set (dCollapse) and splits it by
 % group and series, assigning these as fields into the struct.
@@ -31,6 +30,7 @@ function [structA] = SplitSeries(tree, data, structA, saveName)
 % 
 % Created by Sammy Katta on 27 May 2014.
 
+function [structA] = SplitSeries(tree, data, structA, saveName)
 
 % Find which rows in tree contain group, series, and sweep metadata
 grLoc = find(~cellfun('isempty',tree(:,2)));
