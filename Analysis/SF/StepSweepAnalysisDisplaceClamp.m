@@ -2,46 +2,136 @@
 %%% Stanford University, 
 %%% 20151115
 %%% Script to analyze data from FALCON in Displacement Clamp
-%%%% Five sweeps of steps within one series
+%%% Five sweeps of steps within one series
+%%% ToDo 
+%%% sort data, average traces and tell me the n of the averaged traces 
+%%% afterwards: plot mean traces
+%%% take mean from an averaged signal, check peak
+%%% write into excel sheet --> which values?
+%%% finding function in igor to load excel or csv files
+%%% make it work for ramps as well
+%%% running average
+%%% choose which traces of one recording are good
+%%% average good recordings
+%%% To Do: find row of stiffness automatically 
+%%% maybe: make subplots for all Fivestep blocks
 
 %%  load dat.files 
 clear all; close all; 
-ephysData=ImportPatchData()
+ephysData=ImportPatchData();
 
 %% load notes to get several valus automatically needed for the coversion of the signals
 [filename,pathname] = uigetfile('*.*', 'Load file', 'MultiSelect', 'on'); 
 [numbers, text, raw] = xlsread([pathname, filename]);
 
 %% StepAnalysis 
-%%% TO DO:
-%%% check, if SetPoint and Sensor are pluged in correctly
-%%% running average
-%%% find beginning of step
-%%% choose which traces of one recording are good
-%%% average good recordings
 close all % closes all figures
-%%% hardcoding part:
-%%% change: Files; STF0XX; rawStiff %%%%%% 
-%%% ToDo -Analyze all steps -- look for step 
-Files = 12:15; % Patchmaster File Numbers
-name = 'STF012'; % name of recording. placed into varaibel fiels names
-rawStiff = 2; %% To Do: change to find automatically %% change if two different cantilevers were used
 
-%%% load Current, Actuator Sensor, And Cantilver Signal of each step%
+%%% hardcoding part:
+%%% change:  STF0XX %%%%%% 
+
+name = 'STF013'; % name of recording. placed into varaibel fiels names%
+
+Files = 1:length(ephysData.(name).protocols);% load all protocols  
+rawStiff = 2; %% To Do: change to find automatically 
+
+% load all data from all protocols 
+% load Current, Actuator Sensor, And Cantilver Signal of each step%
+% if else statement included to also load protocols which don't have ForceClamp data
+
 A=[];B=[]; C=[];   %% to get an empty array, if I analyzed different files before
 for i = Files(:,1):Files(:,end);
 A{i} = ephysData.(name).data{1, i}; %Current
+if isempty(ephysData.(name).data{3, i}) == 1
+    continue
+ else
 B{i} = ephysData.(name).data{3, i}; % actuator Sensor
-C{i} = ephysData.(name).data{4, i}; % Cantilever Signal
-D{i} = ephysData.(name).data{2, i}; % actuator SetPoint
 end
-Aall = cat(2,A{:});
-Ball = cat(2,B{:});
-Call = cat(2,C{:});
-Dall = cat(2,D{:});
+ if isempty(ephysData.(name).data{4, i}) ==1
+    continue
+ else
+ C{i} = ephysData.(name).data{4, i}; % Cantilever Signal
+ end
+  if isempty(ephysData.(name).data{2, i}) == 1 % actuator input
+     continue
+ else
+ D{i} = ephysData.(name).data{2, i}; % actuator SetPoint
+  end
+end
 
-%%%%% after loading data
-fs = ephysData.(name).samplingFreq{1, Files(:,1)}; %% sampling frequency from first file loaded; I currently assume it will be the same
+% find all files with certain protocol name: currently: Fivestep
+% ifelse statement: if not FiveStep, then empty array; 
+
+for i = Files(:,1):Files(:,end);
+   if find(strcmpi(ephysData.(name).protocols{1,i}, 'Fivestep')) == 1;
+        continue
+   else 
+         A{1, i} = [];
+          B{1, i} = [];
+           C{1, i} = [];
+            D{1, i} = [];
+    end      
+end
+
+%replacing "broke" protocols with empty arrays (delete protocols with less then 5 stimuli) 
+for i = 1:length(A);  
+   if size(A{1, i},2) < 5 == 1  %% if less the five stimuli are within a protocol, the array is replaced by empty columns. this assumes that this happens only if I broe the protocol, because I forgot to download the wavetable in labview
+       A{1, i} = [];
+       B{1, i} = [];
+       C{1, i} = [];
+       D{1, i} = [];
+   else
+       continue
+   end
+end
+
+% deleting whole blocks of FiveStep
+%
+AllStimuliBlocks = (find(strcmpi(ephysData.(name).protocols, 'Fivestep')))
+% it also displays the broken stimuli. change that it is useful
+while 1
+%FirstValue = [];
+prompt = {'BlockNr (leave empty to quit)'};
+dlg_title = 'Delete a block?';
+num_lines = 1;
+defaultans = {''};
+IndValues = inputdlg(prompt,dlg_title,num_lines,defaultans);
+
+FirstValue = str2num(IndValues{1});%
+% SecondValue = str2num(IndValues{2})
+% ThirdValue = str2num(IndValues{3})
+%a = IndValues{2};
+%b = ('done');
+
+ if isempty(FirstValue) == 1 % ColumnsOneIndentation = ASubtract(:,[FirstValue SecondValue ThirdValue]) 
+     break
+ else
+    A{1, FirstValue}  = []; 
+    B{1, FirstValue}  = []; 
+    C{1, FirstValue}  = []; 
+    D{1, FirstValue}  = []; 
+ end
+end
+
+
+% removes all empty cells from the cell array
+AShort = A(~cellfun('isempty',A));
+BShort = B(~cellfun('isempty',B));
+CShort = C(~cellfun('isempty',C));
+DShort = D(~cellfun('isempty',D));
+
+%concatenating all stimuli
+Aall = [];
+Aall = cat(2,AShort{:});
+Ball = [];
+Ball = cat(2,BShort{:});
+Call = [];
+Call = cat(2,CShort{:});
+Dall = [];
+Dall = cat(2,DShort{:});
+
+%%%%% calculate sampling frequency
+fs = ephysData.(name).samplingFreq{1, Files(:,1)}; % maybe change! %% sampling frequency from first file loaded; I currently assume it will be the same
 interval = 1/fs;   %%%%% get time interval to display x axis in seconds
 ENDTime = length(Aall)/fs; %% don't remember why I complicated it
 Time = (0:interval:ENDTime-interval)'; 
@@ -55,189 +145,298 @@ ASubtract(:,i) = Aall(:,i) - LeakA(i); %%%% subtract leak  --> copy to Igor
  end
 
 %%% getting max current (min value) for On response (needs to be done differently)
-
+AverOnset = [];MaxZeroActu =[];StdZeroActu=[];
 for i = 1:size(Ball,2);
    AverOnset(i)=  mean(Ball(1:100,i));
     MaxZeroActu(i)= max(Ball(1:100,i));
    StdZeroActu(i)= std(Ball(1:100,i));
 end
+
 StartBase = MaxZeroActu  + 2*StdZeroActu; % set a threshold to find the onset of the stimulus
 
 MinA = [];
 CellMin = [];
 AverageMaxCurrent = [];
 AverageMaxCurrentMinus = [];
+Start=[];
 for i = 1:size(Aall,2);
-Start(i) = find([Ball(:,i)] > StartBase(i),1,'first'); %% find cells, where 1st values is bigger than threshold 
+Start(i) = find([Ball(:,i)] > StartBase(i),1, 'first'); %% find cells, where 1st values is bigger than threshold 
 Ende(i) = Start(i) + 100; %% could change 100 to be dependent on fs 
 MinA(i) = min(ASubtract(Start(i):Ende(i),i));
 CellMin(i) = find([ASubtract(:,i)] == MinA(i),1,'first'); % find cell with min value
 Values = ASubtract(:,i);
-%%% TODO: include taking the mean from an averaged signal, check peak
-%%% finding function in igor
 AverageMaxCurrent(i) = mean(Values(CellMin(i)-5:CellMin(i)+5)); % average 11 cells 5+/-min value
- AverageMaxCurrentMinus(i) =  AverageMaxCurrent(i) *-1; % multiply with -1 to falsify demontrating of increase in current
+AverageMaxCurrentMinus(i) =  AverageMaxCurrent(i) *-1; % multiply with -1 to falsify demontrating of increase in current
 end
- 
-figure() % plot all Current leak Subtracted signals in one plot
-plot(Time,ASubtract)
-title('Current')
+
+% or make subplots for all Fivestep blocks
+ %figure() % plot all Current leak Subtracted signals in one plot
+%plot(Time,ASubtract)
+%plot(Time, AShort{:,1})
+ %title('Current')
 
 
-%%%% SetPoint
+% SetPoint
 ActuSetPoint = []; SetPointDispl = [];
 for i = 1:size(Dall,2),
 ActuSetPoint(:,i) = Dall(:,i)*1.5;
 SetPointDispl(i) = max(ActuSetPoint(:,i));
 end
 
-figure()  %%% plots all Cantilever deflections in one plot
-plot(Time,ActuSetPoint)
-title('Displacement SetPoint')
-
-%%% to get Displacment of Actuator: multiply actuator sensor signal times 
-%%% sensitivity of actuator: 1.5 %%%
+% to get Displacment of Actuator: multiply actuator sensor signal times 
+% sensitivity of actuator: 1.5 
 ActuSensor = []; AmplitudeDispl = [];
 for i = 1:size(Ball,2),
 ActuSensor(:,i) = Ball(:,i)*1.5;
 AmplitudeDispl(i) = max(ActuSensor(:,i));
-%figure()
-%figure()
-% plot(Time,ActuSensor(:,i));
-% title('Displacement Actuator')
 end
 
-figure()  %%% plots all Cantilever deflections in one plot
-plot(Time,ActuSensor)
-title('Displacement Actuator')
-
-%%%%% to get Deflection of Cantilever: multiply with Sensitivity 
-%%%% get Sensitivity from Notes of Recording day %%%%
-
+% to get Deflection of Cantilever: multiply with Sensitivity 
+% get Sensitivity from Notes Day of Recording  
 headers = raw(1,:);
 ind = find(strcmpi(headers, 'Sensitivity(um/V)'));
 Sensitivity = raw(rawStiff,ind);  %%% rawstiff = if different cantilever were used change in hardcoding part
 Sensitivity = cell2mat(Sensitivity);
-
 
 Baseline =[];CantiZero = [];CantiDefl = [];
 for i = 1:size(Call,2);
 Baseline(i) = mean(Call(1:100,i));
 CantiZero(:,i) = Call(:,i)-Baseline(i);
 CantiDefl(:,i) = CantiZero(:,i)*Sensitivity;
-%figure()
- %plot(Time,CantiDefl(:,i));
-% title('Cantilever Deflection')
 end
 
-figure()  %%% plots all Cantilever deflections in one plot
-plot(Time,CantiDefl)
-title('Cantilever Deflection')
-
-%%%% calculate Indentation = Actuator Sensor - Cantilever Deflection
+% calculate Indentation = Actuator Sensor - Cantilever Deflection
+MeanIndentation = [];
+Indentation = [];
 for i = 1:size(Call,2);
 Indentation(:,i) = ActuSensor(:,i) - CantiDefl(:,i);
 MeanIndentation(i) = mean(Indentation(1000:2000,i));
 end
 
-figure() %%% plots all Indentations in one plot
-plot(Time,Indentation)
-title('Indentation')
 
-%%% Calculating Force Signal 
+%%% Calculating Force Signal: Cantilever Deflection * Stiffness 
 indStiffness = find(strcmpi(headers, 'Stiffness (N/m)'));
 Stiffness = raw(rawStiff,indStiffness); 
 Stiffness = cell2mat(Stiffness);
 
 for i = 1:size(Aall,2);
 Force(:,i) = CantiDefl(:,i) *Stiffness;
-% figure()
-% plot(Time,Force);%
-% title('Force')
 end
-%%% 
 
-figure() %%% plots all Force signals in one plot
-plot(Time,Force)
-title('Force')
-
+%%% write to excel sheet
 Amplitude = [];
 Amplitude =[AmplitudeDispl',MeanIndentation',AverageMaxCurrent', AverageMaxCurrentMinus'];%, (Files(:,1):Files(:,end))'];%; MeanIndentation(i)'];%, MeanIndentation(i), AverageMaxCurrent(i), AverageMaxCurrentMinus(i), i];
 
-%%%%%% now make all plots
-% %%%%%%% figures current with and without leak subtraction %%%%
-figure()
-for i = 1:size(Aall,2)
-subplot(length(Files),5,i)
-plot(Time,Aall(:,i))
-ylim([-5*10^-11 1*10^-11])
-hold on
-plot(Time,ASubtract(:,i))
-title(MeanIndentation(i))
-end
 
+% Calculating Rise time and Overshoot on Cantilever Deflection signals
+% shortened to the Onset of the step
+ CantiDeflShort = [];
+ MeanCantiDefl = [];
+  for i = 1:size(CantiDefl,2);
+      EndeCanti(i) = Start(i)+1000;
+  CantiDeflShort(:,i) = CantiDefl(Start(i):EndeCanti(i),i); 
+  MeanCantiDefl(i) =  mean(CantiDefl(1000:2000,i));
+  end
+ 
+TimeShort = (0:interval:length(CantiDeflShort)/fs-interval)';  
+InfoSignal = stepinfo(CantiDeflShort, TimeShort, MeanCantiDefl, 'RiseTimeLimits', [0.0 0.63]); %%% over sorted data?? 
+allRiseTime = cat(1,InfoSignal.RiseTime);
+allOvershoot = cat(1,InfoSignal.Overshoot);
+
+% Now figures:
 xScatter = (1:length(MeanIndentation));
 figure()
+subplot(2,2,1)
 scatter(xScatter, LeakA) 
 title('control: Leak Current')
-
-xScatter = (1:length(MeanIndentation));
-figure()
-scatter(xScatter, Start) 
+ylabel('Current')
+xlabel('number of file (in recorded order)')
+hold on
+subplot(2,2,2)
+scatter(xScatter, Start)  
 ylim([0 1000])
+ylabel('postion of cell')
+xlabel('number of file (in recorded order)')
 title('control: to see if thresholding is working')
-
-figure()
+hold on 
+subplot(2,2,3)
 i = 1;
 while i <= length(MeanIndentation)
 scatter(MeanIndentation(i:i+4), AverageMaxCurrentMinus(i:i+4),'LineWidth',10)%,'filled') %% would be nice to see the change in leak
 %set(h, 'SizeData', markerWidth^2)
 hold on
 i = i+5;
-title('Mean Current vs Indentation')
+title('Mean Cur vs Ind')
+xlim([0 max(MeanIndentation)+1])
+ylabel('Current')
+xlabel('Indentation')
 hold on 
-for j = 1:length(Files)
-legend(Files(j))
+for j = 1:size(Aall,2)/5
+%legend(Files(j))
 end
 end
 
-%% Average of variable numbers of columns
+% plotting ForceClamp signals in a subplot
+figure()
+subplot(3,3,1)
+plot(Time,CantiDefl)
+xlim([0 0.3])
+title('Cantilever Deflection')
+ylabel('blub')
+hold on
+subplot(3,3,2)
+plot(Time,Indentation)
+xlim([0 0.3])
+ylabel('Indentation (µm)')
+title('Indentation')
+hold on
+subplot(3,3,3)
+plot(Time,Force)
+xlim([0 0.3])
+ylabel('Force (µN)')
+title('Force')
+hold on
+subplot(3,3,4)
+plot(Time,ActuSetPoint)
+xlim([0 0.3])
+ylabel('bla')
+title('Displacement ActuSetPoint')
+hold on
+subplot(3,3,5)
+plot(Time,ActuSensor)
+xlim([0 0.3])
+ylabel('bla')
+title('Displacement ActuSensor')
+hold on
+subplot(3,3,7)
+scatter(MeanIndentation, allRiseTime)  
+%xlim([0 0.3])
+title('RiseTime (CantiDefl)')
+ylabel('Rise Time Tau (s)')
+xlabel('Indentation')
+xlim([0 max(MeanIndentation)+1])
+hold on
+subplot(3,3,8)
+scatter(MeanIndentation, allOvershoot)  
+xlim([0 max(MeanIndentation)+1])
+ylabel('% to steady state')
+xlabel('Indentation')
+title('Overshoot (CantiDefl)')
+
+%current with and without leak subtraction in a subplot %%%%
+figure()
+for i = 1:size(Aall,2)
+subplot(size(Aall,2)/5,5,i)
+plot(Time,Aall(:,i))
+ylim([-5*10^-11 1*10^-11])
+hold on
+plot(Time,ASubtract(:,i))
+%RecNum = i; % include number of i within legend or title to easier
+%determine the position of the plot
+title(round(MeanIndentation(i),1)) %% 
+end
+
+msgbox('if you want to delete a whole block, run again');
+
+%% delete single recordings
+ASubtractNew = ASubtract;
 while 1
-prompt = {'FirstValue','SecondValue','ThirdValue','InputReady'};
-IndValues = inputdlg(prompt)
-FirstValue = str2num(IndValues{1})
-SecondValue = str2num(IndValues{2})
-ThirdValue = str2num(IndValues{3})
-a = IndValues{4}
-b = ('done')
+prompt = {'FirstRec','SecondRec','ThirdRec','ForthRec'};
+dlg_title = 'Delete a recording?';
+num_lines = 1;
+defaultans = {'','','',''};
+IndValues = inputdlg(prompt,dlg_title,num_lines,defaultans);
+FirstRec = str2num(IndValues{1});
+SecondRec = str2num(IndValues{2});
+ThirdRec = str2num(IndValues{3});
+ForthRec = str2num(IndValues{3});
 
-%xdatatemp = ASubtract(:,[1 6])
-if isempty(ThirdValue) == 1
-  ColumnsOneIndentation = ASubtract(:,[FirstValue SecondValue])
+if isempty(FirstRec) == 1
+    break
 else
-   ColumnsOneIndentation = ASubtract(:,[FirstValue SecondValue ThirdValue]) 
+  ASubtractNew(:,FirstRec) = nan;
+  AverageMaxCurrentMinus(:,FirstRec) = nan;
 end
-%elseif ~strcmp(a,b);
- %  msgbox('it is not done')
-  if  strcmpi(a,b)
-     msgbox('it is done');
-     break;
-  end
  end
+%% Sort Data 
+
+RoundMeanInd = round(MeanIndentation,1);
+[SortInd sorted_index] = sort(RoundMeanInd'); % get index of mean indentations
+SortCurrent = AverageMaxCurrentMinus(sorted_index);
+transAsub = ASubtractNew';
+SortASubtract = transAsub(sorted_index,:);
+SortASubtract = SortASubtract';
+MergeInd = builtin('_mergesimpts',SortInd,0.1,'average'); %%% merge values with +/- 0.1 distance
+tolerance = 0.2; % tolerance to group indentations
+%k = 0.8;
+%FindSameInd = find([SortInd] == 0.4)
+k =[];
+FindSameInd=[];
+MeanSameIndCurrent=[];
+for k = 1:length(MergeInd);
+FindSameInd(:,k) = find([SortInd] >MergeInd(k)-tolerance & SortInd<MergeInd(k)+tolerance);
+MeanSameIndCurrent(k) = nanmean(SortCurrent(FindSameInd(:,k))); %average MaxCurrent*-1
+end
+
+%find number of nan values to find out the number of averages
+
+%average traces 
+%how to average two columns
+%  for k = 1:length(MergeInd);
+%      for i = 1:length(FindSameInd(:,k));
+% % MeanTracesCurrent(:,k) = nanmean(SortASubtract(FindSameInd(:,k)))
+% %B(:,nn+1) MeanTracesCurrent = nanmean(SortASubtract(:,1:2))
+%      end
+%  end
 
 
+
+%%
+%%%delete up to three row and replacing all values with nan
 % 
-% prompt = {'FirstValue','SecondValue','ThirdValue'};
+% ASubtractNew = ASubtract;
+% prompt = {'FirstValue','SecondValue','ThirdValue','ForthValue','FifthValue'};
 % IndValues = inputdlg(prompt)
 % FirstValue = str2num(IndValues{1})
 % SecondValue = str2num(IndValues{2})
 % ThirdValue = str2num(IndValues{3})
+% ForthValue = str2num(IndValues{4})
+% FifthValue = str2num(IndValues{5})
+% 
+% ASubtractNew(:,FirstValue) = nan;
+% ASubtractNew(:,SecondValue) = nan;
+% ASubtractNew(:,ThirdValue) = nan;
+% ASubtractNew(:,ForthValue) = nan;
+% ASubtractNew(:,FifthValue) = nan;
+
+
+% %% Average of variable numbers of columns; not in a for loop yet
+% while 1
+% prompt = {'FirstValue','SecondValue','ThirdValue','InputReady'};
+% dlg_title = 'Delete a recording?';
+% num_lines = 1;
+% defaultans = {'','','',''};
+% IndValues = inputdlg(prompt,dlg_title,num_lines,defaultans);
+% FirstValue = str2num(IndValues{1})
+% SecondValue = str2num(IndValues{2})
+% ThirdValue = str2num(IndValues{3})
+% a = IndValues{4}
+% b = ('done')
+% 
 % %xdatatemp = ASubtract(:,[1 6])
 % if isempty(ThirdValue) == 1
 %   ColumnsOneIndentation = ASubtract(:,[FirstValue SecondValue])
 % else
 %    ColumnsOneIndentation = ASubtract(:,[FirstValue SecondValue ThirdValue]) 
 % end
+% %elseif ~strcmp(a,b);
+%  %  msgbox('it is not done')
+%   if  strcmpi(a,b)
+%      msgbox('it is done');
+%      break;
+%   end
+%  end
+% 
 % 
 
 %%% Average current; but it is not leak subtracte
@@ -251,7 +450,5 @@ end
 % StInd = transpose(std(E.'))
 % AverInd(:,i) = F(:)
 % end
-
-
 
 %%% to delete a column of a cell array A{12}(:,5) = []
