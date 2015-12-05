@@ -17,6 +17,8 @@ projects = {'FAT'};
 
 ephysData = FilterProjectData(ephysData, projects);
 
+ephysMetaData = ImportMetaData();
+
 clear projects
 %% Analyze capacity transient for C, Rs, and tau
 
