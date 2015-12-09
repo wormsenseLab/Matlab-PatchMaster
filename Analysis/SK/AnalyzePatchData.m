@@ -17,35 +17,41 @@ projects = {'FAT'};
 
 ephysData = FilterProjectData(ephysData, projects);
 
-ephysMetaData = ImportMetaData();
-
 clear projects
 %% Analyze capacity transient for C, Rs, and tau
 
 ephysData = CtAnalysis(ephysData);
 
-%% Temporary: Assign numbers of IVq series to look at
+%% Print list of Rs
 
-% TODO: Read these in from a separate file.
+for i=1:length(recs)
+fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).Rs)))
+end
 
-allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';
-    'FAT029';'FAT030';'FAT031'; 'FAT032'; 'FAT033'; 'FAT034';'FAT035';
-    'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
-    'FAT043';'FAT044'};
+%% Import metadata with info about which IVq protocols to look at
 
+ephysMetaData = ImportMetaData();
 
-% List which sets of ct_ivqs to use for on cell (row 1)/whole cell (row 2)
+%% Assign numbers of IVq series to look at
+
+% Inline function to convert cells to double arrays for protStart and Rs
+CellToArray = @(x) reshape([x{:}],size(x,1),size(x,2), size(x,3));
+
+% List which sets of ct_ivqs to use for on cell (col 2)/whole cell (col 3)
 % calculations for the above selection of cells. (i.e., if the second  
 % ct_ivq protocol run for that recording was the one you want to use for  
-% whole-cell, put "2" in row 1). Make sure it has three sequential ivq
-% pgfs.
-protStart = [1 1 1 4 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0; ...
-             4 4 4 7 4 7 6 4 4 4 4 4 4 4 4 4 4 4 4 4 4 1];
-         
-% Which Rs value to use for IV Rs correction
-protRs = ceil(protStart(2,:)./3);
-protRs(7) = 3;
-         
+% whole-cell, put "2" in col 2 for that recording). Make sure it has three 
+% sequential ivq pgfs.
+allCells = ephysMetaData(2:end,1);
+
+%TODO: don't assume headers: try/catch it
+protStart = ephysMetaData(2:end,2:3)'; 
+protStart = CellToArray(protStart);
+
+protRs = ephysMetaData(2:end,4)';
+protRs = CellToArray(protRs);
+
+
 for i = 1:length(allCells)
     ephysData.(allCells{i}).protOC = protStart(1,i);
     ephysData.(allCells{i}).protWC = protStart(2,i);    
