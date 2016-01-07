@@ -13,6 +13,14 @@ steadyStateTime = 400:550;
 % V     (mV)	-60     -110 ++ 20      -60
 
 
+if iscell(inIV)
+    if length(inIV) == 1
+        inIV = inIV{:};
+    else
+        error('TooManyStructs', 'inIV is a cell containing multiple structs. Please input a 1x1 struct');
+    end
+end
+
 
 % Find actual voltage for each step at steady state by correcting from
 % command voltage

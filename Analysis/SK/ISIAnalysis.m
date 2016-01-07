@@ -2,7 +2,7 @@
 % 
 % 
 
-function ISIPeaks = ISIAnalysis(ephysData, allCells)
+function ISIPeaks = ISIAnalysis(ephysData, allCells, protName)
 
 % keyboard;
 sf = 5; %sampling frequency, in kHz
@@ -12,7 +12,6 @@ smoothWindow = 5;
 
 for iCell = 1:length(allCells)
     cellName = allCells{iCell};
-    protName = 'WC_Probe8';
     allSeries = find(strcmp(protName,ephysData.(cellName).protocols));
     
     allOns = [];
