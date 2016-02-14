@@ -6,6 +6,8 @@
 %%% Five sweeps of steps within one series
 %%% ToDo 
 
+%%% Currently, automatically saved data are saved in the same folder
+%%% which AllStimuliBlocks used for analysis 
 %%% does not work for single FiveStep currenlty; problem in replacing NaN
 %%% values
 %%% write into excel sheet --> which values?
@@ -33,13 +35,13 @@ ephysData=ImportPatchData();
 [filename,pathname] = uigetfile('*.*', 'Load file', 'MultiSelect', 'on'); 
 [numbers, text, raw] = xlsread([pathname, filename]);
 
-%% StepAnaly13sis 
+%% StepAnalysis 
 close all % closes all figures
 
 %%% hardcoding part:
 %%% change:  STF0XX, sampling fequency not yet fully automatic %%%%%% 
 
-name = 'STF014'; % name of recording. placed into varaibel fiels names%
+name = 'STF019'; % name of recording. placed into varaibel fiels names%
 stimuli = 'Fivestep';
 Filenumber = 1; % wil be used to extract sampling freuqnecy; first file loaded, maybe change
 
@@ -49,7 +51,7 @@ Files = 1:length(ephysData.(name).protocols);% load all protocols
 % load Current, Actuator Sensor, And Cantilver Signal of each step%
 % if else statement included to also load protocols which don't have ForceClamp data
 
-A=[];B=[]; C=[];   %1% to get an empty array, if I analyzed different files before
+A=[];B=[]; C=[];D=[];   %1% to get an empty array, if I analyzed different files before
 for i = Files(:,1):Files(:,end);
 A{i} = ephysData.(name).data{1, i}; %Current
 if isempty(ephysData.(name).data{3, i}) == 1
@@ -101,7 +103,7 @@ end
 % deleting whole blocks of FiveStep
 %
 AllStimuliBlocks = (find(strcmpi(ephysData.(name).protocols, stimuli)))
-% it also displays the broken stimuli. change that it is useful
+% it also displays the broken stimuli. change to that it is useful
 while 1
 %FirstValue = [];
 prompt = {'BlockNr (leave empty to quit)'};
@@ -158,15 +160,10 @@ LeakA(i) = mean(Aall(1:100,i));  %%%% take the mean of the first 100 Points
 ASubtract(:,i) = Aall(:,i) - LeakA(i); %%%% subtract leak  --> copy to Igor
  end
 
-ASubtractppA = ASubtract*10^12; % current in pA to visualize easier in subplot
+
 
 %%% getting max current (min value) for On response (needs to be done differently)
-% AverOnset = [];MaxZeroActu =[];StdZeroActu=[];
-% for i = 1:size(Ball,2);
-%    AverOnset(i)=  mean(Ball(1:100,i));
-%     MaxZeroActu(i)= max(Ball(1:100,i));
-%    StdZeroActu(i)= std(Ball(1:100,i));
-% end
+
 
 AverOnset = [];MaxZeroActu =[];StdZeroActu=[];
 for i = 1:size(Ball,2);
@@ -184,15 +181,7 @@ AverageMaxCurrent = [];
 AverageMaxCurrentMinus = [];
 Start=[];
 % %%
-% for i = 1:size(Aall,2);
-% Start(i) = find([Ball(:,i)] > StartBase(i),1, 'first'); %% find cells, where 1st values is bigger than threshold 
-% Ende(i) = Start(i) + 100; %% could change 100 to be dependent on fs 
-% MinA(i) = min(ASubtract(Start(i):Ende(i),i));
-% CellMin(i) = find([ASubtract(:,i)] == MinA(i),1,'first'); % find cell with min value
-% Values = ASubtract(:,i);
-% AverageMaxCurrent(i) = mean(Values(CellMin(i)-5:CellMin(i)+5)); % average 11 cells 5+/-min value
-% AverageMaxCurrentMinus(i) =  AverageMaxCurrent(i) *-1; % 
-% end
+
 
  for i = 1:size(Aall,2);
  Start(i) = find([Ball(:,i)] > StartBase(i),1, 'first'); %% find cells, where 1st values is bigger than threshold 
@@ -204,11 +193,6 @@ Start=[];
  AverageMaxCurrentMinus(i) =  AverageMaxCurrent(i) *-1; % multiply with -1 to facilitate demontrating of increase in current
  end
 
-% or make subplots for all Fivestep blocks
- %figure() % plot all Current leak Subtracted signals in one plot
-%plot(Time,ASubtract)
-%plot(Time, AShort{:,1})
- %title('Current')
 
 
 % SetPoint
@@ -240,10 +224,10 @@ Baseline =[];CantiZero = [];CantiDefl = [];
 for i = 1:size(Call,2);
 Baseline(i) = mean(Call(1:100,i));
 CantiZero(:,i) = Call(:,i)-Baseline(i);
-CantiDefl(:,i) = CantiZero(:,i)*Sensitivity;
+CantiDefl(:,i) = CantiZero(:,i)*Sensitivity; % CantiDefl is in um
 end
 
-% calculate Indentation = Actuator Sensor - Cantilever Deflection
+% calculate Indentation = Actuator Sensor - Cantilever Deflection (is in um)
 MeanIndentation = [];
 Indentation = [];
 for i = 1:size(Call,2);
@@ -263,11 +247,6 @@ for i = 1:size(Aall,2);
 Force(:,i) = CantiDefl(:,i) *Stiffness;
 MeanForce(i) = mean(Force(1000:2000,i));
 end
-
-
-%%% write to excel sheet% this can be deleted
-%Amplitude = [];
-%Amplitude =[AmplitudeDispl',MeanIndentation',AverageMaxCurrent', AverageMaxCurrentMinus'];%, (Files(:,1):Files(:,end))'];%; MeanIndentation(i)'];%, MeanIndentation(i), AverageMaxCurrent(i), AverageMaxCurrentMinus(i), i];
 
 
 % Calculating Rise time and Overshoot on Cantilever Deflection signals
@@ -292,12 +271,18 @@ allOvershoot = cat(1,InfoSignal.Overshoot);
 %% now figures
 close all
 
+% calculate in pA
+AverageMaxCurrentMinusppA = AverageMaxCurrentMinus*10^12;
+LeakAppA = LeakA*10^12;
+ASubtractppA = ASubtract*10^12; % current in pA to visualize easier in subplot
+AallppA=Aall*10^12;
+
 xScatter = (1:length(MeanIndentation));
 figure()
 subplot(2,2,1)
-scatter(xScatter, LeakA) 
+scatter(xScatter, LeakAppA) 
 title('control: Leak Current')
-ylabel('Current')
+ylabel('Current (pA)')
 xlabel('number of file (in recorded order)')
 % hold on
 % subplot(1,2,2)
@@ -311,13 +296,13 @@ hold on
 subplot(2,2,2)
 i = 1;
 while i <= length(MeanIndentation)
-scatter(MeanIndentation(i:i+4), AverageMaxCurrentMinus(i:i+4),'LineWidth',2)%,'filled') %% would be nice to see the change in leak
+scatter(MeanIndentation(i:i+4), AverageMaxCurrentMinusppA(i:i+4),'LineWidth',2)%,'filled') %% would be nice to see the change in leak
 %set(h, 'SizeData', markerWidth^2)
 hold on
 i = i+5;
 title('Mean Cur vs Ind')
 xlim([0 max(MeanIndentation)+1])
-ylabel('Current')
+ylabel('Current (pA)')
 xlabel('Indentation')
 hold on 
 for j = 1:size(Aall,2)/5
@@ -327,7 +312,10 @@ end
 hold on 
 subplot(2,2,3)
 scatter(xScatter, Start) 
-
+ylim([400 1000]) % ToDo: change it for Ramps
+ylabel('Point')
+xlabel('Filenumber')
+title('control: Find OnSet of Stimulus')
 hold on 
 subplot(2,2,4)
 plot(Time,ASubtractppA)
@@ -336,49 +324,58 @@ ylabel('Current (pA)')
 xlabel('Time (s)')
 title('Current')
 
+
 %%% plotting ForceClamp signals in a subplot
+allRiseTimeInms = allRiseTime*1000;
+
 figure()
 subplot(3,3,1)
 plot(Time,CantiDefl)
 xlim([0 0.6])
+xlabel('Time (s)')
 title('Cantilever Deflection')
 ylabel('Deflection (µm)')
 hold on
 subplot(3,3,2)
 plot(Time,Indentation)
 xlim([0 0.6])
+xlabel('Time (s)')
 ylabel('Indentation (µm)')
 title('Indentation')
 hold on
 subplot(3,3,3)
 plot(Time,Force)
 xlim([0 0.6])
+xlabel('Time (s)')
 ylabel('Force (µN)')
 title('Force')
 hold on
 subplot(3,3,4)
 plot(Time,ActuSetPoint)
 xlim([0 0.6])
+xlabel('Time (s)')
 ylabel('Displacement (µm)')
 title('Displacement ActuSetPoint')
 hold on
 subplot(3,3,5)
 plot(Time,ActuSensor)
 xlim([0 0.6])
+xlabel('Time (s)')
 ylabel('Displacement (µm)')
 title('Displacement ActuSensor')
 hold on
 subplot(3,3,6)
 plot(Time,normCantiDefl)
 xlim([0 0.6])
-%ylabel('Displacement (µm)')
+xlabel('Time (s)')
+ylabel('normalized Deflection')
 title('Cantilever Defl norm')
 hold on
 subplot(3,3,7)
-scatter(MeanIndentation, allRiseTime)  
+scatter(MeanIndentation, allRiseTimeInms)  
 xlim([0 0.3])
 title('RiseTime (CantiDefl)')
-ylabel('Rise Time Tau (s)')
+ylabel('Rise Time Tau (ms)')
 xlabel('Indentation')
 xlim([0 max(MeanIndentation)+1])
  hold on
@@ -386,7 +383,7 @@ xlim([0 max(MeanIndentation)+1])
  scatter(MeanIndentation, allOvershoot)  
  %xlim([0 max(MeanIndentation)+1])
  ylabel('% to steady state')
- xlabel('Indentation')
+ xlabel('Indentation (µm)')
  title('Overshoot (CantiDefl)')
 hold on 
 subplot(3,3,9)
@@ -398,26 +395,31 @@ hold on
 i = i+5;
 title('Mean Force vs Ind')
 xlim([0 max(MeanIndentation)+1])
-ylabel('Force')
-xlabel('Indentation')
+ylabel('Force (µN)')
+xlabel('Indentation (µm)')
 hold on 
 for j = 1:size(Aall,2)/5
 %legend(Files(j))  % include legend again
 end
 end
 
+
 %%%current with and without leak subtraction in a subplot %%%%
+
+
 figure()
-for i = 1:size(Aall,2)
-subplot(size(Aall,2)/5,5,i)
-plot(Time,Aall(:,i))
-ylim([-5*10^-11 1*10^-11])
+for i = 1:size(AallppA,2)
+subplot(size(AallppA,2)/5,5,i)
+plot(Time,AallppA(:,i))
+%ylim([-5*10^-11 1*10^-11])
 hold on
-plot(Time,ASubtract(:,i))
+plot(Time,ASubtractppA(:,i))
 %RecNum = i; % include number of i within legend or title to easier
 %determine the position of the plot
 title(round(MeanIndentation(i),1)) %% 
 end
+%hold on
+suptitle({'Current (pA) with (red) and without (blue) leak subtraction';'Bold numbers: Indentation in µm'}) %('')
 
 figure()
 for i = 1:size(Aall,2)
@@ -430,13 +432,20 @@ title(round(MeanIndentation(i),1)) %%
 end
 
 
-msgbox('if you want to delete a whole block, run again');
+%msgbox('if you want to delete a whole block, run again');
 
 
 
-%% delete single recordings %something is not working
-close all
+%% delete single recordings 
+%close all
 ASubtractNew = ASubtract;
+AverageMaxCurrentMinusNew = AverageMaxCurrent;
+MeanIndentationNew = MeanIndentation;
+%AverageMaxNormCurrentNew = 
+%TO DO: Someting wrong with the order in command promt
+% if I redo AverageMaxCurrentMinus= Nan, I have to reload it again or do it
+% as for ASubtract new
+
 while 1
 prompt = {'Enter number of recording, matches subplot (leave empty to quit, enter a number as long as you want to delete a recording)'};%,'SecondRec','ThirdRec','ForthRec'};
 dlg_title = 'Delete a recording?';
@@ -451,16 +460,38 @@ FirstRec = str2num(IndValues{1});
 if isempty(FirstRec) == 1
     break
 else
-  ASubtractNew(:,FirstRec) = nan;
-  AverageMaxCurrentMinus(:,FirstRec) = nan;
+  ASubtractNew(:,FirstRec) = NaN;
+  AverageMaxCurrentMinusNew(:,FirstRec) = NaN;
+  MeanIndentationNew(:,FirstRec) = NaN;
+  %MeanSameIndCurrent(:,FirstRec) = nan; % how does it work, when I am defining it later?
+  %NormMeanCurrent(:,FirstRec) = nan; % has to be deleted; was saved from previous work in workspac
+  %MeanSameIndForce(:,FirstRec) = nan; %ToDo: does not work
+  %MeanIndentation(:,FirstRec) = nan; how to delete mergeInd?
 end
 end
 
-
+MeanTraces=[];
+MeanSameIndCurrent=[];
+MeanSameIndForce=[];
+NumberTracesPerInd=[];
+%MeanNormSameIndCurrent
 % Sort Data 
+
+% delete mergeInd
+% int_cols = all(isnan(MeanIndentationNew)|round(MeanIndentationNew)==MeanIndentationNew,1);
+% it = MeanIndentationNew(:,int_cols);
+% 
+% test = [1   NaN   2.2   3.2  4;
+%      NaN 7.9   5.1   NaN  5;
+%      3    5.5  NaN   4.1  NaN];
+% int_cols = all(isnan(MeanIndentationNew)|round(MeanIndentationNew)==MeanIndentationNew,1);
+% it = MeanIndentationNew(:,int_cols);
+% flt = MeanIndentationNew(:,~int_cols);
+
 RoundMeanInd = round(MeanIndentation,1);
 [SortInd sorted_index] = sort(RoundMeanInd'); % get index of mean indentations
-SortCurrent = AverageMaxCurrentMinus(sorted_index);
+SortCurrent = AverageMaxCurrentMinusNew(sorted_index);
+SortNormCurrent = AverageMaxCurrentMinusNew(sorted_index);
 SortForce = MeanForce(sorted_index);
 transAsub = ASubtractNew';
 SortASubtract = transAsub(sorted_index,:);
@@ -472,42 +503,71 @@ tolerance = 0.2; % tolerance to group indentations
 k =[];
 [~,FRow] = mode(SortInd); %gets the Frequency of the most frequent value
 FindSameInd= NaN(FRow,length(MergeInd)); % determine row length with highest probability of most frequent value
-MeanTraces=[];
-MeanSameIndCurrent=[];
 
-%FindSameIndInitial = repmat({NaN},1,8)
+if size(Aall,2) > 5
 FindSameIndInitial = {};
-
 for k = 1:length(MergeInd);
 FindSameIndInitial{k} = find([SortInd] >MergeInd(k)-tolerance & [SortInd]<MergeInd(k)+tolerance);
-%MeanSameIndCurrent(k) = nanmean(SortCurrent(FindSameInd(:,k))); %average MaxCurrent*-1 with same indentation
-%MeanSameIndForce(k) = nanmean(SortForce(FindSameInd(:,k))); %average Force with same Indentation
-%MeanTraces(k,:) = nanmean(SortASubtract((FindSameInd(1,k)):(FindSameInd(end,k)),:),1); % mean traces in a row vector; problem with mean traces; problem, when inddentation oonly ones
 end
 FindSameIndNaN = padcat(FindSameIndInitial{:});
 FindSameInd = FindSameIndNaN;
 
-for i = 1:length(MergeInd);% FRow
-[r,c] = find(isnan(FindSameInd(:,i))); % change code if only one set of parameters; maybe change length(MergeInd)
+for i = 1:length(MergeInd);
+[r,c] = find(isnan(FindSameInd(:,i))); % fails, if only one Block of recording; include it into if statement for this reason
 while sum(isnan(FindSameInd(:,i)))>0
 FindSameInd(r,i) =FindSameInd(r-1,i);
 end
 end
-
+else %% if only one FiveStepProtcol was applied
+    FindSameInd = [];
+    for k = 1:length(MergeInd);
+FindSameInd(:,k) = find([SortInd] >MergeInd(k)-tolerance & [SortInd]<MergeInd(k)+tolerance);
+    end
+    
+end
+    
+%FindLogicalNumberOfTraces = FindLogicalNumberOfTraces'
+%NumberTracesPerInd = NumberTracesPerInd';
 
 for k = 1:length(MergeInd);
 %FindSameIndInitial{k} = find([SortInd] >MergeInd(k)-tolerance & [SortInd]<MergeInd(k)+tolerance);
 MeanSameIndCurrent(k) = nanmean(SortCurrent(FindSameInd(:,k))); %average MaxCurrent*-1 with same indentation
 MeanSameIndForce(k) = nanmean(SortForce(FindSameInd(:,k))); %average Force with same Indentation
 MeanTraces(k,:) = nanmean(SortASubtract((FindSameInd(1,k)):(FindSameInd(end,k)),:),1); % mean traces in a row vector; problem with mean traces; problem, when inddentation oonly ones
+%MeanNormSameIndCurrent
 end
 
+% FindSameIndNew = FindSameInd;
+% while 1
+% prompt = {'Enter number of recording, matches subplot (leave empty to quit, enter a number as long as you want to delete a recording)'};%,'SecondRec','ThirdRec','ForthRec'};
+% dlg_title = 'Delete a recording?';
+% num_lines = 1;
+% defaultans = {''};%,'','',''};
+% IndValues = inputdlg(prompt,dlg_title,num_lines,defaultans);
+% FirstRec = str2num(IndValues{1});
+% %SecondRec = str2num(IndValues{2});
+% %ThirdRec = str2num(IndValues{3});
+% %ForthRec = str2num(IndValues{3});
+% 
+% if isempty(FirstRec) == 1
+%     break
+% else
+%   FindSameIndNew(:,FirstRec) = NaN; find same Ind
+% end
+% end
 
+NormMeanCurrent=[];
 MeanTraces = MeanTraces'; % transpose to column vector for export to igor
 MeanSameIndCurrent = MeanSameIndCurrent';
 MeanSameIndForce = MeanSameIndForce';
 MeanTracesppA = MeanTraces*10^12; % to get current in pA
 NormMeanCurrent = MeanSameIndCurrent/max(MeanSameIndCurrent); % normalize by fit values
+
+% include here calculation of 
+% FindLogicalNumberOfTraces = isnan(FindSameInd) == 0;
+% TracesPerIndentation = sum(FindLogicalNumberOfTraces);
+% TracesPerIndentation = TracesPerIndentation';
+%missing calculation for numer of traces for only one block
 
 figure()
 plot(Time, MeanTracesppA) % plot Current in pA
@@ -522,29 +582,31 @@ title((name))
 MergeIndRow = MergeInd';
 %MergeIndRow = num2str(MergeIndRow);%how to write each Indentation as col header???
 
-col_header={name,'MeanInd','MeanCurrent','NormMeanCurrent','MeanForce'};     %Row cell array (for column labels)
-%row_header(1:10,1)={'Time'};     %Column cell array (for row labels)
-xlswrite(name,MergeInd,'Sheet1','B2');     %Write data
-xlswrite(name,MeanSameIndCurrent,'Sheet1','C2');     %Write data
-xlswrite(name,NormMeanCurrent,'Sheet1','D2');     %Write data
-xlswrite(name,MeanSameIndForce,'Sheet1','E2');     %Write data
-xlswrite(name,col_header,'Sheet1','A1');     %Write column header
-%xlswrite('My_file.xls',row_header,'Sheet1','A2');      %Write row header
-col_header2={name,'Ind1','Ind2','Ind3','Ind4','Ind5','Ind6','Ind7','Ind8','Ind9','Ind10'}; %ToDO - get the values for the
-%Indentations
-xlswrite(name,MeanTraces,'Sheet2', 'B2');   
-xlswrite(name,col_header2,'Sheet2','B1'); 
+% col_header={name,'MeanInd','MeanCurrent','NormMeanCurrent','MeanForce','TracesPerIndentation'};     %Row cell array (for column labels)
+% %row_header(1:10,1)={'Time'};     %Column cell array (for row labels)
+% xlswrite(name,MergeInd,'Sheet1','B2');     %Write data
+% xlswrite(name,MeanSameIndCurrent,'Sheet1','C2');     %Write data
+% xlswrite(name,NormMeanCurrent,'Sheet1','D2');     %Write data
+% xlswrite(name,MeanSameIndForce,'Sheet1','E2');     %Write data
+% xlswrite(name,TracesPerIndentation,'Sheet1','F2'); 
+% xlswrite(name,col_header,'Sheet1','A1');     %Write column header
+% %xlswrite('My_file.xls',row_header,'Sheet1','A2');      %Write row header
+% col_header2={name,'Ind1','Ind2','Ind3','Ind4','Ind5','Ind6','Ind7','Ind8','Ind9','Ind10','Ind11','Ind12','Ind13','Ind14'}; %ToDO - get the values for the
+% %Indentations
+% xlswrite(name,MeanTraces,'Sheet2', 'B2');   
+% xlswrite(name,col_header2,'Sheet2','B1'); 
 
 %%% write Matlabvariables
-save(sprintf('%s.mat',name)) %save(sprintf('%sTEST.mat',name))
+save(sprintf('%s.mat',name)); %save(sprintf('%sTEST.mat',name))
 
 %%% write as csv, because cannot write with mac to excel
 %testlabel = sprintf('%s-MergeInd',name)
 filename = sprintf('%s.csv',name) ;
 fid = fopen(filename, 'w');
 % how to include the Filenumber?
-fprintf(fid, 'MeanInd, MeanCurrent, NormMeanCurrent, MeanForce \n') %, MergeInd,MeanSameIndCurrent, asdasd, ..\n); %\n means start a new line
-fclose(fid)
+fprintf(fid, 'MeanInd, MeanCurrent, NormMeanCurrent, MeanForce \n'); %, MergeInd,MeanSameIndCurrent, asdasd, ..\n); %\n means start a new line
+fclose(fid);
+%ExportData = [MergeInd,MeanSameIndCurrent,NormMeanCurrent,MeanSameIndForce,TracesPerIndentation];
 ExportData = [MergeInd,MeanSameIndCurrent,NormMeanCurrent,MeanSameIndForce];
 dlmwrite(filename, ExportData, '-append', 'delimiter', '\t'); %Use '\t' to produce tab-delimited files.
 
@@ -552,8 +614,8 @@ filename = sprintf('%sTraces.csv',name) ;
 fid = fopen(filename, 'w');
 %dlmwrite(filename,MergeIndRow,'-append', 'precision', '%.6f','\t')
 % how to include the Filenumber?
-fprintf(fid,'Ind1, Ind2, Ind3, Ind4, Ind5, Ind6, Ind7, Ind8, Ind9,Ind10 \n') %, MergeInd,MeanSameIndCurrent, asdasd, ..\n); %\n means start a new line
-fclose(fid)
+fprintf(fid,'Ind1, Ind2, Ind3, Ind4, Ind5, Ind6, Ind7, Ind8, Ind9,Ind10,Ind11,Ind12,Ind13,Ind14 \n'); %, MergeInd,MeanSameIndCurrent, asdasd, ..\n); %\n means start a new line
+fclose(fid);
 dlmwrite(filename, MeanTraces, '-append', 'delimiter', '\t'); %Use '\t' to produce tab-delimited files.
 
 
