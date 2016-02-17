@@ -39,7 +39,7 @@ close all % closes all figures
 %%% hardcoding part:
 %%% change:  STF0XX, sampling fequency not yet fully automatic %%%%%% 
 
-name = 'STF014'; % name of recording. placed into varaibel fiels names%
+name = 'STF019'; % name of recording. placed into varaibel fiels names%
 stimuli = 'Fivestep';
 Filenumber = 1; % wil be used to extract sampling freuqnecy; first file loaded, maybe change
 
