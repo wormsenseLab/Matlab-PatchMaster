@@ -10,7 +10,6 @@ mechPeaks = cell(length(allCells),1);
 sf = 5; %sampling frequency, in kHz
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
-baseLength = baseTime*sf;
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 
 % Load Excel file with lists (col1 = cell name, col2 = series number,
@@ -44,6 +43,7 @@ mechTracePicks = mechTracePicks(:, [1 2 4]);
 % (this allows a cross-check on the protocol name) before analyzing
 % Values for traces not on the list will be stored as NaN.
 for iCell = 1:length(allCells)
+    
     cellName = allCells{iCell};
     protName = 'WC_Probe';
     allSeries = find(strcmp(protName,ephysData.(cellName).protocols));
@@ -61,7 +61,6 @@ for iCell = 1:length(allCells)
     nSeries = length(allSeries);
     
     for iSeries = 1:nSeries
-        
         % Carry out analysis if this series is on the list
         try pickedTraces = pickedSeries{[pickedSeries{:,1}]==allSeries(iSeries),2};
         catch
@@ -73,39 +72,12 @@ for iCell = 1:length(allCells)
         stimComI = ephysData.(cellName).data{2,allSeries(iSeries)} ./ 0.408;
         nSteps = size(stimComI,2);
         
-        % Initialize arrays as NaNs (can be placed in array). You can
-        % later use nanmean to take the mean while ignoring NaN values.
-        stepSize = NaN(nSteps,1);
-        stepStarts = NaN(nSteps,1);
-        stepEnds = NaN(nSteps,1);
-        leakSubtract = NaN(length(stimComI),nSteps);
-        
-        % Find timepoint in sweep at which probe starts pushing (on) and when it
-        % goes back to neutral position (off).
-        for iStep = 1:nSteps
-            
-            % Analyze only desired traces within this series
-            if any(pickedTraces == iStep)
-                
-                % Figure out timepoints when stimulus command for step
-                % starts and ends
-                stepOn = stimComI(:,iStep) - mean(stimComI(1:10*sf,iStep));
-                stepStart = find(stepOn > stepThresh);
-                stepLength = length(stepStart);
-                if stepLength == 0
-                    continue
-                end
-                stepStarts(iStep) = stepStart(1);
-                stepEnds(iStep) = stepStart(1) + stepLength;
-                stepSize(iStep) = mean(stepOn(stepStarts(iStep)+1:stepEnds(iStep)-1));
-                
-                % Subtract leak/baseline
-                leak = mean(probeI(1:100,iStep));
-                leakSubtract(:,iStep) = probeI(:,iStep) - leak;
-                
-            end
-        end
-        
+        [stepSize, stepStarts, stepEnds] = ...
+            FindSteps(nSteps, stimComI, sf, stepThresh);
+
+        leakSubtract = ...
+            SubtractLeak(nSteps, probeI, sf, 'baselineLength',baseTime);
+
         % Concatenate to the complete list of step sizes and
         % leak-subtracted traces across series for this recording
         allSizes = [allSizes; stepSize];
@@ -114,10 +86,7 @@ for iCell = 1:length(allCells)
         allLeakSub = [allLeakSub; leakSubtract'];
         
     end
-    
-    % Round step size to nearest 0.1 to allow grouping data by step size
-    allSizes = round(allSizes*10)/10;
-    
+       
     % Sort by size and take start/end indices of the data for each size
     [sortedSizes, sortIdx] = sort(allSizes);
     [eachSize,sizeStartIdx,~] = unique(sortedSizes,'first');

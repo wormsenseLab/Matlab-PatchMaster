@@ -3,7 +3,8 @@
 % This function is used to filter out crap recordings or unidentified cells
 % that will not be analyzed, and keep only data for the project(s) of
 % interest. It will match data beginning with the given project prefix, 
-% regardless of the rest of the name.
+% regardless of the rest of the name. It will also put the fields in
+% alpha/numerical order after filtering.
 % 
 % USAGE:
 %   ephysData = FilterProjectData(ephysData, projects)
@@ -29,5 +30,6 @@ for iProj = 1:length(projects)
 end
 
 ephysData = rmfield(ephysData,dataFields(~logical(validProject)));
+ephysData = orderfields(ephysData);
 
 end

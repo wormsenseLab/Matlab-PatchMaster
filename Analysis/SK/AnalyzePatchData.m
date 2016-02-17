@@ -10,7 +10,7 @@
 %this is a test
 
 % Don't forget to run sigTOOL first!
-ephysData = ImportPatchData(ephysData);
+ephysData = ImportPatchData();
 
 % Keep only data with given project prefixes/names.
 projects = {'FAT'};
@@ -22,50 +22,64 @@ clear projects
 
 ephysData = CtAnalysis(ephysData);
 
-%% Temporary: Assign numbers of IVq series to look at
+%% Print list of Rs
 
-% TODO: Read these in from a separate file.
+recs = fieldnames(ephysData);
 
-allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';
-    'FAT029';'FAT030';'FAT031'; 'FAT032'; 'FAT033'; 'FAT034';'FAT035';
-    'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
-    'FAT043';'FAT044'};
+for i=1:length(recs)
+fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).Rs)))
+end
 
+%% Import metadata with info about which IVq protocols to look at
 
-% List which sets of ct_ivqs to use for on cell (row 1)/whole cell (row 2)
+ephysMetaData = ImportMetaData();
+
+%% Assign numbers of IVq series to look at
+
+% Define anonymous function to convert cells from metadata to double arrays
+% for protStart and protRs
+CellToArray = @(x) reshape([x{:}],size(x,1),size(x,2), size(x,3));
+
+% List which sets of ct_ivqs to use for on cell (col 2)/whole cell (col 3)
 % calculations for the above selection of cells. (i.e., if the second  
 % ct_ivq protocol run for that recording was the one you want to use for  
-% whole-cell, put "2" in row 1). Make sure it has three sequential ivq
-% pgfs.
-protStart = [1 1 1 4 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0; ...
-             4 4 4 7 4 7 6 4 4 4 4 4 4 4 4 4 4 4 4 4 4 1];
-         
-% Which Rs value to use for IV Rs correction
-protRs = ceil(protStart(2,:)./3);
-protRs(7) = 3;
-         
+% whole-cell, put "2" in col 2 for that recording). Make sure it has three 
+% sequential ivq pgfs.
+allCells = ephysMetaData(2:end,1);
+
+%TODO: don't assume headers: try/catch it
+protStart = ephysMetaData(2:end,2:3)'; 
+protStart = CellToArray(protStart);
+
+protRs = ephysMetaData(2:end,4)';
+protRs = CellToArray(protRs);
+
+
 for i = 1:length(allCells)
     ephysData.(allCells{i}).protOC = protStart(1,i);
     ephysData.(allCells{i}).protWC = protStart(2,i);    
     ephysData.(allCells{i}).protRs = protRs(i);
 end
-clear i protStart allCells protRs
+clear i protStart protRs CellToArray
 %% Process voltage steps
 
 % allCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT027';'FAT028';'FAT029';'FAT030';'FAT031';'FAT032'};
 % 
 % allIVs = IVAnalysis(ephysData,allCells);
 
-wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031';'FAT033';'FAT034';'FAT035'};
-fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032';
-    'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
-    'FAT043';'FAT044'};
+% wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031';'FAT033';'FAT034';'FAT035'};
+% fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032';
+%     'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
+%     'FAT043';'FAT044'};
+% 
+% testingSplit = IVAnalysis(ephysData,wtCells,fatCells);
+% wtIVs = testingSplit{1};
+% fatIVs = testingSplit{2};
+% 
+% clear testingSplit wtCells fatCells
 
-testingSplit = IVAnalysis(ephysData,wtCells,fatCells);
-wtIVs = testingSplit{1};
-fatIVs = testingSplit{2};
-
-clear testingSplit wtCells fatCells
+allIVs = IVAnalysis(ephysData,allCells);
+allIVs = IVRsCorrection(ephysData,allIVs,allCells);
 
 %% Correct voltage steps based on series resistance and plot as scatter
 
@@ -111,6 +125,18 @@ fatCells = {'FAT036';'FAT038';'FAT042';'FAT043';'FAT044'};
 
 mechPeaksWT = IdAnalysis(ephysData,wtCells);
 mechPeaksFat = IdAnalysis(ephysData,fatCells);
+
+
+%% Look at interstimulus interval
+% allCells = {'FAT059'; 'FAT061';'FAT062';'FAT063'};
+%     
+% ISIs = ISIAnalysis(ephysData,allCells);
+% 
+int1sCells = {'FAT059'; 'FAT061';'FAT062';'FAT063';'FAT064'};
+int3sCells = {'FAT065';'FAT066';'FAT072';'FAT073';'FAT077'};
+
+isi1s = ISIAnalysis(ephysData,int1sCells,'WC_Probe8');
+isi3s = ISIAnalysis(ephysData,int3sCells,'WC_Probe8_3s');
 
 %% Plot single MRC sets
 % Draw stim protocol for MRCs
