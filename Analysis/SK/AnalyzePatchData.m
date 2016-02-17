@@ -10,7 +10,7 @@
 %this is a test
 
 % Don't forget to run sigTOOL first!
-ephysData = ImportPatchData();
+[ephysData,tree] = ImportPatchData();
 
 % Keep only data with given project prefixes/names.
 projects = {'FAT'};
@@ -82,40 +82,41 @@ allIVs = IVAnalysis(ephysData,allCells);
 allIVs = IVRsCorrection(ephysData,allIVs,allCells);
 
 %% Correct voltage steps based on series resistance and plot as scatter
-
-wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031'; 'FAT033';'FAT034';'FAT035'};
-fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032';
-    'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
-    'FAT043'};
-% FAT044 has no OC
-
-wtIVs = IVRsCorrection(ephysData,wtIVs,wtCells);
-fatIVs = IVRsCorrection(ephysData,fatIVs,fatCells);
-
-wtI = [];
-wtV = [];
-fatI = [];
-fatV = [];
-
-for i = 1:length(wtCells)
-    cellName = wtCells{i};
-    wtV = [wtV;wtIVs.(cellName).actualV'];
-    wtI = [wtI;wtIVs.(cellName).meanI'];
-end
-
-for i = 1:length(fatCells)
-    cellName = fatCells{i};
-    fatV = [fatV;fatIVs.(cellName).actualV'];
-    fatI = [fatI;fatIVs.(cellName).meanI'];
-end
-
-figure()
-hold on;
-scatter(wtV*1E3,wtI*1E12);
-scatter(fatV*1E3,fatI*1E12,'d');
-plotfixer;
-% FAT027 and FAT030 are the weird ones
-clear i cellName
+% (OLD, use above cell)
+% 
+% wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031'; 'FAT033';'FAT034';'FAT035'};
+% fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032';
+%     'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
+%     'FAT043'};
+% % FAT044 has no OC
+% 
+% wtIVs = IVRsCorrection(ephysData,wtIVs,wtCells);
+% fatIVs = IVRsCorrection(ephysData,fatIVs,fatCells);
+% 
+% wtI = [];
+% wtV = [];
+% fatI = [];
+% fatV = [];
+% 
+% for i = 1:length(wtCells)
+%     cellName = wtCells{i};
+%     wtV = [wtV;wtIVs.(cellName).actualV'];
+%     wtI = [wtI;wtIVs.(cellName).meanI'];
+% end
+% 
+% for i = 1:length(fatCells)
+%     cellName = fatCells{i};
+%     fatV = [fatV;fatIVs.(cellName).actualV'];
+%     fatI = [fatI;fatIVs.(cellName).meanI'];
+% end
+% 
+% figure()
+% hold on;
+% scatter(wtV*1E3,wtI*1E12);
+% scatter(fatV*1E3,fatI*1E12,'d');
+% plotfixer;
+% % FAT027 and FAT030 are the weird ones
+% clear i cellName
 %% Plot mechanically evoked currents in response to single steps
 % IdAnalysis
 
@@ -138,6 +139,38 @@ int3sCells = {'FAT065';'FAT066';'FAT072';'FAT073';'FAT077'};
 isi1s = ISIAnalysis(ephysData,int1sCells,'WC_Probe8');
 isi3s = ISIAnalysis(ephysData,int3sCells,'WC_Probe8_3s');
 
+for i = 1:5
+    clear a
+    a(1,:)=isi1s{3,i}(1):1:isi1s{3,i}(1)+length(isi1s{1,i})-1;
+    if size(isi1s{3,i},2)>1
+        a(2,:)=isi1s{3,i}(2):1:isi1s{3,i}(2)+length(isi1s{1,i})-1;
+    end
+    tVec1{i}=reshape(a',[],1);
+    iVecOn1{i} = reshape(isi1s{4,i}',[],1);
+    iVecOff1{i} = reshape(isi1s{5,i}',[],1);
+end
+
+for i = 1:5
+    clear a
+    a(1,:)=isi3s{3,i}(1):1:isi3s{3,i}(1)+length(isi3s{1,i})-1;
+    if size(isi3s{3,i},2)>1
+        a(2,:)=isi3s{3,i}(2):1:isi3s{3,i}(2)+length(isi3s{1,i})-1;
+    end
+    tVec3{i}=reshape(a',[],1);
+    iVecOn3{i} = reshape(isi3s{4,i}',[],1);
+    iVecOff3{i} = reshape(isi3s{5,i}',[],1);
+end
+
+figure(); 
+h1s = subplot(1,2,1); hold on;
+h3s = subplot(1,2,2); hold on;
+
+for i=1:5
+    plot(h1s,tVec1{i},iVecOn1{i},'b');
+    plot(h1s,tVec1{i},iVecOff1{i},'r');
+    plot(h3s,tVec3{i},iVecOn3{i},'b');
+    plot(h3s,tVec3{i},iVecOff3{i},'r');    
+end
 %% Plot single MRC sets
 % Draw stim protocol for MRCs
 dt = 0.2; % ms, based on sampling frequency (5kHz in current WC_Probe)
