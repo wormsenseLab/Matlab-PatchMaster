@@ -30,7 +30,7 @@
 %                                      included.
 % 
 % OPTIONAL PARAMETER/VALUE PAIRS:
-%   'baseLength'    double             Length of time in ms at beginning of
+%   'BaseLength'    double             Length of time in ms at beginning of
 %                                      sweep to use as baseline for
 %                                      calculating leak for that sweep. 
 %                                      Default is 30ms.
@@ -57,17 +57,17 @@ p.addRequired('sf', @(x) isnumeric(x) && isscalar(x) && x>0);
 % total sweep number
 p.addOptional('approvedTraces', 1:nSweeps, @(x) isnumeric(x) && max(x)<nSweeps); 
 % default: first 30ms used as baseline to find leak current
-p.addParamValue('baseLength', 30, @(x) isnumeric(x) && isscalar(x) && x>0) 
+p.addParameter('BaseLength', 30, @(x) isnumeric(x) && isscalar(x) && x>0) 
 
-p.parse(nSweeps, stimData, sf, threshold, varargin{:});
+p.parse(nSweeps, data, sf, varargin{:});
 
 approvedTraces = p.Results.approvedTraces;
-baseLength = p.Results.baseLength * sf;
+baseLength = p.Results.BaseLength * sf;
 
 % ANALYSIS
 % Subtract leak for approved traces if a list was given, or for all traces
 % if no list was given. Skipped traces will be left as NaNs.
-leakSubtract = NaN(nSweeps,length(stimComI));
+leakSubtract = NaN(length(data),nSweeps);
 leak = NaN(nSweeps,1);
 
 for iSweep = 1:nSweeps

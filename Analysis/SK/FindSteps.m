@@ -1,4 +1,4 @@
-% FindSteps.m
+% findSteps.m
 % This function takes the stimulus command or other stimulus data for a
 % Patchmaster series, ideally pre-scaled into um, with any bias removed,
 % and locates the start, end, and size of isolated steps within each sweep.
@@ -7,11 +7,11 @@
 % Data for skipped sweeps will be filled with NaNs.
 %
 % EXAMPLE USAGE:
-%   stepSize = FindSteps(nSweeps, stimData, sf, threshold)
+%   stepSize = findSteps(nSweeps, stimData, sf, threshold)
 %   [stepSize, stepStarts, stepEnds] = ...
-%         FindSteps(nSweeps, stimData, sf, threshold, approvedTraces)
+%         findSteps(nSweeps, stimData, sf, threshold, approvedTraces)
 %   [stepSize, stepStarts, stepEnds] = ...
-%         FindSteps(nSweeps, stimData, sf, threshold, ')
+%         findSteps(nSweeps, stimData, sf, threshold, 'param1', 'value1')
 %
 % INPUTS:
 %   nSweeps         scalar double      Total number of sweeps in the series.
@@ -49,7 +49,7 @@
 %
 % Created by Sammy Katta on 19th November, 2015.
 
-function [stepSize, stepStarts, stepEnds] = FindSteps(nSweeps, stimData, sf, threshold, varargin)
+function [stepSize, stepStarts, stepEnds] = findSteps(nSweeps, stimData, sf, threshold, varargin)
 
 % TODO: Make stepSize/Starts/Ends able to deal with multiple steps per
 % sweep.

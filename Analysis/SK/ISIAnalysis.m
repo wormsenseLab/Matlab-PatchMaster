@@ -106,14 +106,14 @@ for iCell = 1:length(allCells)
             % Find time for current to decay to 2/e of the peak or 75ms
             % after the peak, whichever comes first. Use that for fitting
             % the single exponential. Fit the unsmoothed mean trace.
-%             [~,onFitInd] = min(abs(leakSubtract(iStep,pkOnLoc(iStep):75*sf+pkOnLoc(iStep))...
-%                 - (leakSubtract(pkOnLoc(iStep))/(2*exp(1)))));
-%             
-%             onFitTime = onFitInd/sf; % seconds
-%             onT = 0:1/sf:onFitTime;
-%             
-%             onFit = fit(onT',leakSubtract(iStep,pkOnLoc(iStep):pkOnLoc(iStep)+onFitInd)','exp1');
-%             onsetTau(iStep) = -1/onFit.b;
+            [~,onFitInd] = min(abs(leakSubtract(iStep,pkOnLoc(iStep):75*sf+pkOnLoc(iStep))...
+                - (leakSubtract(pkOnLoc(iStep))/(2*exp(1)))));
+            
+            onFitTime = onFitInd/sf; % seconds
+            onT = 0:1/sf:onFitTime;
+            
+            onFit = fit(onT',leakSubtract(iStep,pkOnLoc(iStep):pkOnLoc(iStep)+onFitInd)','exp1');
+            onsetTau(iStep) = -1/onFit.b;
             
         end
         

@@ -210,18 +210,6 @@ toPlot = ephysData.FAT029.data{1,11}(:,6);
 plot(tVec,toPlot/1E-12,'b');
 plotfixer;
 
-%% ISI validation
-
-% Validate that interstimulus interval is long enough for full recovery
-% from stimulus by running a step with the ISI of choice 16-32x. Check to
-% see whether on/off currents amplitude is steady over time.
-allCells = {'FAT032'};
-
-ISIPeaksTest = ISIAnalysis(ephysData,allCells);
-
-figure();
-plot(ISIPeaksTest{1}*1E12);
-plotfixer;
 
 %% Dt 
 allCells = {'FAT032'};
