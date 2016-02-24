@@ -26,6 +26,8 @@ function handles = selectCalibSteps(plotData)
 % BUGS:
 %   Cursor datatips are supposed to keep you updated on which cursor is
 %   which so you don't lose pairing, but they don't update properly.
+% 
+% Created by Sammy Katta on 23 February 2016.
 
 %  Create and then hide the GUI as it is being constructed.
 handles.f = figure('Visible','off','Position',[50,250,600,450]);

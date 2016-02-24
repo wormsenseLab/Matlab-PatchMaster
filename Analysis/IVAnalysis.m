@@ -22,13 +22,9 @@ for iGroup = 1:nGroups
     for iCell = 1:length(groupCells)
         cellName = groupCells{iCell}; %TODO: maybe split into project name and cell numbers when feeding input
         
+        % Find locations of protocols ending in 'IVq'.
         protName = 'IVq';
-        % Flip protName and actual protocol names to compare the last X letters
-        % when looking for IVq, to get all IVqs without regard to OC vs. WC. Be
-        % wary of extra IVqs run separately/not as part of ct_IVq.
-        flippedProts = cellfun(@fliplr, ephysData.(cellName).protocols, ...
-            'UniformOutput', false);
-        protLoc = find(strncmp(fliplr(protName),flippedProts,length(protName)));
+        protLoc = matchProts(ephysData,cellName,protName,'MatchType','last');
         
         % Only run analysis if this recording has IVq protocols
         if protLoc
