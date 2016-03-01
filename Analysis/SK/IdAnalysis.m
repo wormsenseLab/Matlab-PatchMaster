@@ -7,6 +7,7 @@ function mechPeaks = IdAnalysis(ephysData, allCells)
 % keyboard;
 
 mechPeaks = cell(length(allCells),1);
+%TODO: Read in sf from file, per series
 sf = 5; %sampling frequency, in kHz
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
@@ -44,6 +45,7 @@ mechTracePicks = mechTracePicks(:, [1 2 4]);
 % Values for traces not on the list will be stored as NaN.
 for iCell = 1:length(allCells)
     
+    %TODO: figure out how to replace with matchProts
     cellName = allCells{iCell};
     protName = 'WC_Probe';
     allSeries = find(strcmp(protName,ephysData.(cellName).protocols));
@@ -64,7 +66,7 @@ for iCell = 1:length(allCells)
         % Carry out analysis if this series is on the list
         try pickedTraces = pickedSeries{[pickedSeries{:,1}]==allSeries(iSeries),2};
         catch
-            continue
+            continue % if it's not on the list, go on to next series in for loop
         end
         
         probeI = ephysData.(cellName).data{1,allSeries(iSeries)};
@@ -76,7 +78,7 @@ for iCell = 1:length(allCells)
             findSteps(nSteps, stimComI, sf, stepThresh);
 
         leakSubtract = ...
-            SubtractLeak(nSteps, probeI, sf, 'BaseLength', baseTime);
+            SubtractLeak(probeI, sf, 'BaseLength', baseTime);
 
         % Concatenate to the complete list of step sizes and
         % leak-subtracted traces across series for this recording
@@ -129,13 +131,13 @@ for iCell = 1:length(allCells)
         % set peak amplitude as NaN. Calculate decay constant tau based on
         % single exponent fit for onset and offset currents.
 
-        [pkOn(iSize), pkOnLoc(iSize), onsetTau(iSize), pkThresh(iSize), ~] = ...
-            findMRCs(startsBySize(iSize), meansBySize(iSize,:));
+        [pkOn(iSize), pkOnLoc(iSize), pkThresh(iSize), onsetTau(iSize), ~] = ...
+            findMRCs(startsBySize(iSize), meansBySize(iSize,:),sf);
         
         % Find MRC peaks at the offset of the step
         
-        [pkOff(iSize), pkOffLoc(iSize), offsetTau(iSize), pkThresh(iSize), ~] = ...
-            findMRCs(endsBySize(iSize), meansBySize(iSize,:));
+        [pkOff(iSize), pkOffLoc(iSize), pkThresh(iSize), offsetTau(iSize), ~] = ...
+            findMRCs(endsBySize(iSize), meansBySize(iSize,:),sf);
         
         
     end
