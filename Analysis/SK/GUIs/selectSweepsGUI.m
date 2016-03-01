@@ -1,6 +1,7 @@
 %  selectSweepsGUI.m
 %
-%
+% Keyboard shortcuts: x = toggle Exclude All
+%                     Enter = Done
 %
 
 function keepSweep = selectSweepsGUI(data,leakSize)
@@ -11,15 +12,24 @@ nCols = 4;
 % Create uipanel to hold subplots
 %TODO: Add text at bottom w cellname, protname, instructions, finish button
 handles.f = figure('Visible','off', ...
-    'Units','normalized', 'Position', [0.05 0.3 0.9 0.6]);
+    'Units','normalized', 'Position', [0.05 0.3 0.9 0.6],...
+    'WindowKeyPressFcn',@shortcutKey_Press);
 handles.uip = uipanel('Position',[0 0.1 1 0.9]);
 handles.hFinish = uicontrol('Style','pushbutton',...
     'String','Done', 'Units','normalized',...
-    'Position',[0.9 0.025 0.1 0.05],...
+    'Position',[0.85 0.025 0.1 0.05],...
     'Callback',@finishButton_Callback);
+handles.hExclude = uicontrol('Style','togglebutton',...
+    'String','Exclude All','Units','normalized',...
+    'Position',[0.75 0.025 0.1 0.05],...
+    'Callback',@excludeButton_Callback);
 % Find how many sweeps must be plotted, divide up into rows of n plots each
 [~, nSweeps, leak] = size(data);
-nRows = fix(nSweeps/nCols)+1;
+if mod(nSweeps,nCols) == 0
+    nRows = fix(nSweeps/nCols);
+else
+    nRows = fix(nSweeps/nCols)+1;
+end
 
 % Plot the raw traces and the leak subtracted traces for the given sweeps
 %TODO: Plot against time
@@ -70,5 +80,39 @@ uiwait;
         close(handles.f);
     end
 
+    function excludeButton_Callback(hObject,eventdata)
+        button_state = get(hObject,'Value');
+        if button_state == get(hObject,'Max')
+            for i=1:length(handles.plt)
+                set(handles.plt(i),'Color','Red');
+            end
+            keepSweep(:)=false;
+        elseif button_state == get(hObject,'Min')
+            for i=1:length(handles.plt)
+                set(handles.plt(i),'Color','White');
+            end
+            keepSweep(:) = true;
+            
+        end
+        
+    end
+
+
+    function shortcutKey_Press(src,eventdata)
+        switch eventdata.Key
+            case 'return'
+                finishButton_Callback()
+            case 'x'
+                set(handles.hExclude, 'Value', ~handles.hExclude.Value)
+                excludeButton_Callback(handles.hExclude,[]);
+%             case 'escape'
+%                 uiresume;
+%                 error('User terminated');
+        end
+        
+    end
+
+
 end
+
 

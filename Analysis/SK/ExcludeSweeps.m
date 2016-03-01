@@ -2,10 +2,12 @@
 %
 %
 
+% add matchtype to pass through to matchProts?
 % pass channel too?
 function selectedSweeps = ExcludeSweeps(ephysData, allCells, protList)
 
 protLoc = cell(length(allCells),1);
+totSeries = 0;
 
 for iCell = 1:length(allCells)
     protLoc{iCell} = matchProts(ephysData, allCells{iCell}, protList);
@@ -19,13 +21,19 @@ for iCell = 1:length(allCells)
         
         [leakSubtract, leakSize] = SubtractLeak(data,sf);
         data(:,:,2) = leakSubtract;
+        try keepSweeps = selectSweepsGUI(data,leakSize);
+        catch
+            fprintf('Exited on %s series %d',cellName,protLoc{iCell});
+            return;
+        end
         
-        keepSweeps = selectSweepsGUI(data,leakSize);
         
         % Format the list of sweeps into a text string for the Excel sheet
         sweeps = sweeps(keepSweeps);
         
         if ~isempty(sweeps)
+            totSeries = totSeries+1;
+            
             sweepsTxt = num2str(sweeps,'%g,'); % add commas within string
             sweepsTxt = sweepsTxt(1:end-1); % trim last comma
             sweepsTxt = horzcat('''',sweepsTxt); % prepend ' to force xls text format
@@ -33,11 +41,13 @@ for iCell = 1:length(allCells)
             
             % Set up the cell name, series number, and sweep numbers in the
             % right format for outputting to the Excel sheet
-            selectedSweeps{iSeries,1}=cellName;
-            selectedSweeps{iSeries,2}=protLoc{iCell}(iSeries);
-            selectedSweeps{iSeries,3}=sweepsTxt;
+            selectedSweeps{totSeries,1}=cellName;
+            selectedSweeps{totSeries,2}=protLoc{iCell}(iSeries);
+            selectedSweeps{totSeries,3}=sweepsTxt;
         end
+        
     end
+    
     
 end
 
