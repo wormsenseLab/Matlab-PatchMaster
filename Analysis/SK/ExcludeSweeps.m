@@ -2,27 +2,31 @@
 %
 %
 
-% add matchtype to pass through to matchProts?
 % pass channel too?
-function selectedSweeps = ExcludeSweeps(ephysData, allCells, protList)
+%TODO: inputparser for matchtype
+function selectedSweeps = ExcludeSweeps(ephysData, allCells, protList, matchType)
 
 protLoc = cell(length(allCells),1);
 totSeries = 0;
+selectedSweeps = cell(1,3);
+if ~exist('matchType','var')
+    matchType = 'full';
+end
 
 for iCell = 1:length(allCells)
-    protLoc{iCell} = matchProts(ephysData, allCells{iCell}, protList);
-    cellName = allCells{iCell};
+    protLoc{iCell} = matchProts(ephysData, allCells{iCell}, protList, 'matchType', matchType);
+    thisCell = allCells{iCell};
     
-    %TODO: change this to while loop to get Previous button to work (allows
-    %index jumping)
     wSeries = 1;
     while wSeries <= length(protLoc{iCell})
+        thisSeries = protLoc{iCell}(wSeries);
         data = ephysData.(allCells{iCell}).data{1,protLoc{iCell}(wSeries)};
         sf = ephysData.(allCells{iCell}).samplingFreq{protLoc{iCell}(wSeries)}/1000;
         protName = sprintf('%d: %s', wSeries,...
-            ephysData.(allCells{iCell}).protocols{protLoc{iCell}(wSeries)});
+            ephysData.(thisCell).protocols{thisSeries});
         nSweeps = size(data,2);
         sweeps = 1:nSweeps;
+        
         
         % Subtract the leak, and add it as dim 3 behind the raw trace for
         % easy passing to the GUI
@@ -35,19 +39,28 @@ for iCell = 1:length(allCells)
         %TODO: Get -1,0,+1 output for next/previous button and use to
         %modify iSeries. Okay to clear previous selection, or do we need
         %to replay excluded traces?
-        [keepSweeps, goBack] = selectSweepsGUI(data,leakSize,cellName,protName);
-%         catch
-%             fprintf('Exited on %s series %d',cellName,protLoc{iCell});
-%             return;
-%         end
+        [keepSweeps, goBack] = selectSweepsGUI(data,leakSize,thisCell,protName);
+        %         catch
+        %             fprintf('Exited on %s series %d',cellName,protLoc{iCell});
+        %             return;
+        %         end
         
         
         % Format the list of sweeps into a text string for the Excel sheet
         sweeps = sweeps(keepSweeps);
         
         if ~isempty(sweeps)
-            totSeries = totSeries+1;
             
+            
+%TODO: find whether an entry exists for the current series. If so,
+%overwrite it. If not, make a new one (at the end?)
+            %
+%             if ~ismember([selectedSweeps{ismember(selectedSweeps(:,1),thisCell),2}],thisSeries)
+                totSeries = totSeries+1;
+%             else
+%                 totSeries = find(ismember(selectedSweeps(:,1),thisCell) && ismember([selectedSweeps{:,2}],thisSeries));
+%             end
+%             
             sweepsTxt = num2str(sweeps,'%g,'); % add commas within string
             sweepsTxt = sweepsTxt(1:end-1); % trim last comma
             sweepsTxt = horzcat('''',sweepsTxt); % prepend ' to force xls text format
@@ -55,13 +68,18 @@ for iCell = 1:length(allCells)
             
             % Set up the cell name, series number, and sweep numbers in the
             % right format for outputting to the Excel sheet
-            selectedSweeps{totSeries,1}=cellName;
-            selectedSweeps{totSeries,2}=protLoc{iCell}(wSeries);
+            selectedSweeps{totSeries,1}=thisCell;
+            selectedSweeps{totSeries,2}=thisSeries;
             selectedSweeps{totSeries,3}=sweepsTxt;
         end
         
-        if goBack && wSeries > 1
+        % If user has clicked previous button, display the previous series.
+%TODO: Fix this to jump back within wSeries and totSeries and iCell.
+%Luckily, you sillily used totSeries instead of just using end, so now you
+%can make use of that. Hurray!
+        if goBack && totSeries > 1
             wSeries = wSeries-1;
+            
         elseif goBack && wSeries <= 1
             fprintf('On first series, can''t go back.');
         else

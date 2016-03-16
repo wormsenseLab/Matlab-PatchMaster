@@ -7,29 +7,15 @@ function mechPeaks = IdAnalysis(ephysData, allCells)
 % keyboard;
 
 mechPeaks = cell(length(allCells),1);
-%TODO: Read in sf from file, per series
-sf = 5; %sampling frequency, in kHz
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
-[filename, pathname] = uigetfile(...
-    {'*.xls;*.xlsx;*.csv;*.txt', 'All spreadsheets';
-    '*.xls;*.xlsx', 'Excel files';
-    '*.csv', 'Comma-separated value files';
-    '*.txt', 'Tab-delimited text files';
-    '*.*', 'All files'}, ...
-    'Pick spreadsheets with list of files/series to analyze',...
-    'MultiSelect', 'on');
-fName = fullfile(pathname, filename);
-[~,~,mechTracePicks] = xlsread(fName);
-for i = 1:length(mechTracePicks)
-    mechTracePicks{i,4} = str2num([mechTracePicks{i,3}]);
-end
-mechTracePicks = mechTracePicks(:, [1 2 4]);
-
+%CHECK IF WORKING
+mechTracePicks = ImportMetaData();
+mechTracePicks = metaDataConvert(mechTracePicks);
 
 %     allSteps = [];
 %     allOns = [];
@@ -72,6 +58,8 @@ for iCell = 1:length(allCells)
         probeI = ephysData.(cellName).data{1,allSeries(iSeries)};
         % convert command V to um, at 0.408 V/um
         stimComI = ephysData.(cellName).data{2,allSeries(iSeries)} ./ 0.408;
+        % sampling frequency in kHz
+        sf = ephysData.(cellName).samplingFreq{allSeries(iSeries)} ./ 1000; 
         nSteps = size(stimComI,2);
         
         [stepSize, stepStarts, stepEnds] = ...

@@ -20,7 +20,7 @@
 %                                      For absolute size, ensure that the
 %                                      baseline is set at 0.
 %   sf              scalar double      Sampling frequency, in kHz.
-%   threshold
+%   threshold       scalar double      Threshold for finding steps, in um.
 %
 % OUTPUTS:
 %   stepSize       double vector       Vector containing the magnitude of
@@ -46,6 +46,12 @@
 %                                      Default is 300 ms.
 %   'roundedTo'     double             Scale for rounding step size to.
 %                                      Default rounds to the nearest 0.1.
+%   'endTime'       double             Reverses step finding procedure by
+%                                      first finding the end of the step
+%                                      and then subtracting the length of 
+%                                      time (in ms) set by this parameter
+%                                      to find the start of the step.
+%                                      Default is 0, for normal process.
 %
 % Created by Sammy Katta on 19th November, 2015.
 
@@ -71,16 +77,19 @@ p.addRequired('threshold', @(x) isnumeric(x) && isscalar(x) && x>0)
 
 p.addOptional('approvedTraces', 1:nSweeps, @(x) isnumeric(x));
 
-p.addParamValue('nStim', 1, @(x) isnumeric(x) && isscalar(x) && x>0);
-p.addParamValue('minStimInterval',300, @(x) isnumeric(x) && isscalar(x) && x>0);
-p.addParamValue('roundedTo',0.1, @(x) isnumeric(x));
+p.addParameter('nStim', 1, @(x) isnumeric(x) && isscalar(x) && x>0);
+p.addParameter('minStimInterval',300, @(x) isnumeric(x) && isscalar(x) && x>0);
+p.addParameter('roundedTo',0.1, @(x) isnumeric(x));
+p.addParameter('endTime',0, @(x) isnumeric(x) && isscalar(x));
 p.parse(nSweeps, stimData, sf, threshold, varargin{:});
 
 approvedTraces = p.Results.approvedTraces;
 nStim = p.Results.nStim;
 minStimInterval = p.Results.minStimInterval;
 roundedTo = p.Results.roundedTo;
-
+endTime = p.Results.endTime;
+%TODO: make endTime able to be a vector, for different step lengths in each
+%sweep.
 
 % ANALYSIS
 % Find size of step (in um), as well as start and end indices.
@@ -97,17 +106,34 @@ for iSweep = 1:nSweeps
     % Analyze only desired traces within this series
     if any(approvedTraces == iSweep)
         
-        % Figure out timepoints when stimulus command for when step starts
-        % and ends, and get the size in microns.
-        stepOn = stimData(:,iSweep) - mean(stimData(1:10*sf,iSweep));
-        stepStart = find(stepOn > threshold);
-        stepLength = length(stepStart);
-        if stepLength == 0
-            continue
+        if endTime == 0 % For normal step finding
+            % Figure out timepoints when stimulus command for when step starts
+            % and ends, and get the size in microns.
+            stepZero = stimData(:,iSweep) - mean(stimData(1:10*sf,iSweep));
+            stepOn = find(stepZero > threshold);
+            stepLength = length(stepOn);
+            if stepLength == 0
+                continue
+            end
+            stepStarts(iSweep) = stepOn(1);
+            stepEnds(iSweep) = stepOn(1) + stepLength;
+            stepSize(iSweep) = mean(stepZero(stepStarts(iSweep)+1:stepEnds(iSweep)-1));
+            
+        else % Reverse step finding from end of step, given step length.
+             % Useful for ramp on/step off stimuli.
+             
+            % Subtract baseline
+            stepZero = stimData(:,iSweep) - mean(stimData(1:10*sf,iSweep));
+            % Find where step signal is above threshold
+            stepOn = find(stepZero > threshold); 
+            % Calculate step length based on given time
+            stepLength = endTime*sf;
+            
+            stepEnds(iSweep) = stepOn(end)+1; % first point below threshold
+            stepStarts(iSweep) = stepOn(end) - stepLength;
+            stepSize(iSweep) = mean(stepZero(stepStarts(iSweep)+1:stepEnds(iSweep)-1));
         end
-        stepStarts(iSweep) = stepStart(1);
-        stepEnds(iSweep) = stepStart(1) + stepLength;
-        stepSize(iSweep) = mean(stepOn(stepStarts(iSweep)+1:stepEnds(iSweep)-1));
+                
     end
 end
 
