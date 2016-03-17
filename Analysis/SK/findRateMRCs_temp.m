@@ -35,6 +35,9 @@ if ~isempty(peaks)
     fitTime = fitInd/sf; % seconds
     tVec = 0:1/sf:fitTime;
     
+    %traceData is already column in this vs. IdAnalysis input to findMRCs
+    %TODO: On findMRCs merge, check for column and transpose if necessary
+    %(also needed for ISIAnalysis to work properly)
     pkFit = fit(tVec',traceData(pkLoc:pkLoc+fitInd)','exp1');
     tau = -1/pkFit.b;
     

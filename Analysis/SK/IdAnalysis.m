@@ -49,17 +49,19 @@ for iCell = 1:length(allCells)
     nSeries = length(allSeries);
     
     for iSeries = 1:nSeries
+        thisSeries = allSeries(iSeries);
+        
         % Carry out analysis if this series is on the list
-        try pickedTraces = pickedSeries{[pickedSeries{:,1}]==allSeries(iSeries),2};
+        try pickedTraces = pickedSeries{[pickedSeries{:,1}]==thisSeries,2};
         catch
             continue % if it's not on the list, go on to next series in for loop
         end
         
-        probeI = ephysData.(cellName).data{1,allSeries(iSeries)};
+        probeI = ephysData.(cellName).data{1,thisSeries};
         % convert command V to um, at 0.408 V/um
-        stimComI = ephysData.(cellName).data{2,allSeries(iSeries)} ./ 0.408;
+        stimComI = ephysData.(cellName).data{2,thisSeries} ./ 0.408;
         % sampling frequency in kHz
-        sf = ephysData.(cellName).samplingFreq{allSeries(iSeries)} ./ 1000; 
+        sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000; 
         nSteps = size(stimComI,2);
         
         [stepSize, stepStarts, stepEnds] = ...
