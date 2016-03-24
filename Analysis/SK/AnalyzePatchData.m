@@ -10,7 +10,10 @@
 %this is a test
 
 % Don't forget to run sigTOOL first!
-[ephysData,tree] = ImportPatchData();
+% [ephysData,tree] = ImportPatchData();
+% ephysData = ImportPatchData();
+ephysData = ImportPatchData(ephysData);
+
 
 % Keep only data with given project prefixes/names.
 projects = {'FAT'};
@@ -126,6 +129,14 @@ fatCells = {'FAT036';'FAT038';'FAT042';'FAT043';'FAT044'};
 
 mechPeaksWT = IdAnalysis(ephysData,wtCells);
 mechPeaksFat = IdAnalysis(ephysData,fatCells);
+
+
+%% Make list of approved traces (by selecting traces to exclude)
+
+protList = 'DispRate';
+% protList = 'WC_Probe';
+% protList = {'WC_Probe';'DispRate'};
+ExcludeSweeps(ephysData,allCells,protList,'first');
 
 
 %% Look at interstimulus interval
