@@ -133,8 +133,8 @@ mechPeaksFat = IdAnalysis(ephysData,fatCells);
 
 %% Make list of approved traces (by selecting traces to exclude)
 
-protList = 'DispRate';
-% protList = 'WC_Probe';
+% protList = 'DispRate';
+protList = 'WC_Probe';
 % protList = {'WC_Probe';'DispRate'};
 ExcludeSweeps(ephysData,allCells,protList,'first');
 

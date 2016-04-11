@@ -21,6 +21,7 @@ for iCell = 1:length(allCells)
     while wSeries <= length(protLoc{iCell})
         thisSeries = protLoc{iCell}(wSeries);
         data = ephysData.(allCells{iCell}).data{1,protLoc{iCell}(wSeries)};
+        dataType = ephysData.(allCells{iCell}).dataunit{1,protLoc{iCell}(wSeries)};
         sf = ephysData.(allCells{iCell}).samplingFreq{protLoc{iCell}(wSeries)}/1000;
         protName = sprintf('%d: %s', wSeries,...
             ephysData.(thisCell).protocols{thisSeries});
@@ -39,7 +40,7 @@ for iCell = 1:length(allCells)
         %TODO: Get -1,0,+1 output for next/previous button and use to
         %modify iSeries. Okay to clear previous selection, or do we need
         %to replay excluded traces?
-        [keepSweeps, goBack] = selectSweepsGUI(data,leakSize,thisCell,protName);
+        [keepSweeps, goBack] = selectSweepsGUI(data,dataType,leakSize,sf,thisCell,protName);
         %         catch
         %             fprintf('Exited on %s series %d',cellName,protLoc{iCell});
         %             return;
