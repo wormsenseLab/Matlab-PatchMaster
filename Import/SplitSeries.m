@@ -63,7 +63,7 @@ for iGr = 1:length(grLoc)
     grpUnit = cell(6,nSer);
     grpFs = cell(1,nSer);
     grpTimes = cell(1,nSer);
-
+    grpHolds = cell(1,nSer);
     
     % Now let's figure out how many channels each series has and move the
     % corresponding data into our cell array.
@@ -74,7 +74,8 @@ for iGr = 1:length(grLoc)
         grpTimes{1,iSer} = tree{seLoc(serTot),3}.SeTime;
 %         grpTimes{2,iSer} = tree{seLoc(serTot),3}.SeTimeMATLAB;
         grpFs{iSer} = 1/tree{seLoc(serTot)+2,5}.TrXInterval;
-
+        grpHolds{iSer} = tree{seLoc(serTot),3}.SeAmplifierState.E9CCIHold;
+        
         % Start at first trace in a series and move down until you hit a
         % blank to count number of channels/traces (this is not recorded in
         % either sweep or trace metadata, and is necessary for prying apart
@@ -83,6 +84,7 @@ for iGr = 1:length(grLoc)
         nChan = 0;
         chanType = cell(6,1);
         chanUnit = cell(6,1);
+
         
         while isTrace == 1
             if seLoc(serTot)+2+nChan > size(tree,1) ||...
@@ -120,6 +122,7 @@ for iGr = 1:length(grLoc)
     structA.(currGr).dataunit = grpUnit;
     structA.(currGr).samplingFreq = grpFs;
     structA.(currGr).startTimes = grpTimes;
+    structA.(currGr).ccHold = grpHolds;
 
 end
 
