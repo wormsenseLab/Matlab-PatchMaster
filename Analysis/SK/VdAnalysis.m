@@ -2,11 +2,11 @@
 %
 % Created by Sammy Katta on 20-May-2015.
 
-function mechPeaks = IdAnalysis(ephysData, allCells)
+function ccPeaks = VdAnalysis(ephysData, allCells)
 
 % keyboard;
 
-mechPeaks = cell(length(allCells),1);
+ccPeaks = cell(length(allCells),1);
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
@@ -14,8 +14,8 @@ smoothWindow = 5; % n timepoints for moving average window for findPeaks
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
 %CHECK IF WORKING
-mechTracePicks = ImportMetaData();
-mechTracePicks = metaDataConvert(mechTracePicks);
+ccTracePicks = ImportMetaData();
+ccTracePicks = metaDataConvert(ccTracePicks);
 
 %     allSteps = [];
 %     allOns = [];
@@ -33,21 +33,16 @@ for iCell = 1:length(allCells)
     
     %TODO: figure out how to replace with matchProts
     cellName = allCells{iCell};
-    protName = 'WC_Probe';
-    allSeries = find(strcmp(protName,ephysData.(cellName).protocols));
-    protName = 'WC_ProbeLarge';
-    allSeries = [allSeries find(strcmp(protName,ephysData.(cellName).protocols))];
-    protName = 'WC_ProbeSmall';
-    allSeries = [allSeries find(strcmp(protName,ephysData.(cellName).protocols))];
-    pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
+    protName = '_CC';
+    allSeries = matchProts(ephysData,cellName, protName,'MatchType','last');
+    nSeries = length(allSeries);
+    pickedSeries = ccTracePicks(find(strcmp(cellName,ccTracePicks(:,1))),[2,3]);
     
     allSizes = [];
     allLeakSub = [];
     allStarts = [];
     allEnds = [];
-    
-    nSeries = length(allSeries);
-    
+      
     for iSeries = 1:nSeries
         thisSeries = allSeries(iSeries);
         
@@ -66,7 +61,7 @@ for iCell = 1:length(allCells)
         nSteps = size(stimComI,2);
         
         [stepSize, stepStarts, stepEnds] = ...
-            findSteps(nSteps, stimComI, sf, stepThresh);
+            findSteps(nSteps, stimComI, sf, stepThresh, 'roundedTo', 0.5);
 
         leakSubtract = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
@@ -134,7 +129,7 @@ for iCell = 1:length(allCells)
     end
     
     
-    mechPeaks{iCell} = [eachSize(~isnan(eachSize)) pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
+    ccPeaks{iCell} = [eachSize(~isnan(eachSize)) pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
     
     % TODO: Figure out how to fit this to the four-parameter sigmoidal
     % function used in O'Hagan: @(X,a,b,c,d) ((a-d)/(1+((X/c)^b)))+d

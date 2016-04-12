@@ -48,6 +48,7 @@ for iCell = 1:length(allCells)
         %calibration, or allow flag to pick which to use.
         probeI = ephysData.(cellName).data{1,thisSeries}(:,pickedTraces);
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
+        dataType = ephysData.(cellName).dataunit{1,thisSeries}
         leakSubtract = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
         leakSubtractCell = num2cell(leakSubtract',2);

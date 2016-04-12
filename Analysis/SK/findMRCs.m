@@ -2,13 +2,19 @@
 %
 %
 
-function [pk, pkLoc, pkThresh, varargout] = findMRCs(stimStart, traceData,sf)
+function [pk, pkLoc, pkThresh, varargout] = findMRCs(stimStart, traceData, sf, dataType)
 
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 threshTime = 100; % use first n ms of trace for setting noise threshold
 
-% Smooth data with a moving average for peak finding
-smooMean = -smooth(traceData',smoothWindow,'moving');
+% Smooth data with a moving average for peak finding and flip if current
+% trace but not if voltage trace (for peak finding)
+switch dataType
+    case 'A'
+        smooMean = -smooth(traceData',smoothWindow,'moving');
+    case 'V'
+        smooMean = smooth(traceData',smoothWindow,'moving');
+end
 
 % Set threshold based on noise of the first 100ms of the trace
 % (i.e., size of signal needed to be seen above that noise)

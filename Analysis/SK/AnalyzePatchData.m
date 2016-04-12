@@ -134,9 +134,12 @@ mechPeaksFat = IdAnalysis(ephysData,fatCells);
 %% Make list of approved traces (by selecting traces to exclude)
 
 % protList = 'DispRate';
-protList = 'WC_Probe';
+% protList = 'WC_Probe';
 % protList = {'WC_Probe';'DispRate'};
-ExcludeSweeps(ephysData,allCells,protList,'first');
+% ExcludeSweeps(ephysData,allCells,protList,'first');
+
+protList = '_CC';
+ExcludeSweeps(ephysData,allCells,protList,'last');
 
 
 %% Look at interstimulus interval
