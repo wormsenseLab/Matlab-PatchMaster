@@ -9,10 +9,13 @@ nCalibs = 3;
 % Temporarily defining calibration protocol locations, later, auto-detect
 % and associate each with the given ephysData recording rather than just
 % the stepValues variable.
-calibData(:,1) = ephysData.TestCalibrationWorm1.data{3,4};
-calibData(:,2) = ephysData.Worm_B.data{3,11};
-calibData(:,3) = ephysData.Worm_C.data{3,9};
-
+% calibData(:,1) = ephysData.TestCalibrationWorm1.data{3,4};
+% calibData(:,2) = ephysData.Worm_B.data{3,11};
+% calibData(:,3) = ephysData.Worm_C.data{3,9};
+calibData(:,1) = ephysData.PutUnloadCalib.data{3,44};
+% calibData(:,2) = ephysData.PutUnloadCalib.data{3,46};
+calibData(:,2) = ephysData.Calibrated.data{2,11};
+calibData(:,3) = ephysData.Calibrated.data{2,12};
 
 for i = 1:nCalibs
     clear handles;
@@ -34,3 +37,13 @@ for i = 1:nCalibs
         stepValues(i,j) = mean(plotData(stepIdx(j,1):stepIdx(j,2)))';
     end
 end
+
+
+dVec = [0 2.5 5 7.5 10];
+dcmap = [0.4 0.4 0.4; 0.7 0.7 0.7; 1 0 0];
+set(gca, 'ColorOrder', dcmap)
+hold on
+plot(dVec,stepValues)
+
+% Switch x/y to allow feeding in the actual PD data from WC_Probe steps
+interp1(dVecAxial, stepValues(1,:),[0.5 1 1.5 3 5 7 8 9 10 11],'linear','extrap');

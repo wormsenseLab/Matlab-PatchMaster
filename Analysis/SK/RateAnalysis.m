@@ -48,7 +48,7 @@ for iCell = 1:length(allCells)
         %calibration, or allow flag to pick which to use.
         probeI = ephysData.(cellName).data{1,thisSeries}(:,pickedTraces);
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
-        dataType = ephysData.(cellName).dataunit{1,thisSeries}
+        dataType = ephysData.(cellName).dataunit{1,thisSeries};
         leakSubtract = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
         leakSubtractCell = num2cell(leakSubtract',2);
@@ -133,13 +133,13 @@ for iCell = 1:length(allCells)
         %current with the 8um step
         
         [pkOff(iRate), pkOffLoc(iRate), pkThresh(iRate), offsetTau(iRate), ~] = ...
-            findMRCs(offsByRate(iRate), meansByRate{iRate},sf);        
+            findMRCs(offsByRate(iRate), meansByRate{iRate},sf,dataType);        
         
     end
     
     
-    ratePeaks{iCell} = [eachRate(~isnan(eachRate)) pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
-
+    ratePeaks{iCell,1} = [eachRate(~isnan(eachRate)) pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
+    ratePeaks{iCell,2} = meansByRate;
 %     for iSweep = 1:nSweeps
 %         [pkOn(iSweep), pkOnLoc(iSweep), pkThresh(iSweep), onsetTau(iSweep), ~] = ...
 %             findRateMRCs_temp(stimWindow(iSweep,:),leakSubtract(:,iSweep),sf);
