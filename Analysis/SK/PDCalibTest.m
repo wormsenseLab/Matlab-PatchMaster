@@ -46,4 +46,5 @@ hold on
 plot(dVec,stepValues)
 
 % Switch x/y to allow feeding in the actual PD data from WC_Probe steps
-interp1(dVecAxial, stepValues(1,:),[0.5 1 1.5 3 5 7 8 9 10 11],'linear','extrap');
+aDisp = interp1(stepValues(1,:), dVecAxial, aSteps,'linear','extrap');
+bDisp = interp1(stepValues(1,:), dVecAxial, bSteps,'linear','extrap');
