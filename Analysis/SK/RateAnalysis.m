@@ -1,6 +1,15 @@
 % RateAnalysis.m
 %
-%
+% This function 
+% 
+% USAGE:
+% 
+% 
+% INPUTS:
+% 
+% 
+% OUTPUTS:
+% 
 
 function ratePeaks = RateAnalysis(ephysData, allCells, rampStartTime)
 
