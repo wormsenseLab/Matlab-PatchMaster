@@ -19,7 +19,7 @@ wtRateCells = rateCells(strcmp(genotype,'TU2769'));
 wtRatePeaks = ratePeaks(strcmp(genotype,'TU2769'),:);
 fatRateCells = rateCells(strcmp(genotype,'GN381'));
 fatRatePeaks = ratePeaks(strcmp(genotype,'GN381'),:);
-%% Plot
+%% Sort peaks and get means by rate across recordings
 rTest = wtRatePeaks;
 % rTest = fatRatePeaks;
 
@@ -45,7 +45,7 @@ errorbar(eachRate,meansByRate,stErrByRate,'r')
 
 clear rCat rSort rateSortIdx rateStartIdx rateEndIdx iRate nRates rateIdx 
 
-%%
+%% Get recording names for sorted peaks
 
 rTest = wtRatePeaks;
 

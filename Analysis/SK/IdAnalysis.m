@@ -1,4 +1,7 @@
 % IdAnalysis.m
+% 
+% This function 
+% 
 %
 % Created by Sammy Katta on 20-May-2015.
 
@@ -13,41 +16,28 @@ smoothWindow = 5; % n timepoints for moving average window for findPeaks
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
-%CHECK IF WORKING
 mechTracePicks = ImportMetaData();
 mechTracePicks = metaDataConvert(mechTracePicks);
-
-%     allSteps = [];
-%     allOns = [];
-%     allOffs = [];
-%     allOnTaus = [];
-%     allOffTaus = [];
-
-
-
 
 % Find applicable series and check against list of included series/traces
 % (this allows a cross-check on the protocol name) before analyzing
 % Values for traces not on the list will be stored as NaN.
-for iCell = 1:length(allCells)
-    
-    %TODO: figure out how to replace with matchProts
-    cellName = allCells{iCell};
-    protName = 'WC_Probe';
-    allSeries = find(strcmp(protName,ephysData.(cellName).protocols));
-    protName = 'WC_ProbeLarge';
-    allSeries = [allSeries find(strcmp(protName,ephysData.(cellName).protocols))];
-    protName = 'WC_ProbeSmall';
-    allSeries = [allSeries find(strcmp(protName,ephysData.(cellName).protocols))];
-    pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
-    
+for iCell = 1:length(allCells)   
+        
     allSizes = [];
     allLeakSub = [];
     allStarts = [];
     allEnds = [];
     
+    % Given list of all cells, check which are on the approved list and use
+    % those for analysis. Conversely, make sure the cells on the list match
+    % the expected protocol type.
+    cellName = allCells{iCell};
+    allSeries = matchProts(ephysData,cellName,...
+        {'WC_Probe','WC_ProbeLarge','WC_ProbeSmall'},'MatchType','full');
     nSeries = length(allSeries);
-    
+    pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
+       
     for iSeries = 1:nSeries
         thisSeries = allSeries(iSeries);
         

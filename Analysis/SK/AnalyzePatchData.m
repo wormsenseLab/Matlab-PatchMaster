@@ -123,13 +123,16 @@ allIVs = IVRsCorrection(ephysData,allIVs,allCells);
 %% Plot mechanically evoked currents in response to single steps
 % IdAnalysis
 
-wtCells = {'FAT034';'FAT035'};
-fatCells = {'FAT036';'FAT038';'FAT042';'FAT043';'FAT044'};
-% FAT041 has high leak
+% wtCells = {'FAT034';'FAT035'};
+% fatCells = {'FAT036';'FAT038';'FAT042';'FAT043';'FAT044'};
+% % FAT041 has high leak
+% 
+% mechPeaksWT = IdAnalysis(ephysData,wtCells);
+% mechPeaksFat = IdAnalysis(ephysData,fatCells);
 
-mechPeaksWT = IdAnalysis(ephysData,wtCells);
-mechPeaksFat = IdAnalysis(ephysData,fatCells);
-
+mechPeaks = IdAnalysis(ephysData,allCells);
+mechCells = allCells(~cellfun('isempty',mechPeaks(:,1)));
+mechPeaks = mechPeaks(~cellfun('isempty',mechPeaks(:,1)),:);
 
 %% Make list of approved traces (by selecting traces to exclude)
 
