@@ -1,9 +1,38 @@
 % IdAnalysis.m
 % 
-% This function 
+% This function calculates the mean peak current for each step size across
+% a given recording, for making an I-d or I-x curve. Step size is
+% calculated using findSteps with the stimulus command signal. 
 % 
+% Stimulus command voltage to step size conversion is hardcoded for the
+% current setup.
+% 
+% USAGE:
+%   mechPeaks = IdAnalysis(ephysData, allCells)
 %
+% INPUTS:
+%   ephysData       struct          Imported data from ImportPatchData.
+% 
+%   allCells        cell array      List of recording names to analyze. 
+% 
+% PROMPTED INPUTS:
+%   ImportMetaData asks for a metadata file in .xls format containing the
+%   list of traces to analyze in the same format as files output by
+%   ExcludeSweeps(). This will get double-checked against allCells.
+% 
+% OUTPUTS:
+%   mechPeaks       cell array      Nested cell array with a cell for each
+%                                   recording. Columns per recording:
+%                                   [step size (um); peak current at step
+%                                   onset (pA); peak current at offset; 
+%                                   onset tau (ms); offset tau; onset
+%                                   location (sample); offset location]
+%   
+% 
 % Created by Sammy Katta on 20-May-2015.
+
+% TODO: Add flag for using stim com signal vs. PD signal (chan 2 vs chan 3) 
+% TODO: Pull stimCom 0.408 factor out as defined variable
 
 function mechPeaks = IdAnalysis(ephysData, allCells)
 

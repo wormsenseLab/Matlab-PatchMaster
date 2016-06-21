@@ -1,6 +1,35 @@
 % VdAnalysis.m
 %
-% Created by Sammy Katta on 20-May-2015.
+% This function calculates the mean peak potential for each step size across
+% a given recording, for making an V-d or V-x curve. Step size is
+% calculated using findSteps with the stimulus command signal. 
+% 
+% Stimulus command voltage to step size conversion is hardcoded for the
+% current setup.
+% 
+% USAGE:
+%   ccPeaks = VdAnalysis(ephysData, allCells)
+%
+% INPUTS:
+%   ephysData       struct          Imported data from ImportPatchData.
+% 
+%   allCells        cell array      List of recording names to analyze. 
+% 
+% PROMPTED INPUTS:
+%   ImportMetaData asks for a metadata file in .xls format containing the
+%   list of traces to analyze, in the same format as files output by
+%   ExcludeSweeps(). This will get double-checked against allCells.
+% 
+% OUTPUTS:
+%   ccPeaks         cell array      Nested cell array with a cell for each
+%                                   recording. Columns per recording:
+%                                   [step size (um); peak voltage at step
+%                                   onset (mV); peak voltage at offset; 
+%                                   onset tau (ms); offset tau; onset
+%                                   location (sample); offset location]
+%   
+% 
+% Updated by Sammy Katta on 20-June-2016.
 
 function ccPeaks = VdAnalysis(ephysData, allCells)
 
@@ -13,17 +42,9 @@ smoothWindow = 5; % n timepoints for moving average window for findPeaks
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
-%CHECK IF WORKING
+
 ccTracePicks = ImportMetaData();
 ccTracePicks = metaDataConvert(ccTracePicks);
-
-%     allSteps = [];
-%     allOns = [];
-%     allOffs = [];
-%     allOnTaus = [];
-%     allOffTaus = [];
-
-
 
 
 % Find applicable series and check against list of included series/traces
@@ -113,14 +134,14 @@ for iCell = 1:length(allCells)
         end
                 
            
-        % Find MRC peaks if they exist at the onset of the step, otherwise
+        % Find MRP peaks if they exist at the onset of the step, otherwise
         % set peak amplitude as NaN. Calculate decay constant tau based on
         % single exponent fit for onset and offset currents.
 
         [pkOn(iSize), pkOnLoc(iSize), pkThresh(iSize), onsetTau(iSize), ~] = ...
             findMRCs(startsBySize(iSize), meansBySize(iSize,:),sf, dataType);
         
-        % Find MRC peaks at the offset of the step
+        % Find MRP peaks at the offset of the step
         
         [pkOff(iSize), pkOffLoc(iSize), pkThresh(iSize), offsetTau(iSize), ~] = ...
             findMRCs(endsBySize(iSize), meansBySize(iSize,:),sf, dataType);

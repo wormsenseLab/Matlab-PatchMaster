@@ -1,7 +1,37 @@
 % ISIAnalysis.m
 % 
+% This function calculates the mean peak current at onset and offset of a
+% step over a series of identical steps with a given interstimulus
+% interval.
 % 
+% USAGE:
+%   ISIPeaks = ISIAnalysis(ephysData, allCells, protName)
+%
+% INPUTS:
+%   ephysData       struct          Imported data from ImportPatchData.
+% 
+%   allCells        cell array      List of recording names to analyze. 
+% 
+%   protName        char            Name of the pgf to search for.
+% 
+% PROMPTED INPUTS:
+%   ImportMetaData asks for a metadata file in .xls format containing the
+%   list of traces to analyze (in the same format as files output by
+%   ExcludeSweeps). This will get double-checked against allCells.
+% 
+% OUTPUTS:
+%   mechPeaks       cell array      Nested cell array with a cell for each
+%                                   recording. Columns per recording:
+%                                   [step size (um); peak current at step
+%                                   onset (pA); peak current at offset; 
+%                                   onset tau (ms); offset tau; onset
+%                                   location (sample); offset location]
+%   
+% Updated by Sammy Katta on 20th June 2016.
 
+
+% TODO: Use matchProts instead
+% TODO: Use tracePicks list
 function ISIPeaks = ISIAnalysis(ephysData, allCells, protName)
 
 % keyboard;

@@ -60,7 +60,7 @@ switch dataType
     case 'A'
         for iSweep = 1:nSweeps
             % Plot the sweep in its proper subplot against time
-            tVec = 0:1/sf:length(data(:,iSweep,1))-(1/sf);
+            tVec = 0:1/sf:length(data(:,iSweep,1))/sf-(1/sf);
             handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
                 'Parent', handles.uip);
             plot(tVec,data(:,iSweep,1)*1E12);
