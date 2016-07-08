@@ -35,7 +35,8 @@ end
 
 %% Import metadata with info about which IVq protocols to look at
 
-ephysMetaData = ImportMetaData();
+ephysMetaData = ImportMetaData(); %FAT-IV Assignments
+ephysBase = ImportMetaData();  %Recording Database
 
 %% Assign numbers of IVq series to look at
 

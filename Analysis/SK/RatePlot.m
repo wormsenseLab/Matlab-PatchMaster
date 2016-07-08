@@ -1,10 +1,12 @@
 % Run scripts
 
-protList = 'DispRate';
-matchType = 'first';
-rampStartTime = 150; %ms
-
+% protList = 'DispRate';
+% matchType = 'first';
+% 
+% newCells = allCells(71:end);
 % rateSweeps = ExcludeSweeps(ephysData, newCells, protList, matchType);
+
+rampStartTime = 150; %ms
 
 ratePeaks = RateAnalysis(ephysData, allCells, rampStartTime);
 rateCells = allCells(~cellfun('isempty',ratePeaks(:,1)));
@@ -12,13 +14,20 @@ ratePeaks = ratePeaks(~cellfun('isempty',ratePeaks(:,1)),:);
 
 ratePeaks(:,3)=cellfun(@(x,y) repmat(x,size(y,1),1), rateCells, ratePeaks(:,2), 'UniformOutput',0);
 %%
-genotype = ImportMetaData();
-strcmp(genotype(:,1),rateCells)
-genotype=genotype(:,2);
-wtRateCells = rateCells(strcmp(genotype,'TU2769'));
-wtRatePeaks = ratePeaks(strcmp(genotype,'TU2769'),:);
-fatRateCells = rateCells(strcmp(genotype,'GN381'));
-fatRatePeaks = ratePeaks(strcmp(genotype,'GN381'),:);
+
+% ephysBase = ImportMetaData();  %Recording Database
+genotype = cell(length(allCells),2);
+for i=1:length(allCells)
+    genotype(i,1) = allCells(i);
+    genotype(i,2) = ephysBase(strcmp(ephysBase(:,1),allCells(i)),2);    
+end
+wtCells = allCells(strcmp(genotype(:,2),'TU2769'));
+fatCells = allCells(strcmp(genotype(:,2),'GN381'));
+
+wtRateCells = rateCells(ismember(rateCells,wtCells));
+wtRatePeaks = ratePeaks(ismember(rateCells,wtCells));
+fatRateCells = rateCells(ismember(rateCells,fatCells));
+fatRatePeaks = ratePeaks(ismember(rateCells,fatCells));
 %% Sort peaks and get means by rate across recordings
 rTest = wtRatePeaks;
 % rTest = fatRatePeaks;
@@ -44,6 +53,12 @@ end
 errorbar(eachRate,meansByRate,stErrByRate,'r')
 
 clear rCat rSort rateSortIdx rateStartIdx rateEndIdx iRate nRates rateIdx 
+% clear meansByRate stdByRate stErrByRate
+
+%TODO: RateAnalysis is finding slightly different velocities for the same
+%ramps, probably starting when the sampling freq changed. Fix this by
+%matching to a list of expected/commanded rates (but keep the actual
+%values, for x error bars).
 
 %% Get recording names for sorted peaks
 
