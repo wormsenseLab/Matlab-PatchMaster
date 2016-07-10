@@ -31,6 +31,7 @@ for iCell = 1:length(allCells)
     allLeakSub = cell(0);
     allRamps = [];
     allOffs = [];
+    traceIDs = [];
     
     % Given list of all cells, check which are on the approved list and use
     % those for analysis.
@@ -49,7 +50,6 @@ for iCell = 1:length(allCells)
         catch
             continue % if it's not on the list, go on to next series in for loop
         end
-       
         
         stimComI = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces) ./ 0.408;
         %     indentI = -ephysData.(cellName).data{3,thisSeries};
@@ -78,6 +78,7 @@ for iCell = 1:length(allCells)
         allRamps = [allRamps; stimWindow];
         allOffs = [allOffs; stimWindow(:,2)+300]; 
         allLeakSub=[allLeakSub; leakSubtractCell];
+        traceIDs = [traceIDs; repmat(thisSeries,size(pickedTraces))' pickedTraces'];
        
     end
     
@@ -89,6 +90,7 @@ for iCell = 1:length(allCells)
     sortedRamps = allRamps(sortIdx,:);
     sortedOffs = allOffs(sortIdx);
     sortedLeakSub = allLeakSub(sortIdx);
+    sortedIDs = traceIDs(sortIdx,:);
     
     % Use start index for the start and end times, assuming they don't
     % change within a given step size (or whatever grouping you are using;
@@ -105,7 +107,7 @@ for iCell = 1:length(allCells)
     onsetTau = NaN(nRates,1);
     offsetTau = NaN(nRates,1);
     nReps = NaN(nRates,1);
-    
+    theseIDs = cell(nRates,1);
     % Use start and end indices for each step rate to take the mean of the
     % leak-subtracted trace corresponding to that step rate. Then smooth
     % and find peaks near the step times.
@@ -116,6 +118,7 @@ for iCell = 1:length(allCells)
         rateIdx = rateStartIdx(iRate):rateEndIdx(iRate);
         nReps(iRate) = length(rateIdx);
         theseSweeps = sortedLeakSub(rateIdx);
+        theseIDs{iRate} = sortedIDs(rateIdx,:);
         
         % If the same rate came up in multiple protocols, pad the shorter
         % one to fit the longer one with A(numel(B))=0;
@@ -152,6 +155,8 @@ for iCell = 1:length(allCells)
     
     ratePeaks{iCell,1} = [eachRate(~isnan(eachRate)) pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc nReps];
     ratePeaks{iCell,2} = meansByRate;
+    ratePeaks{iCell,3} = repmat(cellName,size(pkOn),1);
+    ratePeaks{iCell,4} = theseIDs;
 %     for iSweep = 1:nSweeps
 %         [pkOn(iSweep), pkOnLoc(iSweep), pkThresh(iSweep), onsetTau(iSweep), ~] = ...
 %             findRateMRCs_temp(stimWindow(iSweep,:),leakSubtract(:,iSweep),sf);

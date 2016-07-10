@@ -20,7 +20,7 @@ sweep = p.Results.sweep;
 
 switch channel
     case 1
-        plot(ephysData.(cellName).data{channel,protocol}(:,1)*1E12);
+        plot(ephysData.(cellName).data{channel,protocol}(:,sweep)*1E12);
     otherwise
         plot(ephysData.(cellName).data{channel,protocol}(:,sweep));
 end

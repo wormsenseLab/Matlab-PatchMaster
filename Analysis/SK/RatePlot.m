@@ -19,7 +19,7 @@ ratePeaks(:,3)=cellfun(@(x,y) repmat(x,size(y,1),1), rateCells, ratePeaks(:,2), 
 genotype = cell(length(allCells),2);
 for i=1:length(allCells)
     genotype(i,1) = allCells(i);
-    genotype(i,2) = ephysBase(strcmp(ephysBase(:,1),allCells(i)),2);    
+    genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),allCells(i)),2);    
 end
 wtCells = allCells(strcmp(genotype(:,2),'TU2769'));
 fatCells = allCells(strcmp(genotype(:,2),'GN381'));
@@ -49,11 +49,11 @@ stdByRate(iRate,1) = nanstd(rSort(rateIdx,3));
 stErrByRate(iRate,1) = sqrt(stdByRate(iRate))/rateCount;
 end
 
-% errorbar(eachRate,meansByRate,stErrByRate)
-errorbar(eachRate,meansByRate,stErrByRate,'r')
+errorbar(eachRate,meansByRate,stErrByRate)
+% errorbar(eachRate,meansByRate,stErrByRate,'r')
 
 clear rCat rSort rateSortIdx rateStartIdx rateEndIdx iRate nRates rateIdx 
-% clear meansByRate stdByRate stErrByRate
+clear meansByRate stdByRate stErrByRate
 
 %TODO: RateAnalysis is finding slightly different velocities for the same
 %ramps, probably starting when the sampling freq changed. Fix this by
