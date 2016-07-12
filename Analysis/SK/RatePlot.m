@@ -12,10 +12,9 @@ ratePeaks = RateAnalysis(ephysData, allCells, rampStartTime);
 rateCells = allCells(~cellfun('isempty',ratePeaks(:,1)));
 ratePeaks = ratePeaks(~cellfun('isempty',ratePeaks(:,1)),:);
 
-ratePeaks(:,3)=cellfun(@(x,y) repmat(x,size(y,1),1), rateCells, ratePeaks(:,2), 'UniformOutput',0);
 %%
 
-% ephysBase = ImportMetaData();  %Recording Database
+% ephysRecordingBase = ImportMetaData();  %Recording Database
 genotype = cell(length(allCells),2);
 for i=1:length(allCells)
     genotype(i,1) = allCells(i);
