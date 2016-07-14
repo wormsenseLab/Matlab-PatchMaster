@@ -18,6 +18,7 @@
 % calibData(:,3) = ephysData.Calibrated.data{2,12};
 
 calibMetaData = ImportMetaData(); %CalibTraces104.xls
+calibTracePicks = metaDataConvert(calibMetaData);
 calibCells = calibMetaData(:,1);
 
 for iCell = 1:4
@@ -29,6 +30,7 @@ for iCell = 5:length(calibCells)
     
 end
 
+%% Select ranges from calibration protocol
 for iCell = 1:length(calibCells)
     clear handles;
     plotData = calibData(:,iCell);
@@ -48,13 +50,16 @@ for iCell = 1:length(calibCells)
     for j = 1:size(stepIdx,1)
         stepValues(iCell,j) = mean(plotData(stepIdx(j,1):stepIdx(j,2)))';
     end
+      
     close;
     
 end
 
-
+%% Split up wt and mutants
 genotype = cell(length(calibCells),2);
 for iCell=1:length(calibCells)
+    stepValues(iCell,:) = stepValues(iCell,:)-stepValues(iCell,1);
+    
     genotype(iCell,1) = calibCells(iCell);
     genotype(iCell,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),calibCells(iCell)),2);    
 end
@@ -64,6 +69,11 @@ fatCalibCells = calibCells(strcmp(genotype(:,2),'GN381'));
 wtStepValues = stepValues(ismember(calibCells,wtCalibCells),:);
 fatStepValues = stepValues(ismember(calibCells,fatCalibCells),:);
 
+
+%% Calculate calibration curve and convert photodiode readings into actual step sizes
+
+%TODO: Have dVec included as input in calibTracePicks (metaDataConvert has
+%been modified to allow it as column 4).
 dVec = [0 2.5 5 7.5 10];
 % dcmap = [0.4 0.4 0.4; 0.7 0.7 0.7; 1 0 0];
 % set(gca, 'ColorOrder', dcmap)
@@ -74,13 +84,12 @@ hold on
 plot(dVecAxial,fatStepValues(1:end,:),'r')
 plotfixer;
 
-calibTracePicks = ImportMetaData();
-calibTracePicks = metaDataConvert(calibTracePicks);
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 
 for iCell = 1:length(calibCells)
    allPDSteady = []; 
    allTraceIDs = []; 
+   allSeriesIDs = [];
    
    cellName = calibCells{iCell};
    calibSteps(:,:,iCell) = ephysData.(cellName).data{1,calibMetaData{iCell,2}}; 
@@ -101,6 +110,8 @@ for iCell = 1:length(calibCells)
        
 %        probeI = ephysData.(cellName).data{1,thisSeries};
        % convert command V to um, at 0.408 V/um
+%TODO: include stimComI and call findSteps and use allSizes to sort rather
+%than traceID, because that won't work if you include Small/Large protocols
        photodiodeV = ephysData.(cellName).data{3,thisSeries};
        % sampling frequency in kHz
        sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
@@ -110,14 +121,16 @@ for iCell = 1:length(calibCells)
        pdChange = SubtractLeak(photodiodeV, sf, 'BaseLength', baseTime);
        allPDSteady = [allPDSteady pdChange(1750:2249,:)];
        allTraceIDs = [allTraceIDs pickedTraces];
+       allSeriesIDs = [allSeriesIDs repmat(thisSeries, length(pickedTraces),1)];
    end
    
-   [sortedSizes, sortIdx] = sort(allTraceIDs);
-   [eachSize,sizeStartIdx,~] = unique(sortedSizes,'first');
-   [~,sizeEndIdx,~] = unique(sortedSizes,'last');
+   [sortedTraceID, sortIdx] = sort(allTraceIDs); % sort by trace number, assuming size is same
+   [eachSize,sizeStartIdx,~] = unique(sortedTraceID,'first');
+   [~,sizeEndIdx,~] = unique(sortedTraceID,'last');
    nSizes = sum(~isnan(eachSize));
    sortedPDSteady = allPDSteady(:,sortIdx);
    sortedPDAverage = mean(sortedPDSteady,1);
+   sortedSeriesID = allSeriesIDs(sortIdx); % combine with sortedTraceID to ID traces used for mean
    
    meansBySize = NaN(nSizes,length(sortedPDSteady));
 
@@ -139,7 +152,7 @@ for iCell = 1:length(calibCells)
 
 end
 
-% Switch x/y to allow feeding in the actual PD data from WC_Probe steps
+%% Interpolate 
 
 wtPDAverages = pdAverage(:,ismember(calibCells,wtCalibCells));
 fatPDAverages = pdAverage(:,ismember(calibCells,fatCalibCells));
@@ -160,6 +173,7 @@ end
 
 end
 
+%% Plot actual step curves
 plot([1 3 5 7 9 11], wtStepCurves,'b');
 hold on
 plot([1 3 5 7 9 11], fatStepCurves,'g');

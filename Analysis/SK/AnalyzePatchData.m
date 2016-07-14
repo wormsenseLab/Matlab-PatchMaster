@@ -131,7 +131,7 @@ allIVs = IVRsCorrection(ephysData,allIVs,allCells);
 % mechPeaksWT = IdAnalysis(ephysData,wtCells);
 % mechPeaksFat = IdAnalysis(ephysData,fatCells);
 
-mechPeaks = IdAnalysis(ephysData,allCells);
+mechPeaks = IdAnalysis(ephysData,allCells,0);
 mechCells = allCells(~cellfun('isempty',mechPeaks(:,1)));
 mechPeaks = mechPeaks(~cellfun('isempty',mechPeaks(:,1)),:);
 

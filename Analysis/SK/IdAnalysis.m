@@ -15,6 +15,13 @@
 % 
 %   allCells        cell array      List of recording names to analyze. 
 % 
+%   calibFlag       logical         Flag specifying whether to use 
+%                                   photodiode calibration and photodiode
+%                                   signal to determine actual step size 
+%                                   for all given cells. 
+%                                   0 = don't use calib, 1 = use calib.
+%                                   (2 = internally set, skip calib for cell).
+% 
 % PROMPTED INPUTS:
 %   ImportMetaData asks for a metadata file in .xls format containing the
 %   list of traces to analyze in the same format as files output by
@@ -34,7 +41,7 @@
 % TODO: Add flag for using stim com signal vs. PD signal (chan 2 vs chan 3) 
 % TODO: Pull stimCom 0.408 factor out as defined variable
 
-function mechPeaks = IdAnalysis(ephysData, allCells)
+function mechPeaks = IdAnalysis(ephysData, allCells, calibFlag)
 
 % keyboard;
 
@@ -54,6 +61,7 @@ mechTracePicks = metaDataConvert(mechTracePicks);
 for iCell = 1:length(allCells)   
         
     allSizes = [];
+    allPDSizes = [];
     allLeakSub = [];
     allStarts = [];
     allEnds = [];
@@ -80,9 +88,31 @@ for iCell = 1:length(allCells)
         % convert command V to um, at 0.408 V/um
         stimComI = ephysData.(cellName).data{2,thisSeries} ./ 0.408;
         % sampling frequency in kHz
-        sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000; 
+        sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
         dataType = ephysData.(cellName).dataunit{1,thisSeries};
         nSteps = size(stimComI,2);
+        
+        % if calibration should be used to calculate step sizes, get photodiode data
+        % and use calib curve to transform photodiodeV trace into
+        % measured displacement trace (then use same findSteps threshold)
+        if calibFlag == 1
+            photodiodeV = ephysData.(cellName).data{3,thisSeries};
+            pdCalib = ephysData.(cellName).calibration;
+            if isempty(photodiodeV)
+                photodiodeV = ephysData.(cellName).data{2,thisSeries};
+            end
+            
+            % Interpolate photodiode voltage to calculate measured disp
+            try measuredDisp = interp1(-photodiodeV, pdCalib(1,:), -pdCalib(2,:), 'linear','extrap');
+            catch
+                disp ('No calibration found for %s', cellName);
+                calibFlag = 2;
+            end
+            [pdStepSize, pdStepStarts, pdStepEnds] = ...
+                findSteps(nSteps, measuredDisp, sf, stepThresh);
+%TODO: Change roundedTo parameter for this use
+%TODO: Check that stepThresh is applicable for measuredDisp as well
+        end
         
         [stepSize, stepStarts, stepEnds] = ...
             findSteps(nSteps, stimComI, sf, stepThresh);
@@ -96,10 +126,15 @@ for iCell = 1:length(allCells)
         allStarts = [allStarts; stepStarts];
         allEnds = [allEnds; stepEnds];
         allLeakSub = [allLeakSub; leakSubtract'];
+        if calibFlag == 1
+            allPDSizes = [allPDSizes; pdStepSize];
+        end
         
     end
-       
-    % Sort by size and take start/end indices of the data for each size
+    
+%START HERE: sort pd sizes and include them in sorted list of traces, as
+%well as peaks output
+    % Sort by commanded size and take start/end indices of the data for each size
     [sortedSizes, sortIdx] = sort(allSizes);
     [eachSize,sizeStartIdx,~] = unique(sortedSizes,'first');
     [~,sizeEndIdx,~] = unique(sortedSizes,'last');
@@ -159,7 +194,11 @@ for iCell = 1:length(allCells)
     % function used in O'Hagan: @(X,a,b,c,d) ((a-d)/(1+((X/c)^b)))+d
     % Using optimtool? fmincon? nlinfit if you add the statistics toolbox.
     
-   
+% reset calibFlag to true if it was unset for a particular cell
+if calibFlag == 2
+    calibFlag = 1;
+end
+    
 end
 
 end
