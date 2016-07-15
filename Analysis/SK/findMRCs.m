@@ -4,7 +4,7 @@
 
 function [pk, pkLoc, pkThresh, varargout] = findMRCs(stimStart, traceData, sf, dataType)
 
-smoothWindow = 5; % n timepoints for moving average window for findPeaks
+smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling
 threshTime = 100; % use first n ms of trace for setting noise threshold
 
 % Smooth data with a moving average for peak finding and flip if current
@@ -24,13 +24,13 @@ pkThresh = 1.5*thselect(smooMean(1:threshTime*sf),'rigrsure');
 % Find MRC peaks if they exist, otherwise set peak amplitude as 0.
 % Calculate decay constant tau based on single exponent fit.
 
-[peaks, peakLocs] = findpeaks(smooMean(stimStart-100:stimStart+100),...
+[peaks, peakLocs] = findpeaks(smooMean(stimStart-(sf*1000/50):stimStart+(sf*1000/50)),...
     'minpeakheight',pkThresh);
 if ~isempty(peaks)
     
     pk = max(peaks)*1E12;
     peakLocs = peakLocs(peaks==max(peaks));
-    pkLoc = peakLocs(1) + stimStart-100; %account for start position
+    pkLoc = peakLocs(1) + stimStart-(sf*1000/50); %account for start position
     
     % Find time for current to decay to 2/e of the peak or 75ms
     % after the peak, whichever comes first. Use that for fitting

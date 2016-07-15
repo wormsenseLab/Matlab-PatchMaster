@@ -127,23 +127,23 @@ allIVs = IVRsCorrection(ephysData,allIVs,allCells);
 % wtCells = {'FAT034';'FAT035'};
 % fatCells = {'FAT036';'FAT038';'FAT042';'FAT043';'FAT044'};
 % % FAT041 has high leak
-% 
-% mechPeaksWT = IdAnalysis(ephysData,wtCells);
-% mechPeaksFat = IdAnalysis(ephysData,fatCells);
+
+mechPeaksWT = IdAnalysis(ephysData,wtCells,1);
+mechPeaksFat = IdAnalysis(ephysData,fatCells,1);
 
 mechPeaks = IdAnalysis(ephysData,allCells,0);
-mechCells = allCells(~cellfun('isempty',mechPeaks(:,1)));
-mechPeaks = mechPeaks(~cellfun('isempty',mechPeaks(:,1)),:);
+mechCellsFat = allCells(~cellfun('isempty',mechPeaksFat(:,1)));
+mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 
 %% Make list of approved traces (by selecting traces to exclude)
 
 % protList = 'DispRate';
-% protList = 'WC_Probe';
+protList = {'WC_Probe'; 'WC_ProbeSmall';'WC_ProbeLarge'};
 % protList = {'WC_Probe';'DispRate'};
-% ExcludeSweeps(ephysData,allCells,protList,'first');
+ExcludeSweeps(ephysData,allCells,1,protList,'full');
 
-protList = '_CC';
-ExcludeSweeps(ephysData,allCells,protList,'last');
+% protList = '_CC';
+% ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
 
 %% Look at interstimulus interval

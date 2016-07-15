@@ -39,13 +39,16 @@
 % Created by Sammy Katta on 20-May-2015.
 
 % TODO: Add flag for using stim com signal vs. PD signal (chan 2 vs chan 3) 
+%   Done, but still uses stim com to group step sizes, and includes PD
+%   trace and calculated sizes (based on calibration if available) in
+%   output
 % TODO: Pull stimCom 0.408 factor out as defined variable
 
 function mechPeaks = IdAnalysis(ephysData, allCells, calibFlag)
 
 % keyboard;
 
-mechPeaks = cell(length(allCells),1);
+mechPeaks = cell(length(allCells),4);
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
@@ -63,9 +66,11 @@ for iCell = 1:length(allCells)
     allSizes = [];
     allPDSizes = [];
     allLeakSub = [];
+    allPDDisp = [];
     allStarts = [];
     allEnds = [];
-    
+    traceIDs = [];
+
     % Given list of all cells, check which are on the approved list and use
     % those for analysis. Conversely, make sure the cells on the list match
     % the expected protocol type.
@@ -84,9 +89,9 @@ for iCell = 1:length(allCells)
             continue % if it's not on the list, go on to next series in for loop
         end
         
-        probeI = ephysData.(cellName).data{1,thisSeries};
+        probeI = ephysData.(cellName).data{1,thisSeries}(:,pickedTraces);
         % convert command V to um, at 0.408 V/um
-        stimComI = ephysData.(cellName).data{2,thisSeries} ./ 0.408;
+        stimComI = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces) ./ 0.408;
         % sampling frequency in kHz
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
         dataType = ephysData.(cellName).dataunit{1,thisSeries};
@@ -96,22 +101,32 @@ for iCell = 1:length(allCells)
         % and use calib curve to transform photodiodeV trace into
         % measured displacement trace (then use same findSteps threshold)
         if calibFlag == 1
-            photodiodeV = ephysData.(cellName).data{3,thisSeries};
-            pdCalib = ephysData.(cellName).calibration;
-            if isempty(photodiodeV)
-                photodiodeV = ephysData.(cellName).data{2,thisSeries};
-            end
-            
-            % Interpolate photodiode voltage to calculate measured disp
-            try measuredDisp = interp1(-photodiodeV, pdCalib(1,:), -pdCalib(2,:), 'linear','extrap');
+            try pdCalib = ephysData.(cellName).calibration;
             catch
-                disp ('No calibration found for %s', cellName);
+                fprintf('No calibration found for %s\n', cellName);
                 calibFlag = 2;
             end
-            [pdStepSize, pdStepStarts, pdStepEnds] = ...
-                findSteps(nSteps, measuredDisp, sf, stepThresh);
-%TODO: Change roundedTo parameter for this use
-%TODO: Check that stepThresh is applicable for measuredDisp as well
+            
+            if calibFlag ==1
+                
+                photodiodeV = ephysData.(cellName).data{3,thisSeries}(:,pickedTraces);
+                
+                if isempty(photodiodeV)
+                    photodiodeV = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces);
+                end
+                
+                
+                % Interpolate photodiode voltage to calculate measured disp
+                try measuredDisp = interp1(-pdCalib(2,:), pdCalib(1,:), -photodiodeV, 'linear','extrap');
+                catch
+                    fprintf('Interpolation failed for %s, series %d\n',cellName,thisSeries);
+                end
+                
+                [pdStepSize, pdStepStarts, pdStepEnds] = ...
+                    findSteps(nSteps, measuredDisp, sf, stepThresh, 'roundedTo', 0.05);
+            end
+            %TODO: Change roundedTo parameter for this use
+            %TODO: Check that stepThresh is applicable for measuredDisp as well
         end
         
         [stepSize, stepStarts, stepEnds] = ...
@@ -128,8 +143,10 @@ for iCell = 1:length(allCells)
         allLeakSub = [allLeakSub; leakSubtract'];
         if calibFlag == 1
             allPDSizes = [allPDSizes; pdStepSize];
+            allPDDisp = [allPDDisp; measuredDisp'];
         end
-        
+        traceIDs = [traceIDs; repmat(thisSeries,size(pickedTraces))' pickedTraces'];
+
     end
     
 %START HERE: sort pd sizes and include them in sorted list of traces, as
@@ -143,6 +160,12 @@ for iCell = 1:length(allCells)
     sortedStarts = allStarts(sortIdx);
     sortedEnds = allEnds(sortIdx);
     sortedLeakSub = allLeakSub(sortIdx,:);
+    sortedIDs = traceIDs(sortIdx,:);
+
+    if calibFlag == 1
+        sortedPDDisp = allPDDisp(sortIdx,:);
+        sortedPDSizes = allPDSizes(sortIdx);
+    end
     
     % TODO: Store nReps as endIdx-StartIdx for each step size
     
@@ -160,18 +183,36 @@ for iCell = 1:length(allCells)
     pkOffLoc = NaN(nSizes,1);
     onsetTau = NaN(nSizes,1);
     offsetTau = NaN(nSizes,1);
+    theseIDs = cell(nSizes,1);
+    
+    if calibFlag == 1
+        meanPDTrace = NaN(nSizes,length(sortedPDDisp));
+        meanPDSize = zeros(nSizes,1);
+    end
     
     % Use start and end indices for each step size to take the mean of the
     % leak-subtracted trace corresponding to that step size. Then smooth
     % and find peaks near the step times.
     for iSize = 1:nSizes
+        sizeIdx = sizeStartIdx(iSize):sizeEndIdx(iSize);
         if sizeEndIdx(iSize)-sizeStartIdx(iSize)>0
-            meansBySize(iSize,:) = mean(sortedLeakSub(sizeStartIdx(iSize):sizeEndIdx(iSize),:));
+            meansBySize(iSize,:) = mean(sortedLeakSub(sizeIdx,:));
+            theseIDs{iSize} = sortedIDs(sizeIdx,:);
+            if calibFlag==1
+                meanPDTrace(iSize,:) = mean(sortedPDDisp(sizeIdx,:));
+                meanPDSize(iSize) = mean(sortedPDSizes(sizeIdx,:));
+            end
+            
         else
-            meansBySize(iSize,:) = sortedLeakSub(sizeStartIdx(iSize):sizeEndIdx(iSize),:);
+            meansBySize(iSize,:) = sortedLeakSub(sizeIdx,:);
+            theseIDs{iSize} = sortedIDs(sizeIdx,:);
+            if calibFlag==1
+                meanPDTrace(iSize,:) = sortedPDDisp(sizeIdx,:);
+                meanPDSize(iSize) = sortedPDSizes(sizeIdx,:);
+            end
         end
-                
-           
+        
+        
         % Find MRC peaks if they exist at the onset of the step, otherwise
         % set peak amplitude as NaN. Calculate decay constant tau based on
         % single exponent fit for onset and offset currents.
@@ -183,13 +224,24 @@ for iCell = 1:length(allCells)
         
         [pkOff(iSize), pkOffLoc(iSize), pkThresh(iSize), offsetTau(iSize), ~] = ...
             findMRCs(endsBySize(iSize), meansBySize(iSize,:),sf, dataType);
-        
-        
+         
     end
     
-    
-    mechPeaks{iCell} = [eachSize(~isnan(eachSize)) pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
-    
+    if calibFlag==1
+        mechPeaks{iCell,1} = [eachSize(~isnan(eachSize)) meanPDSize(~isnan(eachSize)) ...
+            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
+        mechPeaks{iCell,2} = meansBySize;
+        mechPeaks{iCell,3} = meanPDTrace;
+        mechPeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
+        mechPeaks{iCell,5} = theseIDs;
+    else
+        mechPeaks{iCell,1} = ...
+            [eachSize(~isnan(eachSize)) nan(size(eachSize(~isnan(eachSize))))...
+            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
+        mechPeaks{iCell,2} = meansBySize;
+        mechPeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
+        mechPeaks{iCell,5} = theseIDs;
+    end
     % TODO: Figure out how to fit this to the four-parameter sigmoidal
     % function used in O'Hagan: @(X,a,b,c,d) ((a-d)/(1+((X/c)^b)))+d
     % Using optimtool? fmincon? nlinfit if you add the statistics toolbox.
