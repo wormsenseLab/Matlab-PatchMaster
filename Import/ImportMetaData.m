@@ -27,8 +27,8 @@ stripHeader = p.Results.StripHeader;
 
 
 
-[fname, pname] = uigetfile('*.xlsx','Pick Excel file with metadata');
-[~, ~, rawMetaData] = xlsread([pname fname]);
+[fname, pname] = uigetfile('*.xls;*.xlsx','Pick Excel file with metadata');
+[~, ~, rawMetaData] = xlsread(fullfile(pname,fname));
 
 if stripHeader  % if file has unwanted header row, get rid of it.
     rawMetaData = rawMetaData(2:end,:);

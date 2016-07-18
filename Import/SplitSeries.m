@@ -44,7 +44,7 @@ serTot = 1;
 traceTot = 1;
 for iGr = 1:length(grLoc)
     % Strip hyphens/other characters that are invalid in field names
-    currGr = regexprep(tree{grLoc(iGr),2}.GrLabel,'[-/\s]','');
+    currGr = regexprep(tree{grLoc(iGr),2}.GrLabel,'[-/\s\0]','');
     
     % Find number of series in each group but don't get tripped up by the 
     % last group.
@@ -62,6 +62,7 @@ for iGr = 1:length(grLoc)
     grpType = cell(6,nSer);
     grpUnit = cell(6,nSer);
     grpFs = cell(1,nSer);
+    grpTimes = cell(1,nSer);
 
     
     % Now let's figure out how many channels each series has and move the
@@ -70,6 +71,8 @@ for iGr = 1:length(grLoc)
         
         % Name of pgf stim file used in each series
         grpProt{iSer} = tree{seLoc(serTot),3}.SeLabel;
+        grpTimes{1,iSer} = tree{seLoc(serTot),3}.SeTime;
+%         grpTimes{2,iSer} = tree{seLoc(serTot),3}.SeTimeMATLAB;
         grpFs{iSer} = 1/tree{seLoc(serTot)+2,5}.TrXInterval;
 
         % Start at first trace in a series and move down until you hit a
@@ -116,6 +119,7 @@ for iGr = 1:length(grLoc)
     structA.(currGr).channel = grpType;
     structA.(currGr).dataunit = grpUnit;
     structA.(currGr).samplingFreq = grpFs;
+    structA.(currGr).startTimes = grpTimes;
 
 end
 

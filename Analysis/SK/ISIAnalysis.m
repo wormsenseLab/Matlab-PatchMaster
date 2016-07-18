@@ -18,11 +18,13 @@ for iCell = 1:length(allCells)
     allOffs = [];
     
     nSeries = length(allSeries);
+    tStart = zeros(1,nSeries);
     
     for iSeries = 1:nSeries
         probeI = ephysData.(cellName).data{1,allSeries(iSeries)};
         % convert command V to um, at 0.408 V/um for current setup(5-15-15)
         stimComI = ephysData.(cellName).data{2,allSeries(iSeries)} ./ 0.408;
+        tStart(1,iSeries) = ephysData.(cellName).startTimes{allSeries(iSeries)};
         
         nSteps = size(stimComI,2);
         
@@ -77,6 +79,10 @@ for iCell = 1:length(allCells)
             
             
                 %%%%%%%%
+                
+        %TODO: Put the peak finding into a separate function and pass in
+        %the info for stepStart vs stepEnd.
+        
             % Smooth data with a moving average for peak finding
         smooMean = -smooth(leakSubtract(iStep,:)',smoothWindow,'moving');
         % Set threshold based on noise of the first 100ms of the trace
@@ -119,15 +125,15 @@ for iCell = 1:length(allCells)
             pkLoc = pkLoc(pk==max(pk));
             pkOffLoc(iStep) = pkLoc(1) + stepEnd-100;
             
-            [~,offFitInd] = min(abs(leakSubtract(iStep,pkOffLoc(iStep):75*sf+pkOffLoc(iStep))...
-                - (leakSubtract(pkOffLoc(iStep))/(2*exp(1)))));
-            
-            offFitTime = offFitInd/sf; % seconds
-            offT = 0:1/sf:offFitTime;
-            
-            offFit = fit(offT',leakSubtract(iStep,pkOffLoc(iStep):pkOffLoc(iStep)+offFitInd)','exp1');
-            offsetTau(iStep) = -1/offFit.b;
-
+%             [~,offFitInd] = min(abs(leakSubtract(iStep,pkOffLoc(iStep):75*sf+pkOffLoc(iStep))...
+%                 - (leakSubtract(pkOffLoc(iStep))/(2*exp(1)))));
+%             
+%             offFitTime = offFitInd/sf; % seconds
+%             offT = 0:1/sf:offFitTime;
+%             
+%             offFit = fit(offT',leakSubtract(iStep,pkOffLoc(iStep):pkOffLoc(iStep)+offFitInd)','exp1');
+%             offsetTau(iStep) = -1/offFit.b;
+% 
         end
         
     
@@ -148,5 +154,15 @@ for iCell = 1:length(allCells)
     
     ISIPeaks{1,iCell} = allOns;
     ISIPeaks{2,iCell} = allOffs;
+    ISIPeaks{3,iCell} = tStart;
    
+end
+
+% Adjust start times so beginning of first ISI series is time 0.
+ISIPeaks(3,:) = cellfun(@(x) x-x(1),ISIPeaks(3,:),'UniformOutput',0);
+
+% On and off adjusted to zero
+ISIPeaks(4,:) = cellfun(@(x) x-x(1),ISIPeaks(1,:),'UniformOutput',0);
+ISIPeaks(5,:) = cellfun(@(x) x-x(1),ISIPeaks(2,:),'UniformOutput',0);
+
 end
