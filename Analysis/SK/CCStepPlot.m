@@ -1,15 +1,15 @@
-% StepPlot.m
+% CCStepPlot.m
 
 %% Import and divide by genotype
 
-protList = {'WC_Probe','WC_ProbeSmall','WC_ProbeLarge'};
+protList = {'Probe_CC','ProbeS_CC','ProbeL_CC'};
 matchType = 'full';
 ExcludeSweeps(ephysData, allCells, 1, protList, matchType);
 
-stepTracePicks = ImportMetaData(); % AllWCStepsTo104TracePicks.xls
-stepTracePicks = metaDataConvert(stepTracePicks);
-ephysRecordingBase = ImportMetaData(); % RecordingDatabase.xls
-stepCells = unique(stepTracePicks(:,1));
+ccStepTracePicks = ImportMetaData(); % AllWCStepsTo104TracePicks.xls
+ccStepTracePicks = metaDataConvert(ccStepTracePicks);
+% ephysRecordingBase = ImportMetaData(); % RecordingDatabase.xls
+ccStepCells = unique(ccStepTracePicks(:,1));
 
 genotype = cell(length(allCells),2);
 for i=1:length(allCells)
@@ -19,23 +19,23 @@ end
 
 wtCells = allCells(strcmp(genotype(:,2),'TU2769'));
 fatCells = allCells(strcmp(genotype(:,2),'GN381'));
-wtStepCells = stepCells(ismember(stepCells,wtCells));
-fatStepCells = stepCells(ismember(stepCells,fatCells));
+wtCCStepCells = ccStepCells(ismember(ccStepCells,wtCells));
+fatCCStepCells = ccStepCells(ismember(ccStepCells,fatCells));
 
 %% Run IDAnalysis and filter empty results
-mechPeaksWT = IdAnalysis(ephysData,wtStepCells,0);
-mechPeaksFat = IdAnalysis(ephysData,fatStepCells,0);
+ccPeaksWT = VdAnalysis(ephysData,wtCCStepCells,0);
+ccPeaksFat = VdAnalysis(ephysData,fatCCStepCells,0);
 
-mechCellsWT = allCells(~cellfun('isempty',mechPeaksWT(:,1)));
-mechPeaksWT = mechPeaksWT(~cellfun('isempty',mechPeaksWT(:,1)),:);
-mechCellsFat = allCells(~cellfun('isempty',mechPeaksFat(:,1)));
-mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
+mechCellsWT = allCells(~cellfun('isempty',ccPeaksWT(:,1)));
+ccPeaksWT = ccPeaksWT(~cellfun('isempty',ccPeaksWT(:,1)),:);
+mechCellsFat = allCells(~cellfun('isempty',ccPeaksFat(:,1)));
+ccPeaksFat = ccPeaksFat(~cellfun('isempty',ccPeaksFat(:,1)),:);
 
 %% Sort peaks and get means by step size across recordings
 
 %TODO: Modify IDAnalysis to get PDStepSizes with mean/SD for horiz errbars
 
-sTest = mechPeaksWT;
+sTest = ccPeaksWT;
 % sTest = mechPeaksFat;
 
 sCat = vertcat(sTest{:,1});
@@ -63,7 +63,7 @@ clear meansBySize stdBySize stErrBySize
 
 %% Get recording names for sorted peaks
 
-sTest = mechPeaksFat;
+sTest = ccPeaksFat;
 
 sCat = vertcat(sTest{:,1}); 
 sCat(sCat==40000)=20000;
@@ -80,7 +80,7 @@ sSortNameFat = sSortName;
 
 %% Save mechPeaks in format for Igor's I-dCellFits
 
-peaky = mechPeaksWT;
+peaky = ccPeaksWT;
 
 % StepSize FAT1on FAT2on
 nCells = size(peaky,1);

@@ -48,7 +48,7 @@ function mechPeaks = IdAnalysis(ephysData, allCells, calibFlag)
 
 % keyboard;
 
-mechPeaks = cell(length(allCells),4);
+mechPeaks = cell(length(allCells),5);
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
@@ -151,8 +151,7 @@ for iCell = 1:length(allCells)
         end
         traceIDs = [traceIDs; repmat(thisSeries,size(pickedTraces))' pickedTraces'];
 
-    end
-    
+    end    
 
     % Sort by commanded size and take start/end indices of the data for each size
     [sortedSizes, sortIdx] = sort(allSizes);
