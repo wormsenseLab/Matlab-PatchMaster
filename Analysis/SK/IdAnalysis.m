@@ -120,10 +120,14 @@ for iCell = 1:length(allCells)
                 try measuredDisp = interp1(-pdCalib(2,:), pdCalib(1,:), -photodiodeV, 'linear','extrap');
                 catch
                     fprintf('Interpolation failed for %s, series %d\n',cellName,thisSeries);
+                    calibFlag = 2;
                 end
                 
-                [pdStepSize, pdStepStarts, pdStepEnds] = ...
+                try [pdStepSize, pdStepStarts, pdStepEnds] = ...
                     findSteps(nSteps, measuredDisp, sf, stepThresh, 'roundedTo', 0.05);
+                catch
+                end
+                
             end
             %TODO: Change roundedTo parameter for this use
             %TODO: Check that stepThresh is applicable for measuredDisp as well
@@ -149,8 +153,7 @@ for iCell = 1:length(allCells)
 
     end
     
-%START HERE: sort pd sizes and include them in sorted list of traces, as
-%well as peaks output
+
     % Sort by commanded size and take start/end indices of the data for each size
     [sortedSizes, sortIdx] = sort(allSizes);
     [eachSize,sizeStartIdx,~] = unique(sortedSizes,'first');
@@ -195,9 +198,10 @@ for iCell = 1:length(allCells)
     % and find peaks near the step times.
     for iSize = 1:nSizes
         sizeIdx = sizeStartIdx(iSize):sizeEndIdx(iSize);
+        theseIDs{iSize} = sortedIDs(sizeIdx,:);
+        
         if sizeEndIdx(iSize)-sizeStartIdx(iSize)>0
             meansBySize(iSize,:) = mean(sortedLeakSub(sizeIdx,:));
-            theseIDs{iSize} = sortedIDs(sizeIdx,:);
             if calibFlag==1
                 meanPDTrace(iSize,:) = mean(sortedPDDisp(sizeIdx,:));
                 meanPDSize(iSize) = mean(sortedPDSizes(sizeIdx,:));
@@ -205,7 +209,6 @@ for iCell = 1:length(allCells)
             
         else
             meansBySize(iSize,:) = sortedLeakSub(sizeIdx,:);
-            theseIDs{iSize} = sortedIDs(sizeIdx,:);
             if calibFlag==1
                 meanPDTrace(iSize,:) = sortedPDDisp(sizeIdx,:);
                 meanPDSize(iSize) = sortedPDSizes(sizeIdx,:);
@@ -227,6 +230,8 @@ for iCell = 1:length(allCells)
          
     end
     
+    %TODO: Add nReps to output here
+
     if calibFlag==1
         mechPeaks{iCell,1} = [eachSize(~isnan(eachSize)) meanPDSize(~isnan(eachSize)) ...
             pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];

@@ -11,7 +11,7 @@
 % OUTPUTS:
 % 
 
-function ratePeaks = RateAnalysis(ephysData, allCells, rampStartTime)
+function ratePeaks = RateAnalysis(ephysData, allCells, rampStartTime, calibFlag)
 
 % Initialize output cells and intermediate vectors, and set constants
 ratePeaks = cell(length(allCells),1);
@@ -32,6 +32,9 @@ for iCell = 1:length(allCells)
     allRamps = [];
     allOffs = [];
     traceIDs = [];
+    allPDDisp = [];
+    allPDSizes = [];
+
     
     % Given list of all cells, check which are on the approved list and use
     % those for analysis.
@@ -62,6 +65,7 @@ for iCell = 1:length(allCells)
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
         leakSubtractCell = num2cell(leakSubtract',2);
         
+        % find ramp rates
         nSweeps = size(stimComI,2);
         stimWindow = nan(nSweeps, 2);
         
@@ -71,15 +75,60 @@ for iCell = 1:length(allCells)
         stimWindow(stimWindow(:,2) - stimWindow(:,1) == 0,2) = ...
             stimWindow(stimWindow(:,2) - stimWindow(:,1) == 0,2) + 1; % if ramp is actually step, make sure duration is at least 1 timepoint
         rampRate = stimSize ./ ((stimWindow(:,2)-stimWindow(:,1))/(sf*1000)); % rate in um/s
-         
+
+        
+        % if calibration should be used to calculate ramp rates, get photodiode data
+        % and use calib curve to transform photodiodeV trace into
+        % measured displacement trace (then use same findSteps threshold)
+        if calibFlag == 1
+            try pdCalib = ephysData.(cellName).calibration;
+            catch
+                fprintf('No calibration found for %s\n', cellName);
+                calibFlag = 2;
+            end
+            
+            if calibFlag ==1
+                
+                photodiodeV = ephysData.(cellName).data{3,thisSeries}(:,pickedTraces);
+                
+                if isempty(photodiodeV)
+                    photodiodeV = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces);
+                end
+                
+                
+                % Interpolate photodiode voltage to calculate measured disp
+                try measuredDisp = interp1(-pdCalib(2,:), pdCalib(1,:), -photodiodeV, 'linear','extrap');
+                catch
+                    fprintf('Interpolation failed for %s, series %d\n',cellName,thisSeries);
+                end
+                
+                pdStimWindow = nan(nSweeps, 2);
+                
+                pdRampThresh = 1.5*thselect(photodiodeV(1:threshTime*sf),'rigrsure');
+                pdStimWindow(1:end,1) = rampStartTime*sf;
+                [stimSize,pdStimWindow(:,2)] = findSteps(nSweeps,photodiodeV,sf,pdRampThresh,'endTime',300);
+                pdStimWindow(pdStimWindow(:,2) - pdStimWindow(:,1) == 0,2) = ...
+                    pdStimWindow(pdStimWindow(:,2) - pdStimWindow(:,1) == 0,2) + 1; % if ramp is actually step, make sure duration is at least 1 timepoint
+                pdRampRate = stimSize ./ ((pdStimWindow(:,2)-pdStimWindow(:,1))/(sf*1000)); % rate in um/s
+                
+            end
+            %TODO: Change roundedTo parameter for this use
+            %TODO: Check that stepThresh is applicable for measuredDisp as well
+        end
+                 
         % Concatenate to the complete list of step sizes and
         % leak-subtracted traces across series for this recording
         allRates = [allRates; rampRate];
         allRamps = [allRamps; stimWindow];
-        allOffs = [allOffs; stimWindow(:,2)+300]; 
-        allLeakSub=[allLeakSub; leakSubtractCell];
+        allOffs = [allOffs; stimWindow(:,2)+sf*300]; % step off is 300ms after end of ramp
+        allLeakSub=[allLeakSub; leakSubtractCell];       
+        if calibFlag ==1
+            allPDRates = [allPDRates; pdRampRate];
+            allPDRamps = [allPDRamps; pdStimWindow];
+            allPDDisp = [allPDDisp, measuredDisp'];
+        end
         traceIDs = [traceIDs; repmat(thisSeries,size(pickedTraces))' pickedTraces'];
-       
+        
     end
     
     [sortedRates, sortIdx] = sort(allRates); 
@@ -91,6 +140,12 @@ for iCell = 1:length(allCells)
     sortedOffs = allOffs(sortIdx);
     sortedLeakSub = allLeakSub(sortIdx);
     sortedIDs = traceIDs(sortIdx,:);
+    
+    if calibFlag == 1
+        sortedPDDisp = allPDDisp(sortIdx,:);
+        sortedPDRates = allPDRates(sortIdx);
+        sortedPDRamps = allPDRamps(sortIdx);
+    end
     
     % Use start index for the start and end times, assuming they don't
     % change within a given step size (or whatever grouping you are using;
@@ -108,10 +163,15 @@ for iCell = 1:length(allCells)
     offsetTau = NaN(nRates,1);
     nReps = NaN(nRates,1);
     theseIDs = cell(nRates,1);
+    
+    if calibFlag == 1
+        meanPDTrace = NaN(nRates,length(sortedPDDisp));
+        meanPDRate = zeros(nRates,1);
+        meanPDRamp = zeros(nRates,1);
+    end
     % Use start and end indices for each step rate to take the mean of the
     % leak-subtracted trace corresponding to that step rate. Then smooth
     % and find peaks near the step times.
-    %TODO: Add nReps to output here
     
 
     for iRate = 1:nRates
@@ -131,8 +191,19 @@ for iCell = 1:length(allCells)
                 theseSweeps=cellfun(@(x)cat(2,x,nan(1,maxLength-length(x))),theseSweeps,'UniformOutput',false);
                 meansByRate{iRate} = nanmean(cell2mat(theseSweeps));
             end
+            if calibFlag==1
+                meanPDTrace(iRate,:) = mean(sortedPDDisp(rateIdx,:));
+                meanPDRate(iRate) = mean(sortedPDRates(rateIdx,:));
+                meanPDRamp(iRate) = mean(sortedPDRamps(rateIdx,:));
+            end
+            
         else
             meansByRate{iRate} = cell2mat(sortedLeakSub(rateStartIdx(iRate):rateEndIdx(iRate),:));
+            if calibFlag==1
+                meanPDTrace(iRate,:) = sortedPDDisp(rateIdx,:);
+                meanPDRate(iRate) = sortedPDRates(rateIdx,:);
+                meanPDRamp(iRate) = sortedPDRamps(rateIdx,:);
+            end
         end
                 
            
@@ -141,7 +212,7 @@ for iCell = 1:length(allCells)
         % single exponent fit for onset and offset currents.
 
         [pkOn(iRate), pkOnLoc(iRate), pkThresh(iRate), onsetTau(iRate), ~] = ...
-            findRateMRCs_temp(rampsByRate(iRate,:), meansByRate{iRate},sf);
+            findRampMRCs(rampsByRate(iRate,:), meansByRate{iRate},sf);
         
         % Find MRC peaks at the offset of the step
         %TODO: check if this is working properly - should always have off
@@ -152,14 +223,25 @@ for iCell = 1:length(allCells)
         
     end
     
+    if calibFlag ==1
+        ratePeaks{iCell,1} = [eachRate(~isnan(eachRate)) meanPDRate(~isnan(eachRate))...
+            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc meanPDRamp(~isnan(eachRate)) nReps];
+        ratePeaks{iCell,2} = meansByRate;
+        ratePeaks{iCell,3} = meanPDTrace;
+        ratePeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
+        ratePeaks{iCell,5} = theseIDs;
+    else
+        ratePeaks{iCell,1} = [eachRate(~isnan(eachRate)) nan(size(eachRate(~isnan(eachRate)))) ...
+            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc nan(size(eachRate(~isnan(eachRate)))) nReps];
+        ratePeaks{iCell,2} = meansByRate;
+        ratePeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
+        ratePeaks{iCell,5} = theseIDs;
+    end
+        
     
-    ratePeaks{iCell,1} = [eachRate(~isnan(eachRate)) pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc nReps];
-    ratePeaks{iCell,2} = meansByRate;
-    ratePeaks{iCell,3} = repmat(cellName,size(pkOn),1);
-    ratePeaks{iCell,4} = theseIDs;
 %     for iSweep = 1:nSweeps
 %         [pkOn(iSweep), pkOnLoc(iSweep), pkThresh(iSweep), onsetTau(iSweep), ~] = ...
-%             findRateMRCs_temp(stimWindow(iSweep,:),leakSubtract(:,iSweep),sf);
+%             findRampMRCs(stimWindow(iSweep,:),leakSubtract(:,iSweep),sf);
 %         
 %     end
     

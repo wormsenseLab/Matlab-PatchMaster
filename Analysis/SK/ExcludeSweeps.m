@@ -1,8 +1,8 @@
 % ExcludeSweeps.m
 %
+% selectedSweeps = ExcludeSweeps(ephysData, allCells, channel, protList, matchType)
 % 
 % 
-% pass channel too?
 %TODO: inputparser for matchtype
 function selectedSweeps = ExcludeSweeps(ephysData, allCells, channel, protList, matchType)
 

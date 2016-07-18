@@ -1,10 +1,9 @@
 % Run scripts
 
-% protList = 'DispRate';
-% matchType = 'first';
-% 
-% newCells = allCells(71:end);
-% rateSweeps = ExcludeSweeps(ephysData, newCells, protList, matchType);
+protList = 'DispRate';
+matchType = 'first';
+
+rateSweeps = ExcludeSweeps(ephysData, allCells, protList, matchType);
 
 rampStartTime = 150; %ms
 
@@ -18,7 +17,7 @@ ratePeaks = ratePeaks(~cellfun('isempty',ratePeaks(:,1)),:);
 genotype = cell(length(allCells),2);
 for i=1:length(allCells)
     genotype(i,1) = allCells(i);
-    genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),allCells(i)),2);    
+    genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,2),allCells(i)),3);    
 end
 wtCells = allCells(strcmp(genotype(:,2),'TU2769'));
 fatCells = allCells(strcmp(genotype(:,2),'GN381'));
@@ -69,7 +68,7 @@ rCat(rCat==40000)=20000;
 rSort = rCat(rateSortIdx,:);
 
 rCatTrace = vertcat(rTest{:,2});
-rCatName = vertcat(rTest{:,3});
+rCatName = vertcat(rTest{:,4});
 maxSize = max(cellfun(@numel,rCatTrace));
 catFcn = @(x) [x nan(1,maxSize-numel(x))];
 rMatTrace = cellfun(catFcn,rCatTrace,'UniformOutput',false);

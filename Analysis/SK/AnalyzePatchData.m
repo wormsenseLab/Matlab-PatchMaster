@@ -28,15 +28,23 @@ ephysData = CtAnalysis(ephysData);
 %% Print list of Rs
 
 recs = fieldnames(ephysData);
+resists = nan(length(recs),2);
 
 for i=1:length(recs)
-fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).Rs)))
+try fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).Rs(ephysData.(recs{i}).protRs))))
+catch
+    continue
+end
+
+resists(i,1) = ephysData.(recs{i}).C(ephysData.(recs{i}).protRs);
+resists(i,2) = ephysData.(recs{i}).Rs(ephysData.(recs{i}).protRs);
+
 end
 
 %% Import metadata with info about which IVq protocols to look at
 
 ephysMetaData = ImportMetaData(); %FAT-IV Assignments
-ephysBase = ImportMetaData();  %Recording Database
+ephysRecordingBase = ImportMetaData();  %Recording Database
 
 %% Assign numbers of IVq series to look at
 
@@ -85,42 +93,50 @@ clear i protStart protRs CellToArray
 allIVs = IVAnalysis(ephysData,allCells);
 allIVs = IVRsCorrection(ephysData,allIVs,allCells);
 
-%% Correct voltage steps based on series resistance and plot as scatter
-% (OLD, use above cell)
-% 
-% wtCells = {'FAT020';'FAT021';'FAT022';'FAT025';'FAT031'; 'FAT033';'FAT034';'FAT035'};
-% fatCells = {'FAT027';'FAT028';'FAT029'; 'FAT030'; 'FAT032';
-%     'FAT036';'FAT037';'FAT038';'FAT039';'FAT040';'FAT041';'FAT042';
-%     'FAT043'};
-% % FAT044 has no OC
-% 
-% wtIVs = IVRsCorrection(ephysData,wtIVs,wtCells);
-% fatIVs = IVRsCorrection(ephysData,fatIVs,fatCells);
-% 
-% wtI = [];
-% wtV = [];
-% fatI = [];
-% fatV = [];
-% 
-% for i = 1:length(wtCells)
-%     cellName = wtCells{i};
-%     wtV = [wtV;wtIVs.(cellName).actualV'];
-%     wtI = [wtI;wtIVs.(cellName).meanI'];
-% end
-% 
-% for i = 1:length(fatCells)
-%     cellName = fatCells{i};
-%     fatV = [fatV;fatIVs.(cellName).actualV'];
-%     fatI = [fatI;fatIVs.(cellName).meanI'];
-% end
-% 
-% figure()
-% hold on;
-% scatter(wtV*1E3,wtI*1E12);
-% scatter(fatV*1E3,fatI*1E12,'d');
-% plotfixer;
-% % FAT027 and FAT030 are the weird ones
-% clear i cellName
+allI = nan(1050,12,length(allCells));
+allV = nan(12,length(allCells));
+whichCells = false(length(allCells),1);
+for i = 1:length(allCells)
+   try allI(:,:,i) = allIVs.(allCells{i}).capCorrIV;
+   catch
+       continue
+   end
+   try allV(:,i) = allIVs.(allCells{i}).actualV;
+   catch 
+       continue
+   end
+   whichCells(i) = true;
+end
+ivCells = allCells(whichCells);
+
+genotype = cell(length(ivCells),2);
+for i=1:length(ivCells)
+genotype(i,1) = ivCells(i);
+genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),ivCells(i)),2);
+end
+wtCells = ivCells(strcmp(genotype(:,2),'TU2769'));
+fatCells = ivCells(strcmp(genotype(:,2),'GN381'));
+
+wtI = allI(:,:,ismember(ivCells,wtCells));
+fatI = allI(:,:,ismember(ivCells,fatCells));
+wtV = allV(:,ismember(ivCells,wtCells));
+fatV = allV(:,ismember(ivCells,fatCells));
+
+wtIsteady = squeeze(mean(wtI(350:550,:,:)));
+fatIsteady = squeeze(mean(fatI(350:550,:,:)));
+
+meanwtI = nanmean(wtIsteady,2);
+meanwtV = nanmean(wtV,2);
+steWTI = nanstd(wtIsteady,0,2)./sqrt(sum(~isnan(wtIsteady(1,:))));
+steWTV = nanstd(wtV,0,2)./sqrt(sum(~isnan(wtV(1,:))));
+
+meanfatI = nanmean(fatIsteady,2);
+meanfatV = nanmean(fatV,2);
+steFatI = nanstd(fatIsteady,0,2)./sqrt(size(fatIsteady,2));
+steFatV = nanstd(fatV,0,2)./sqrt(size(fatV,2));
+
+% wtIVs = rmfield(allIVs, allCells(~ismember(allCells,wtCells)));
+% fatIVs = rmfield(allIVs, allCells(~ismember(allCells,fatCells)));
 %% Plot mechanically evoked currents in response to single steps
 % IdAnalysis
 
@@ -131,7 +147,9 @@ allIVs = IVRsCorrection(ephysData,allIVs,allCells);
 mechPeaksWT = IdAnalysis(ephysData,wtCells,1);
 mechPeaksFat = IdAnalysis(ephysData,fatCells,1);
 
-mechPeaks = IdAnalysis(ephysData,allCells,0);
+% mechPeaks = IdAnalysis(ephysData,allCells,0);
+mechCellsWT = allCells(~cellfun('isempty',mechPeaksWT(:,1)));
+mechPeaksWT = mechPeaksWT(~cellfun('isempty',mechPeaksWT(:,1)),:);
 mechCellsFat = allCells(~cellfun('isempty',mechPeaksFat(:,1)));
 mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 

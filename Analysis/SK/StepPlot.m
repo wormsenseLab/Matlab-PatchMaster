@@ -1,6 +1,11 @@
 % StepPlot.m
 
 %% Import and divide by genotype
+
+protList = {'WC_Probe','WC_ProbeSmall','WC_ProbeLarge'};
+matchType = 'full';
+ExcludeSweeps(ephysData, allCells, 1, protList, matchType);
+
 stepTracePicks = ImportMetaData(); % AllWCStepsTo104TracePicks.xls
 stepTracePicks = metaDataConvert(stepTracePicks);
 ephysRecordingBase = ImportMetaData(); % RecordingDatabase.xls
@@ -9,7 +14,7 @@ stepCells = unique(stepTracePicks(:,1));
 genotype = cell(length(allCells),2);
 for i=1:length(allCells)
     genotype(i,1) = allCells(i);
-    genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),allCells(i)),2);    
+    genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,2),allCells(i)),3);    
 end
 
 wtCells = allCells(strcmp(genotype(:,2),'TU2769'));
@@ -18,8 +23,8 @@ wtStepCells = stepCells(ismember(stepCells,wtCells));
 fatStepCells = stepCells(ismember(stepCells,fatCells));
 
 %% Run IDAnalysis and filter empty results
-mechPeaksWT = IdAnalysis(ephysData,wtStepCells,1);
-mechPeaksFat = IdAnalysis(ephysData,fatStepCells,1);
+mechPeaksWT = IdAnalysis(ephysData,wtStepCells,0);
+mechPeaksFat = IdAnalysis(ephysData,fatStepCells,0);
 
 mechCellsWT = allCells(~cellfun('isempty',mechPeaksWT(:,1)));
 mechPeaksWT = mechPeaksWT(~cellfun('isempty',mechPeaksWT(:,1)),:);
@@ -30,11 +35,10 @@ mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 
 %TODO: Modify IDAnalysis to get PDStepSizes with mean/SD for horiz errbars
 
-% sTest = mechPeaksWT;
-sTest = mechPeaksFat;
+sTest = mechPeaksWT;
+% sTest = mechPeaksFat;
 
 sCat = vertcat(sTest{:,1});
-sCat(sCat==40000)=20000;
 [~,sizeSortIdx] = sort(sCat(:,1));
 sSort = sCat(sizeSortIdx,:);
 
@@ -52,14 +56,14 @@ end
 
 
 % errorbar(eachSize,meansBySize,stErrBySize)
-errorbar(eachSize,meansBySize,stErrBySize,'r')
+% errorbar(eachSize,meansBySize,stErrBySize,'r')
 
 clear sCat  sizeSortIdx sizeStartIdx sizeEndIdx iSize nSizes sizeIdx 
 clear meansBySize stdBySize stErrBySize
 
 %% Get recording names for sorted peaks
 
-sTest = mechPeaksWT;
+sTest = mechPeaksFat;
 
 sCat = vertcat(sTest{:,1}); 
 sCat(sCat==40000)=20000;
@@ -67,10 +71,9 @@ sCat(sCat==40000)=20000;
 sSort = sCat(sizeSortIdx,:);
 
 sCatTrace = vertcat(sTest{:,2});
-sCatName = vertcat(sTest{:,3});
-maxSize = max(cellfun(@numel,sCatTrace));
-catFcn = @(x) [x nan(1,maxSize-numel(x))];
-sMatTrace = cellfun(catFcn,sCatTrace,'UniformOutput',false);
-sMatTrace = vertcat(sMatTrace{:});
-sSortTrace = sMatTrace(sizeSortIdx,:);
+sCatName = vertcat(sTest{:,4});
+sSortTrace = sCatTrace(sizeSortIdx,:);
 sSortName = sCatName(sizeSortIdx,:);
+
+sSortTraceFat = sSortTrace;
+sSortNameFat = sSortName;

@@ -1,11 +1,20 @@
-% findMRCs.m
+% findRamp.m
 %
-%
+% Uses stimWindow instead of stimStart to allow for ramp peak-finding
 
-function [pk, pkLoc, pkThresh, varargout] = findRateMRCs_temp(stimWindow, traceData,sf)
+function [pk, pkLoc, pkThresh, varargout] = findRampMRCs(stimWindow, traceData,sf)
 
-smoothWindow = sf/1000; % n timepoints for moving average window for findPeaks
+smoothWindow = sf; % n timepoints for moving average window for findPeaks (sf = 1ms worth)
 threshTime = 100; % use first n ms of trace for setting noise threshold
+
+switch sf
+    case 5
+        artifactOffset = sf*2;
+    case 10
+        artifactOffset = 0;
+    otherwise
+        artifactOffset = sf;
+end
 
 % Smooth data with a moving average for peak finding
 smooMean = -smooth(traceData',smoothWindow,'moving');
@@ -18,13 +27,15 @@ pkThresh = 1.5*thselect(smooMean(1:threshTime*sf),'rigrsure');
 % Find MRC peaks if they exist, otherwise set peak amplitude as 0.
 % Calculate decay constant tau based on single exponent fit.
 
-[peaks, peakLocs] = findpeaks(smooMean(stimWindow(1)-(sf/100):stimWindow(2)+(sf/100)),...
-    'minpeakheight',pkThresh);
+%NEXT: Can this buffer change between rates? Does it need to? Or will the
+%fastest time be enough?
+[peaks, peakLocs] = findpeaks(smooMean(stimWindow(1)+artifactOffset:stimWindow(2)+(sf*20)),...
+    'minpeakheight',pkThresh); %allows ramp, unlike findMRCs
 if ~isempty(peaks)
     
     pk = max(peaks)*1E12;
     peakLocs = peakLocs(peaks==max(peaks));
-    pkLoc = peakLocs(1) + stimWindow(1)-sf(100); %account for start position
+    pkLoc = peakLocs(1) + stimWindow(1)+artifactOffset; %account for start position
     
     % Find time for current to decay to 2/e of the peak or 75ms
     % after the peak, whichever comes first. Use that for fitting
