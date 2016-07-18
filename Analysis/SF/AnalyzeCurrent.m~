@@ -18,7 +18,6 @@ end
             for i = 1:size(Aall,2);
     Start(i) = find([ActuSensor(:,i)] > StartBase(i),1, 'first'); %% find cell, where 1st value is bigger than threshold; Onset On-Stimulus 
     EndeRamp(i)= StartOffBelow(i)-(0.300/interval); % Time= Points*interval
-    
             end
 else
     disp 'Remember: only calculates length of Ramp correctly (needed for Fitting), if Plateau phase is 500 ms'  

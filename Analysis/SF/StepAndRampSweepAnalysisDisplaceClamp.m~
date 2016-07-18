@@ -54,7 +54,7 @@ close all; clc
 %%% hardcoding part:
 %%% change:  STF0XX, sampling fequency not yet fully automatic %%%%%% 
 
-name = 'SKS014'; % name of recording. placed into varaibel fiels names%
+name = 'SKS008'; % name of recording. placed into varaibel fiels names%
 stimuli = 'FiveRampHold'; % Single protocols: Step and Ramp-Hold; Five sweeps per protocol:FiveStep, FiveRampHold; does not work with alternative names
 Filenumber = 1; % wil be used to extract sampling freuqnecy; first file loaded, maybe change
 
@@ -430,8 +430,7 @@ ThirdRec = str2num(IndValues{3});
 if isempty(FirstRec) == 1
     break
 else
- cftool(Indentation(Start(FirstRec)+SecondRec:Start(FirstRec)+LengthRamp(FirstRec)+ThirdRec,FirstRec),Force(Start(FirstRec)+SecondRec:Start(FirstRec)+LengthRamp(FirstRec)+ThirdRec,FirstRec));   
-%cftool(Indentation(Start(FirstRec)+SecondRec:Start(FirstRec)+LengthRamp(FirstRec)+ThirdRec,i),Force(Start(FirstRec)+SecondRec:Start(FirstRec)+LengthRamp(FirstRec)+ThirdRec,FirstRec),i);
+cftool(Indentation(Start(FirstRec)+SecondRec:Start(FirstRec)+LengthRamp(FirstRec)+ThirdRec,i),Force(Start(FirstRec)+SecondRec:Start(FirstRec)+LengthRamp(FirstRec)+ThirdRec,FirstRec));
 end
   end
  else
@@ -483,7 +482,6 @@ MeanSameIndCurrent=[];
 MeanSameIndForce=[];
 NumberTracesPerInd=[];
 MeanSameVelIndentation=[];
-
 
 if isFiveStep == 1 || isStep == 1;
     disp 'Step Round and sort'
@@ -538,9 +536,6 @@ end
 MeanTracesIndentation = MeanTracesIndentation'
 else
     disp 'Ramp Round and Sort';
-    
- Velocity=Velocity';
- StiffnessRamp = StiffnessRamp';
    % RoundMeanInd = round(Velocity,1);   
 [SortVel sorted_index] = sort(Velocity); % get index of mean Velocity
 SortCurrent = AvgMaxCurrentMinusNew(sorted_index);
@@ -623,7 +618,7 @@ else
 MeanSameVelIndentation = MeanSameVelIndentation';
 VelocityVer = Velocity';
 %MeanSameVelStiffnessRamp = MeanSameVelStiffnessRamp'
-MeanSameVelStiffnessRampVer = MeanSameVelStiffnessRamp'
+%MeanSameVelStiffnessRampVer = MeanSameVelStiffnessRamp'
 StiffnessRampVer = StiffnessRamp';
 %MergeVel!!!
 end
@@ -858,7 +853,7 @@ ExportMeanDataMechanics = [MeanIndentationVer,MeanForceVer];
 
 else
 %ExportData = [MergeVel,MeanSameVelIndentation,MeanSameIndCurrent,NormMeanCurrent,MeanSameIndForce];  %MeanSameIndCurrent means here: current at same velocities
-ExportMeanSameVelDataMechanics = [MergeVel,MeanSameVelStiffnessRampVer,MeanSameVelIndentation];
+ExportMeanSameVelDataMechanics = [MergeVel,MeanSameVelStiffnessRamp,MeanSameVelIndentation];
 ExportMeanDataMechanics = [VelocityVer,StiffnessRampVer,MeanIndentationVer,MeanForceVer];
 end
 
