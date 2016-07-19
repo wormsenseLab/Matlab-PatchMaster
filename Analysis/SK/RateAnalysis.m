@@ -10,6 +10,8 @@
 % 
 % OUTPUTS:
 % 
+% 
+% TODO: Flag rounding to nearest expected rate value
 
 function ratePeaks = RateAnalysis(ephysData, allCells, rampStartTime, calibFlag)
 
@@ -17,7 +19,7 @@ function ratePeaks = RateAnalysis(ephysData, allCells, rampStartTime, calibFlag)
 ratePeaks = cell(length(allCells),1);
 threshTime = 30; % use first n ms of trace for setting noise threshold
 baseTime = 30; % use first n ms for baseline for subtracting leak
-% rampStartTime = 150; % step command start time in ms
+rateTargets = [8 12.8 64 80 107 320 800 2585 3815 5720 8000 20000 40000];
 
 % Import list of approved sweeps for each recording+series. Can be output
 % from ExcludeSweeps().
@@ -56,8 +58,6 @@ for iCell = 1:length(allCells)
         
         stimComI = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces) ./ 0.408;
         %     indentI = -ephysData.(cellName).data{3,thisSeries};
-        %TODO: use PD signal instead once you have it converted to um with
-        %calibration, or allow flag to pick which to use.
         probeI = ephysData.(cellName).data{1,thisSeries}(:,pickedTraces);
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
         dataType = ephysData.(cellName).dataunit{1,thisSeries};
@@ -71,11 +71,11 @@ for iCell = 1:length(allCells)
         
         rampThresh = 1.5*thselect(stimComI(1:threshTime*sf),'rigrsure');
         stimWindow(1:end,1) = rampStartTime*sf;
-        [stimSize,stimWindow(:,2)] = findSteps(nSweeps,stimComI,sf,rampThresh,'endTime',300);
+        [stimSize,stimWindow(:,2)] = findSteps(nSweeps,stimComI,sf,rampThresh,'endTime',300,'roundedTo',0.2);
         stimWindow(stimWindow(:,2) - stimWindow(:,1) == 0,2) = ...
             stimWindow(stimWindow(:,2) - stimWindow(:,1) == 0,2) + 1; % if ramp is actually step, make sure duration is at least 1 timepoint
         rampRate = stimSize ./ ((stimWindow(:,2)-stimWindow(:,1))/(sf*1000)); % rate in um/s
-
+        rampRate = interp1(rateTargets, rateTargets, rampRate, 'next'); % round to nearest assigned value
         
         % if calibration should be used to calculate ramp rates, get photodiode data
         % and use calib curve to transform photodiodeV trace into

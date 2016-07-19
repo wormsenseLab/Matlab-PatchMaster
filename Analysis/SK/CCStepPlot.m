@@ -2,6 +2,10 @@
 
 %% Import and divide by genotype
 
+%use filtCells instead of allCells to run ExcludeSweeps
+% rsFiltCells = ephysRecordingBase([ephysRecordingBase{2:89,20}]'==1,2)
+% filtCells = allCells(ismember(allCells,rsFiltCells))
+
 protList = {'Probe_CC','ProbeS_CC','ProbeL_CC'};
 matchType = 'full';
 ExcludeSweeps(ephysData, allCells, 1, protList, matchType);
@@ -26,9 +30,9 @@ fatCCStepCells = ccStepCells(ismember(ccStepCells,fatCells));
 ccPeaksWT = VdAnalysis(ephysData,wtCCStepCells,0);
 ccPeaksFat = VdAnalysis(ephysData,fatCCStepCells,0);
 
-mechCellsWT = allCells(~cellfun('isempty',ccPeaksWT(:,1)));
+ccCellsWT = allCells(~cellfun('isempty',ccPeaksWT(:,1)));
 ccPeaksWT = ccPeaksWT(~cellfun('isempty',ccPeaksWT(:,1)),:);
-mechCellsFat = allCells(~cellfun('isempty',ccPeaksFat(:,1)));
+ccCellsFat = allCells(~cellfun('isempty',ccPeaksFat(:,1)));
 ccPeaksFat = ccPeaksFat(~cellfun('isempty',ccPeaksFat(:,1)),:);
 
 %% Sort peaks and get means by step size across recordings
@@ -36,47 +40,49 @@ ccPeaksFat = ccPeaksFat(~cellfun('isempty',ccPeaksFat(:,1)),:);
 %TODO: Modify IDAnalysis to get PDStepSizes with mean/SD for horiz errbars
 
 sTest = ccPeaksWT;
-% sTest = mechPeaksFat;
+% sTest = ccPeaksFat;
 
-sCat = vertcat(sTest{:,1});
-[~,sizeSortIdx] = sort(sCat(:,1));
-sSort = sCat(sizeSortIdx,:);
+sCCCat = vertcat(sTest{:,1});
+[~,sizeSortIdx] = sort(sCCCat(:,1));
+sCCSort = sCCCat(sizeSortIdx,:);
 
-[eachSize,sizeStartIdx,~] = unique(sSort(:,1),'first');
-[~,sizeEndIdx,~] = unique(sSort(:,1),'last');
+[eachSize,sizeStartIdx,~] = unique(sCCSort(:,1),'first');
+[~,sizeEndIdx,~] = unique(sCCSort(:,1),'last');
 nSizes = sum(~isnan(eachSize));
 
 for iSize = 1:nSizes
 sizeIdx = sizeStartIdx(iSize):sizeEndIdx(iSize);
 sizeCount = sizeEndIdx(iSize)-sizeStartIdx(iSize)+1;
-meansBySize(iSize,1) = nanmean(sSort(sizeIdx,3));
-stdBySize(iSize,1) = nanstd(sSort(sizeIdx,3));
+meansBySize(iSize,1) = nanmean(sCCSort(sizeIdx,3));
+stdBySize(iSize,1) = nanstd(sCCSort(sizeIdx,3));
 stErrBySize(iSize,1) = sqrt(stdBySize(iSize))/sizeCount;
 end
 
+sCCSortWT = sCCSort;
 
 % errorbar(eachSize,meansBySize,stErrBySize)
 % errorbar(eachSize,meansBySize,stErrBySize,'r')
 
-clear sCat  sizeSortIdx sizeStartIdx sizeEndIdx iSize nSizes sizeIdx 
+
+clear sCat sSort sizeSortIdx sizeStartIdx sizeEndIdx iSize nSizes sizeIdx 
 clear meansBySize stdBySize stErrBySize
 
 %% Get recording names for sorted peaks
 
 sTest = ccPeaksFat;
 
-sCat = vertcat(sTest{:,1}); 
-sCat(sCat==40000)=20000;
-[~,sizeSortIdx] = sort(sCat(:,1));
-sSort = sCat(sizeSortIdx,:);
+sCCCat = vertcat(sTest{:,1}); 
+sCCCat(sCCCat==40000)=20000;
+[~,sizeSortIdx] = sort(sCCCat(:,1));
+sCCSort = sCCCat(sizeSortIdx,:);
 
-sCatTrace = vertcat(sTest{:,2});
-sCatName = vertcat(sTest{:,4});
-sSortTrace = sCatTrace(sizeSortIdx,:);
-sSortName = sCatName(sizeSortIdx,:);
+sCCCatTrace = vertcat(sTest{:,2});
+sCCCatName = vertcat(sTest{:,4});
+sCCSortTrace = sCCCatTrace(sizeSortIdx,:);
+sCCSortName = sCCCatName(sizeSortIdx,:);
 
-sSortTraceFat = sSortTrace;
-sSortNameFat = sSortName;
+sCCSortTraceFat = sCCSortTrace;
+sCCSortNameFat = sCCSortName;
 
 %% Save mechPeaks in format for Igor's I-dCellFits
 
@@ -102,47 +108,51 @@ for i = 1:nCells
     colNames {i+1} = peaky{i,4}(1,:);
 end
 
-wtOnToIgor = onToIgor;
-wtOffToIgor = offToIgor;
-wtColsToIgor = colNames;
+wtCCOnToIgor = onToIgor;
+wtCCOffToIgor = offToIgor;
+wtCCColsToIgor = colNames;
 
 %% Save toIgors as delimited text
 
 % copy headers into Excel and save each as csv
-% wtColsToIgor(2:end) = cellfun(@(x) horzcat(x,' on'), wtColsToIgor(2:end),'UniformOutput',0);
-% wtColsToIgor(2:end) = cellfun(@(x) strrep(x,'on','off'), wtColsToIgor(2:end),'UniformOutput',0);
-% fatColsToIgor(2:end) = cellfun(@(x) horzcat(x,' on'), fatColsToIgor(2:end),'UniformOutput',0);
-% fatColsToIgor(2:end) = cellfun(@(x) strrep(x,'on','off'), fatColsToIgor(2:end),'UniformOutput',0);
+wtCCColsToIgor(2:end) = cellfun(@(x) horzcat(x,' on'), wtCCColsToIgor(2:end),'UniformOutput',0);
+wtCCColsToIgor(2:end) = cellfun(@(x) strrep(x,'on','off'), wtCCColsToIgor(2:end),'UniformOutput',0);
+fatCCColsToIgor(2:end) = cellfun(@(x) horzcat(x,' on'), fatCCColsToIgor(2:end),'UniformOutput',0);
+fatCCColsToIgor(2:end) = cellfun(@(x) strrep(x,'on','off'), fatCCColsToIgor(2:end),'UniformOutput',0);
 
 % then for each, append data
-dlmwrite('PatchData/IgorFatOffs.csv',fatOffToIgor,'-append')
+dlmwrite('PatchData/IgorCCWtOns.csv',wtCCOnToIgor,'-append')
+dlmwrite('PatchData/IgorCCWtOffs.csv',wtCCOffToIgor,'-append')
+dlmwrite('PatchData/IgorCCFatOns.csv',fatCCOnToIgor,'-append')
+dlmwrite('PatchData/IgorCCFatOffs.csv',fatCCOffToIgor,'-append')
 
 %% Normalize from igor sigmoid fits
 % cols = WtOnMax, WtOnXHalf, WtOnRate, WtOffMax, WtOffXHalf, WtOffRate
 
-for i = 1:size(wtStats,1)
-    wtOnNorm(:,i) = wtOnToIgor(:,i+1)/wtStats(i,1);
+for i = 1:size(wtCCStats,1)
+    wtCCOnNorm(:,i) = wtCCOnToIgor(:,i+1)/wtCCStats(i,1);
 end
 
-for i = 1:size(wtStats,1)
-    wtOffNorm(:,i) = wtOffToIgor(:,i+1)/wtStats(i,4);
+for i = 1:size(wtCCStats,1)
+    wtCCOffNorm(:,i) = wtCCOffToIgor(:,i+1)/wtCCStats(i,2);
 end
 
-for i = 1:size(fatStats,1)
-    fatOnNorm(:,i) = fatOnToIgor(:,i+1)/fatStats(i,1);
+for i = 1:size(fatCCStats,1)
+    fatCCOnNorm(:,i) = fatCCOnToIgor(:,i+1)/fatCCStats(i,1);
 end
 
-for i = 1:size(fatStats,1)
-    fatOffNorm(:,i) = fatOffToIgor(:,i+1)/fatStats(i,4);
+for i = 1:size(fatCCStats,1)
+    fatCCOffNorm(:,i) = fatCCOffToIgor(:,i+1)/fatCCStats(i,2);
 end
-% 
-% wtColsToIgor(2:end) = cellfun(@(x) horzcat(x,' on'), wtColsToIgor(2:end),'UniformOutput',0);
-% wtColsToIgor(2:end) = cellfun(@(x) strrep(x,'on','off'), wtColsToIgor(2:end),'UniformOutput',0);
-% fatColsToIgor(2:end) = cellfun(@(x) horzcat(x,' on'), fatColsToIgor(2:end),'UniformOutput',0);
-% fatColsToIgor(2:end) = cellfun(@(x) strrep(x,'on','off'), fatColsToIgor(2:end),'UniformOutput',0);
 
-dlmwrite('PatchData/IgorWtOnNorms.csv',wtOnNorm,'-append')
-dlmwrite('PatchData/IgorWtOffNorms.csv',wtOffNorm,'-append')
-dlmwrite('PatchData/IgorFatOnNorms.csv',fatOnNorm,'-append')
-dlmwrite('PatchData/IgorFatOffNorms.csv',fatOffNorm,'-append')
+wtCCColsToIgor(2:end) = cellfun(@(x) strrep(x,'off','on Norm'), wtCCColsToIgor(2:end),'UniformOutput',0);
+wtCCColsToIgor(2:end) = cellfun(@(x) strrep(x,'on','off'), wtCCColsToIgor(2:end),'UniformOutput',0);
+
+fatCCColsToIgor(2:end) = cellfun(@(x) strrep(x,'off','on Norm'), fatCCColsToIgor(2:end),'UniformOutput',0);
+fatCCColsToIgor(2:end) = cellfun(@(x) strrep(x,'on','off'), fatCCColsToIgor(2:end),'UniformOutput',0);
+
+dlmwrite('PatchData/IgorCCWtOnNorms.csv',wtCCOnNorm,'-append')
+dlmwrite('PatchData/IgorCCWtOffNorms.csv',wtCCOffNorm,'-append')
+dlmwrite('PatchData/IgorCCFatOnNorms.csv',fatCCOnNorm,'-append')
+dlmwrite('PatchData/IgorCCFatOffNorms.csv',fatCCOffNorm,'-append')
 

@@ -42,7 +42,12 @@ pkThresh = 1.5*thselect(smooMean(1:threshTime*sf),'rigrsure');
     'minpeakheight',pkThresh);
 if ~isempty(peaks)
     
-    pk = max(peaks)*1E12;
+    switch dataType
+        case 'A'
+            pk = max(peaks)*1E12; %pA
+        case 'V'
+            pk = max(peaks)*1E3; %mV
+    end
     peakLocs = peakLocs(peaks==max(peaks));
     pkLoc = peakLocs(1) + stimStart+artifactOffset; %account for start position
     

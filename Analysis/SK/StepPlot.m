@@ -2,6 +2,10 @@
 
 %% Import and divide by genotype
 
+%use filtCells instead of allCells to run ExcludeSweeps
+% rsFiltCells = ephysRecordingBase([ephysRecordingBase{2:89,20}]'==1,2)
+% filtCells = allCells(ismember(allCells,rsFiltCells))
+
 protList = {'WC_Probe','WC_ProbeSmall','WC_ProbeLarge'};
 matchType = 'full';
 ExcludeSweeps(ephysData, allCells, 1, protList, matchType);

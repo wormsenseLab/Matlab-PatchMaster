@@ -122,15 +122,17 @@ for iSweep = 1:nSweeps
         else % Reverse step finding from end of step, given step length.
              % Useful for ramp on/step off stimuli.
              
-            % Subtract baseline
+            % Subtract baseline from plateau
             stepZero = stimData(:,iSweep) - mean(stimData(1:10*sf,iSweep));
             % Find where step signal is above threshold
             stepOn = find(stepZero > threshold); 
+            plateauZero = stimData(:,iSweep)-mean(stimData(stepOn(end)-10*sf:stepOn(end)-sf));
+            stepOff = find(plateauZero > -threshold);
             % Calculate step length based on given time
             stepLength = endTime*sf;
             
-            stepEnds(iSweep) = stepOn(end)+1; % first point below threshold
-            stepStarts(iSweep) = stepOn(end) - stepLength;
+            stepEnds(iSweep) = stepOff(end); % first point below threshold
+            stepStarts(iSweep) = stepOff(end) - stepLength;
             stepSize(iSweep) = mean(stepZero(stepStarts(iSweep)+1:stepEnds(iSweep)-1));
         end
                 
