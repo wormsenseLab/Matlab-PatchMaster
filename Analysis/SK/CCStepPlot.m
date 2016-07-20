@@ -39,8 +39,8 @@ ccPeaksFat = ccPeaksFat(~cellfun('isempty',ccPeaksFat(:,1)),:);
 
 %TODO: Modify IDAnalysis to get PDStepSizes with mean/SD for horiz errbars
 
-sTest = ccPeaksWT;
-% sTest = ccPeaksFat;
+% sTest = ccPeaksWT;
+sTest = ccPeaksFat;
 
 sCCCat = vertcat(sTest{:,1});
 [~,sizeSortIdx] = sort(sCCCat(:,1));
@@ -58,7 +58,7 @@ stdBySize(iSize,1) = nanstd(sCCSort(sizeIdx,3));
 stErrBySize(iSize,1) = sqrt(stdBySize(iSize))/sizeCount;
 end
 
-sCCSortWT = sCCSort;
+sCCSortFat = sCCSort;
 
 % errorbar(eachSize,meansBySize,stErrBySize)
 % errorbar(eachSize,meansBySize,stErrBySize,'r')

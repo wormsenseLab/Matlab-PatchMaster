@@ -57,6 +57,7 @@ for iCell = 1:length(allCells)
     allStarts = [];
     allEnds = [];
     traceIDs = [];
+    allRestingV = [];
     
     % Given list of all cells, check which are on the approved list and use
     % those for analysis. Conversely, make sure the cells on the list match
@@ -123,7 +124,7 @@ for iCell = 1:length(allCells)
         [stepSize, stepStarts, stepEnds] = ...
             findSteps(nSteps, stimComI, sf, stepThresh, 'roundedTo', 0.5);
 
-        leakSubtract = ...
+        [leakSubtract, restingV] = ...
             SubtractLeak(probeV, sf, 'BaseLength', baseTime);
 
         % Concatenate to the complete list of step sizes and
@@ -132,6 +133,7 @@ for iCell = 1:length(allCells)
         allStarts = [allStarts; stepStarts];
         allEnds = [allEnds; stepEnds];
         allLeakSub = [allLeakSub; leakSubtract'];
+        allRestingV = [allRestingV; restingV];
         if calibFlag == 1
             allPDSizes = [allPDSizes; pdStepSize];
             allPDDisp = [allPDDisp; measuredDisp'];
@@ -149,7 +151,9 @@ for iCell = 1:length(allCells)
     sortedStarts = allStarts(sortIdx);
     sortedEnds = allEnds(sortIdx);
     sortedLeakSub = allLeakSub(sortIdx,:);
+    sortedRestingV = allRestingV(sortIdx);
     sortedIDs = traceIDs(sortIdx,:);
+    
 
     if calibFlag == 1
         sortedPDDisp = allPDDisp(sortIdx,:);
@@ -173,6 +177,7 @@ for iCell = 1:length(allCells)
     onsetTau = NaN(nSizes,1);
     offsetTau = NaN(nSizes,1);
     nReps = NaN(nSizes,1);
+    meanRestingV = NaN(nSizes,1);
     theseIDs = cell(nSizes,1);
     
     if calibFlag == 1
@@ -190,6 +195,7 @@ for iCell = 1:length(allCells)
 
         if sizeEndIdx(iSize)-sizeStartIdx(iSize)>0
             meansBySize(iSize,:) = mean(sortedLeakSub(sizeIdx,:));
+            meanRestingV(iSize) = mean(sortedRestingV(sizeIdx,:));
             if calibFlag==1
                 meanPDTrace(iSize,:) = mean(sortedPDDisp(sizeIdx,:));
                 meanPDSize(iSize) = mean(sortedPDSizes(sizeIdx,:));
@@ -197,6 +203,7 @@ for iCell = 1:length(allCells)
             
         else
             meansBySize(iSize,:) = sortedLeakSub(sizeIdx,:);
+            meanRestingV(iSize) = sortedRestingV(sizeIdx,:);
             if calibFlag==1
                 meanPDTrace(iSize,:) = sortedPDDisp(sizeIdx,:);
                 meanPDSize(iSize) = sortedPDSizes(sizeIdx,:);
@@ -220,7 +227,7 @@ for iCell = 1:length(allCells)
      
     if calibFlag==1
         ccPeaks{iCell,1} = [eachSize(~isnan(eachSize)) meanPDSize(~isnan(eachSize)) ...
-            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc nReps];
+            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc meanRestingV nReps];
         ccPeaks{iCell,2} = meansBySize;
         ccPeaks{iCell,3} = meanPDTrace;
         ccPeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
@@ -228,7 +235,7 @@ for iCell = 1:length(allCells)
     else
         ccPeaks{iCell,1} = ...
             [eachSize(~isnan(eachSize)) nan(size(eachSize(~isnan(eachSize))))...
-            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc nReps];
+            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc meanRestingV nReps];
         ccPeaks{iCell,2} = meansBySize;
         ccPeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
         ccPeaks{iCell,5} = theseIDs;

@@ -39,10 +39,13 @@ mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 
 %TODO: Modify IDAnalysis to get PDStepSizes with mean/SD for horiz errbars
 
-sTest = mechPeaksWT;
-% sTest = mechPeaksFat;
+% sTest = mechPeaksWT;
+sTest = mechPeaksFat;
 
 sCat = vertcat(sTest{:,1});
+sCat(sCat==6.9)=7;
+sCat(sCat==8.9)=9;
+sCat(sCat==10.9)=11;
 [~,sizeSortIdx] = sort(sCat(:,1));
 sSort = sCat(sizeSortIdx,:);
 
@@ -55,9 +58,13 @@ sizeIdx = sizeStartIdx(iSize):sizeEndIdx(iSize);
 sizeCount = sizeEndIdx(iSize)-sizeStartIdx(iSize)+1;
 meansBySize(iSize,1) = nanmean(sSort(sizeIdx,3));
 stdBySize(iSize,1) = nanstd(sSort(sizeIdx,3));
-stErrBySize(iSize,1) = sqrt(stdBySize(iSize))/sizeCount;
+stErrBySize(iSize,1) = stdBySize(iSize)/sqrt(sizeCount);
 end
 
+sSortFat = sSort;
+
+% stepMeansWT = [eachSize meansBySize stErrBySize];
+% stepMeansFat = [eachSize meansBySize stErrBySize];
 
 % errorbar(eachSize,meansBySize,stErrBySize)
 % errorbar(eachSize,meansBySize,stErrBySize,'r')
@@ -70,7 +77,6 @@ clear meansBySize stdBySize stErrBySize
 sTest = mechPeaksFat;
 
 sCat = vertcat(sTest{:,1}); 
-sCat(sCat==40000)=20000;
 [~,sizeSortIdx] = sort(sCat(:,1));
 sSort = sCat(sizeSortIdx,:);
 
@@ -149,4 +155,37 @@ dlmwrite('PatchData/IgorWtOnNorms.csv',wtOnNorm,'-append')
 dlmwrite('PatchData/IgorWtOffNorms.csv',wtOffNorm,'-append')
 dlmwrite('PatchData/IgorFatOnNorms.csv',fatOnNorm,'-append')
 dlmwrite('PatchData/IgorFatOffNorms.csv',fatOffNorm,'-append')
+
+%% Traces for tau fitting to Igor
+
+dlmwrite('PatchData/IgorWtStepTraces.csv',sSortTraceWT')
+dlmwrite('PatchData/IgorFatStepTraces.csv',sSortTraceFat')
+
+
+%% Traces copied in next to sSort rates column
+sSort = sSortIgorTausWT;
+% sSort = sSortIgorTausFat;
+
+[eachSize,sizeStartIdx,~] = unique(sSort(:,1),'first');
+[~,sizeEndIdx,~] = unique(sSort(:,1),'last');
+nSizes = sum(~isnan(eachSize));
+
+for iSize = 1:nSizes
+sizeIdx = sizeStartIdx(iSize):sizeEndIdx(iSize);
+sizeCount = sizeEndIdx(iSize)-sizeStartIdx(iSize)+1;
+
+tau1BySize(iSize,1) = nanmean(sSort(sizeIdx,2));
+tau1StdBySize(iSize,1) = nanstd(sSort(sizeIdx,2));
+tau1StErrBySize(iSize,1) = tau1StdBySize(iSize)/sqrt(sizeCount);
+
+tau2BySize(iSize,1) = nanmean(sSort(sizeIdx,3));
+tau2StdBySize(iSize,1) = nanstd(sSort(sizeIdx,3));
+tau2StErrBySize(iSize,1) = tau2StdBySize(iSize)/sqrt(sizeCount);
+end
+
+tausBySizeWT = [tau1BySize tau1StdBySize tau1StErrBySize tau2BySize tau2StdBySize tau2StErrBySize];
+% tausBySizeFat = [tau1BySize; tau1StdBySize; tau1StErrBySize; tau2BySize; tau2StdBySize; tau2StErrBySize];
+
+errorbar(eachSize,tau2BySize,tau1StErrBySize)
+% errorbar(eachSize,tau2BySize,tau1StErrBySize,'r')
 
