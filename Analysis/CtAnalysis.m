@@ -68,6 +68,7 @@ for iCell = 1:length(allCells)
         % subtracted from total current to get capacitance current
         rsLeakSub = deltaV/IRsLeak;   % estimate of series resistance, for comparison
         ICt = meanCt-IRsLeak;
+        
         %     plot(ICt,'g')
         
         % TODO: IMPORT SAMPLING FREQUENCY from metadata tree

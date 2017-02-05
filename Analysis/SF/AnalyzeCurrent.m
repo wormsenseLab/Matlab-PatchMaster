@@ -1,19 +1,18 @@
-function [AvgMaxCurrent,AvgMaxCurrentMinus,AvgMaxCurrentOff,AvgMaxCurrentMinusOff,Start,StartOffBelow,Ende,EndeOff,ASubtractAvg,LengthRamp,LengthInms,EndeRamp] = AnalyzeCurrent(isFiveStep,isStep,ActuSensor,StartBase,Aall,ASubtract,fs,SlopeActu,BelowPlateau,CellMaxActuFirst,interval); %tf,isStep, SteigungAbs,
+function [LeakA, ASubtract, AvgMaxCurrent,AvgMaxCurrentMinus,AvgMaxCurrentOff,AvgMaxCurrentMinusOff,Start,StartOffBelow,Ende,EndeOff,ASubtractAvg,LengthRamp,LengthInms,EndeRamp,StartOffBelowShort,ActuSensorAvg] = AnalyzeCurrent(isFiveStep,isStep,isFifteenStep,ActuSensor,StartBase,Aall,fs,SlopeActu,BelowPlateau,CellMaxActuFirst,interval);%tf,isStep, SteigungAbs,
 
-MinA = []; CellMin = [];AvgMaxCurrent = [];AvgMaxCurrentMinus = [];Start=[];  Ende = []; EndeOff = [];  
+LeakA = []; ASubtract = []; MinA = []; CellMin = [];AvgMaxCurrent = [];AvgMaxCurrentMinus = [];Start=[];  Ende = []; EndeOff = [];  
 CellMinOff = [];AvgMaxCurrentOff = [];AvgMaxCurrentMinusOff = []; 
 StartOffBelow = [];ActuSensorAvg=[]; EndeRamp = [];LengthInms =[]; 
 
 
-ASubtractAvg = tsmovavg(ASubtract,'s',5,1);%average signal
+%%% this could go to the ForceClamp Section  
 ActuSensorAvg = tsmovavg(ActuSensor,'s',10,1);
-% SteigungAbs is an averaged Signal   
-
+ 
 for i = 1:size(Aall,2);
 StartOffBelowShort(i) = find([ActuSensorAvg(CellMaxActuFirst(i):end,i)] < BelowPlateau(i),1, 'first');% %% find cell, where 1st value is lower than threshold; Onset Off-Stimulus
 StartOffBelow(i) = StartOffBelowShort(i)+ CellMaxActuFirst(i); % CellMaxActuFirst excludes the values before Max Value
 end
-    if isFiveStep == 1 || isStep ==1;
+    if isFiveStep == 1 || isStep ==1 || isFifteenStep ==1 ;
         disp 'Remember: only calculates length of Ramp of Step correctly, if Plateau phase is 300 ms'  
             for i = 1:size(Aall,2);
     Start(i) = find([ActuSensor(:,i)] > StartBase(i),1, 'first'); %% find cell, where 1st value is bigger than threshold; Onset On-Stimulus 
@@ -28,21 +27,34 @@ else
 %     StartOffBelow(i) = StartOffBelowShort(i)+ CellMaxActuFirst(i); %pretty good, checked values in Igor
     EndeRamp(i)= StartOffBelow(i)-(0.500/interval); % Time= Points*interval
     end
-end
+ end
+%%%%%%%
 
+%%%%%% Subtract leak current
+
+  for i = 1:size(Aall,2);
+ LeakA(i) = mean(Aall(Start(i)-0.02*fs:Start(i),i));  %%%
+ ASubtract(:,i) = Aall(:,i) - LeakA(i); %%%
+  end
+  
+ASubtractAvg = tsmovavg(ASubtract,'s',5,1);%average signal
+absASubtractAvg = abs(ASubtractAvg);
+   
 for i = 1:size(Aall,2);
 % StartOffBelowShort(i) = find([ActuSensorAvg(CellMaxActuFirst(i):end,i)] < BelowPlateau(i),1, 'first');% this is the falling slope
 % StartOffBelow(i) = StartOffBelowShort(i)+ CellMaxActuFirst(i); %pretty good, checked values in Igor
 Ende(i) = Start(i) + (fs/20);
 EndeOff(i) = StartOffBelow(i) + (fs/20); % currently not in use
-MinA(i) = min(ASubtractAvg(Start(i):Ende(i),i));
-CellMin(i) = find([ASubtractAvg(:,i)] == MinA(i),1,'first');
+MinA(i) = max(absASubtractAvg(Start(i):Ende(i),i));
+%min(ASubtractAvg(Start(i):Ende(i),i));
+CellMin(i) = find([absASubtractAvg(:,i)] == MinA(i),1,'first');
+%find([ASubtractAvg(:,i)] == MinA(i),1,'first');
 MinAOff(i) = min(ASubtractAvg(StartOffBelow(i):StartOffBelow(i)+100,i)); 
 CellMinOff(i) = find([ASubtractAvg(:,i)] == MinAOff(i),1,'first');  % change that it looks closer to seco
-Values(:,i) = ASubtractAvg(:,i);% UNECESSARY? forget, why I did this
-AvgMaxCurrentOff(i) = mean(ASubtractAvg(CellMinOff(i)-5:CellMinOff(i)+5,i)); % ToDo Five or 10???
+Values(:,i) = ASubtractAvg(:,i);% UNECESSARY? forget, why I did this%%%%
+AvgMaxCurrentOff(i) = mean(ASubtractAvg(CellMinOff(i)-1:CellMinOff(i)+5,i)); % ToDo Five or 10???
 AvgMaxCurrentMinusOff(i) =  AvgMaxCurrentOff(i) *-1;
-AvgMaxCurrent(i) = mean(Values(CellMin(i)-5:CellMin(i)+5,i));%(i) = mean(Values(CellMin(i)-10:CellMin(i)+10));
+AvgMaxCurrent(i) = mean(Values(CellMin(i)-1:CellMin(i)+5,i));%(i) = mean(Values(CellMin(i)-10:CellMin(i)+10));
 AvgMaxCurrentMinus(i) = AvgMaxCurrent(i) *-1;
 LengthRamp(i)=EndeRamp(i) - Start(i);
 LengthInms(i) = LengthRamp(i)*interval;

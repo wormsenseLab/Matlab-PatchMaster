@@ -1,4 +1,4 @@
-% IVAnalysis.m
+ % IVAnalysis.m
 %
 % IVAnalysis takes the data from on-cell and whole-cell IV steps, subtracts
 % on-cell from whole-cell as capacitance correction, and takes the mean of
