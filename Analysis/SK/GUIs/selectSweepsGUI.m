@@ -4,7 +4,7 @@
 %                     Enter = Done
 %
 
-function [keepSweep, goBack] = selectSweepsGUI(data,leakSize,cellName,protName)
+function [keepSweep, goBack] = selectSweepsGUI(data,dataType,channel,leakSize,sf,cellName,protName)
 nCols = 4;
 goBack = 0; % pass this as 1 if user clicks "Previous" button
 %TODO: Set figure size so you can actually see the plots (maybe YLim on axes too)
@@ -53,36 +53,83 @@ else
     nRows = fix(nSweeps/nCols)+1;
 end
 
-% Plot the raw traces and the leak subtracted traces for the given sweeps
-%TODO: Plot against time
-for iSweep = 1:nSweeps
-    % Plot the sweep in its proper subplot
-    handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
-        'Parent', handles.uip);
-    plot(data(:,iSweep,1)*1E12);
-    hold on;
-    % If the leak-subtracted traces are also there, plot them too
-    if exist('leak','var')
-        plot(data(:,iSweep,2)*1E12);
-    end
+switch dataType
     
-    % Print leak size on subplot
-    text(0.5,0.1, sprintf('%.1f pA',leakSize(iSweep)*1E12), ...
-        'VerticalAlignment','bottom', 'HorizontalAlignment','center', ...
-        'Units','normalized', 'FontSize',10);
-    
-    % Number the axis for later use, set the button down function (must be
-    % done after plotting or at least after 'hold on', because plotting
-    % resets the axes properties otherwise).
-    set(gca, 'YLim', [-80 10], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
-    
+    % Plot the raw current traces and the leak subtracted traces 
+    % for the given voltage clamp sweeps
+    case 'A'
+        for iSweep = 1:nSweeps
+            % Plot the sweep in its proper subplot against time
+            tVec = 0:1/sf:length(data(:,iSweep,1))/sf-(1/sf);
+            handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
+                'Parent', handles.uip);
+            plot(tVec,data(:,iSweep,1)*1E12);
+            hold on;
+            % If the leak-subtracted traces are also there, plot them too
+            if exist('leak','var')
+                plot(tVec,data(:,iSweep,2)*1E12);
+            end
+            
+            % Print leak size on subplot
+            text(0.5,0.1, sprintf('%.1f pA',leakSize(iSweep)*1E12), ...
+                'VerticalAlignment','bottom', 'HorizontalAlignment','center', ...
+                'Units','normalized', 'FontSize',10);
+            
+            % Number the axis for later use, set the button down function (must be
+            % done after plotting or at least after 'hold on', because plotting
+            % resets the axes properties otherwise).
+            set(gca, 'YLim', [-80 10], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+            
+        end
+     
+    % Plot the voltage traces for current clamp sweeps
+    case 'V'
+        
+        if isempty(strfind(protName,'Calib')) && channel == 1 % for non-PD calib traces
+            for iSweep = 1:nSweeps
+                % Plot the sweep in its proper subplot against time
+                tVec = 0:1/sf:length(data(:,iSweep,1))/sf-1/sf;
+                handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
+                    'Parent', handles.uip);
+                plot(tVec,data(:,iSweep,1)*1E3);
+                hold on;
+                
+                % Print baseline voltage on subplot
+                text(0.5,0.1, sprintf('%2.0f mV',leakSize(iSweep)*1E3), ...
+                    'VerticalAlignment','bottom', 'HorizontalAlignment','center', ...
+                    'Units','normalized', 'FontSize',10);
+                
+                % Number the axis for later use, set the button down function (must be
+                % done after plotting or at least after 'hold on', because plotting
+                % resets the axes properties otherwise).
+                set(gca, 'YLim', [-90 40], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+                
+            end
+        else
+            for iSweep = 1:nSweeps
+                % Plot the sweep in its proper subplot against time
+                tVec = 0:1/sf:length(data(:,iSweep,1))/sf-1/sf;
+                handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
+                    'Parent', handles.uip);
+                plot(tVec,data(:,iSweep,1));
+                hold on;
+                              
+                % Number the axis for later use, set the button down function (must be
+                % done after plotting or at least after 'hold on', because plotting
+                % resets the axes properties otherwise).
+                set(gca, 'YLim',[-5 1], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+                
+            end
+        end
+        
 end
+
 
 set(handles.f, 'Visible', 'on');
 
 % Boolean of which sweeps to keep, will be updated as user clicks on plots
 % to exclude those sweeps.
-keepSweep = true(1,nSweeps);
+keepSweep = true(1,nSweeps); 
 
 uiwait;
 

@@ -39,7 +39,7 @@ function protLoc = matchProts(ephysData, cellName, protName, varargin)
 p = inputParser;
 p.addRequired('ephysData');
 p.addRequired('cellName');
-p.addRequired('protNames');
+p.addRequired('protName');
 
 p.addParameter('MatchType', 'full', @(x) validateattributes(x,{'char'},{'nonempty'}));
 p.parse(ephysData, cellName, protName, varargin{:});
@@ -61,11 +61,11 @@ for i = 1:length(protName)
             protLoc{i} = find(strcmpi(protName{i},prots));
         case 'first' % match protName to the beginning of the series name
             prots = ephysData.(cellName).protocols;
-            protLoc{i} = find(strncmpi(protName{i},prots,length(protName)));
+            protLoc{i} = find(strncmpi(protName{i},prots,length(protName{i})));
         case 'last' % match protName to the end of the series name
             flippedProts = cellfun(@fliplr, ephysData.(cellName).protocols, ...
                 'UniformOutput', false);
-            protLoc{i} = find(strncmpi(fliplr(protName{i}),flippedProts,length(protName)));
+            protLoc{i} = find(strncmpi(fliplr(protName{i}),flippedProts,length(protName{i})));
     end
     
 end

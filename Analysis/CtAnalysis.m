@@ -20,6 +20,7 @@
 
 function ephysData = CtAnalysis(ephysData)
 
+% keyboard;
 allCells = fieldnames(ephysData);
 
 for iCell = 1:length(allCells)
@@ -31,16 +32,14 @@ for iCell = 1:length(allCells)
     
     % Look for pgf names ending in "ct_neg" and note their locations.
     protName = 'ct_neg';
-    flippedProts = cellfun(@fliplr, ephysData.(cellName).protocols, ...
-        'UniformOutput', false);
-    protLoc = find(strncmp(fliplr(protName),flippedProts,length(protName)));
-    
+    protLoc = matchProts(ephysData, cellName, protName, 'matchType', 'last');
     
     C = zeros(1,length(protLoc));
     tau = zeros(1,length(protLoc));
     Rs = zeros(1,length(protLoc));
     
     for i = 1:length(protLoc)
+        sf = ephysData.(cellName).samplingFreq{protLoc(i)}; %Hz, sampling freq
         
         % Pull out capacity transient data, subtract leak at holding, multiply
         % the negative by -1 to overlay it on the positive, then plot, and
@@ -53,10 +52,10 @@ for iCell = 1:length(allCells)
         ctPos = bsxfun(@minus, ctPos, mean(ctPos(1:20,:)));
         
         meanCt = mean([ctNeg ctPos],2);
-        %     figure(); hold on;
-        %     plot(mean(ctNeg,2),'b');
-        %     plot(mean(ctPos,2),'r');
-        %     plot(meanCt,'k');
+           % figure(); hold on;
+           % plot(mean(ctNeg,2),'b');
+           % plot(mean(ctPos,2),'r');
+           % plot(meanCt,'k');
         
         deltaV = 10E-3; % V, 10 mV step
         
@@ -96,13 +95,12 @@ for iCell = 1:length(allCells)
         % 5ms. Either way, stick with exp1 because it's simpler (and because
         % you're focusing on the fast component) vs. exp2. Compare the two.
         
-        sampFreq = 10000; % Hz
         fitStart = find(ICt == max(ICt(45:60)));
         if max(ICt(45:60)) ~= 0 % avoids crash when recording was lost and all values were 0
             [~,fitInd] = min(abs(ICt(fitStart:fitStart+30)-(ICt(fitStart)/(2*exp(1)))));
             
-            fitTime = fitInd/sampFreq; % seconds
-            t = 0:1/sampFreq:fitTime;
+            fitTime = fitInd/sf; % seconds
+            t = 0:1/sf:fitTime;
             
             capFit = fit(t',ICt(fitStart:fitStart+fitInd),'exp1');
             %     plot(capFit,t,ICt(intStart:intStart+minInd));
