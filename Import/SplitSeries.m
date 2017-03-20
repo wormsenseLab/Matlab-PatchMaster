@@ -49,9 +49,11 @@ for iGr = 1:length(grLoc)
     % Find number of series in each group but don't get tripped up by the 
     % last group.
     if iGr<length(grLoc)
-        nSer = tree{seLoc(find(seLoc<grLoc(iGr+1),1,'last')),3}.SeSeriesCount;
+        nSer = length([tree{grLoc(iGr):grLoc(iGr+1),3}]);
+%         nSer = tree{seLoc(find(seLoc<grLoc(iGr+1),1,'last')),3}.SeSeriesCount;
     else
-        nSer = tree{seLoc(end),3}.SeSeriesCount;
+        nSer = length([tree{grLoc(iGr):end,3}]);
+%         nSer = tree{seLoc(end),3}.SeSeriesCount;
     end
     
     % Initialize cell array with space for 6 channels worth of data from a 

@@ -39,8 +39,8 @@ mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 
 %TODO: Modify IDAnalysis to get PDStepSizes with mean/SD for horiz errbars
 
-% sTest = mechPeaksWT;
-sTest = mechPeaksFat;
+sTest = mechPeaksWT;
+% sTest = mechPeaksFat;
 
 sCat = vertcat(sTest{:,1});
 sCat(sCat==6.9)=7;
@@ -61,9 +61,9 @@ stdBySize(iSize,1) = nanstd(sSort(sizeIdx,3));
 stErrBySize(iSize,1) = stdBySize(iSize)/sqrt(sizeCount);
 end
 
-sSortFat = sSort;
+sSortWT = sSort;
 
-% stepMeansWT = [eachSize meansBySize stErrBySize];
+stepMeansWT = [eachSize meansBySize stErrBySize];
 % stepMeansFat = [eachSize meansBySize stErrBySize];
 
 % errorbar(eachSize,meansBySize,stErrBySize)
@@ -74,7 +74,7 @@ clear meansBySize stdBySize stErrBySize
 
 %% Get recording names for sorted peaks
 
-sTest = mechPeaksFat;
+sTest = mechPeaksWT;
 
 sCat = vertcat(sTest{:,1}); 
 [~,sizeSortIdx] = sort(sCat(:,1));
@@ -85,8 +85,8 @@ sCatName = vertcat(sTest{:,4});
 sSortTrace = sCatTrace(sizeSortIdx,:);
 sSortName = sCatName(sizeSortIdx,:);
 
-sSortTraceFat = sSortTrace;
-sSortNameFat = sSortName;
+sSortTraceWT = sSortTrace;
+sSortNameWT = sSortName;
 
 %% Save mechPeaks in format for Igor's I-dCellFits
 

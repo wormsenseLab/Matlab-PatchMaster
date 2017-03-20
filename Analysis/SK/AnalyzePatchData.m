@@ -11,8 +11,8 @@
 
 % Don't forget to run sigTOOL first!
 % [ephysData,tree] = ImportPatchData();
-% ephysData = ImportPatchData();
-ephysData = ImportPatchData(ephysData);
+ephysData = ImportPatchData();
+% ephysData = ImportPatchData(ephysData);
 
 
 % Keep only data with given project prefixes/names.
@@ -112,7 +112,7 @@ ivCells = allCells(whichCells);
 genotype = cell(length(ivCells),2);
 for i=1:length(ivCells)
 genotype(i,1) = ivCells(i);
-genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),ivCells(i)),2);
+genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,2),ivCells(i)),3);
 end
 wtCells = ivCells(strcmp(genotype(:,2),'TU2769'));
 fatCells = ivCells(strcmp(genotype(:,2),'GN381'));
