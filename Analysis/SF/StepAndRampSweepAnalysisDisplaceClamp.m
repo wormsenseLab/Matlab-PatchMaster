@@ -6,7 +6,7 @@
 %%% Update: 20170204
 %%% Script to analyze data from FALCON in Displacement Clamp
 %%% To commit to github
-%%% go to my branch
+%%% go to my branch (patchmaster functions on dropbox)
 %%% git add .
 %%% git commit -m 'text'
 %%% git push origin my branch
@@ -54,10 +54,10 @@ end
 close all; clc
 
 %%% hardcoding part:
-name = 'STF070'; % name of recording. placed into varaibel fiels names%
+name = 'STF094'; % name of recording. placed into varaibel fiels names%
 stimuli = 'FiveStep'; 
 OnlyMechano = 0; % if = 0, then FALCON, if 1, then ForceClamp Only 
-ReadFromSheet = 0; % if = 0, then command promp to delete block, if 1, then read from MetaDataSheet 
+ReadFromSheet = 1; % if = 0, then command promp to delete block, if 1, then read from MetaDataSheet 
 % protocol names:
 % Single protocols: Step and Ramp-Hold; 
 % Five sweeps per protocol:FiveStep, FiveRampHold; does not work with alternative names
@@ -501,13 +501,14 @@ if isempty(FirstRec) == 1
     break
 else
   ASubtractNew(:,FirstRec) = NaN;
-  AvgMaxCurrentMinusNew(:,FirstRec) = NaN;
+  AvgMaxCurrentMinusNew(FirstRec) = NaN;
   MeanIndentationNew(:,FirstRec) = NaN;
   LeakANew(:,FirstRec) = NaN;
   
 end
 end
 
+AvgMaxCurrentMinusNewppA = AvgMaxCurrentMinusNew*10^12;
 LeakAppA = LeakANew*10^12;
 %% Sort Data 
  
@@ -851,7 +852,7 @@ subplot(3,2,2)
 if isFiveStep == 1 || isFiveRamp == 1 || isFifteenStep == 1;
     i = 1;
 while i <= length(MeanIndentation)
-scatter(MeanIndentation(i:i+4), AverageMaxCurrentMinusppA(i:i+4),'LineWidth',2)%,'filled') %% would be nice to see the change in leak
+scatter(MeanIndentation(i:i+4), AvgMaxCurrentMinusNewppA(i:i+4),'LineWidth',2)%,'filled') %% would be nice to see the change in leak
 %set(h, 'SizeData', markerWidth^2)
 hold on
 i = i+5;
@@ -869,7 +870,7 @@ end
 
 else
 scatter(MeanIndentation, AverageMaxCurrentMinusppA,'LineWidth',2)
-title('Mean Cur vs Ind')
+title('Mean Cur vs Ind -deleted series still included')
 xlim([0 max(MeanIndentation)+1])
 ylabel('Current (pA)')
 xlabel('Indentation (um)')
@@ -1058,6 +1059,7 @@ display 'include TauCalculation into delete singel series'
 
 %%
 %Export Data
+ExportMeanSameInd = [];ExportMeanSingle=[];ExportMeanSameIndOFF =[];ExportMeanSortForce=[];
 if isFiveStep == 1 || isStep == 1 || isFifteenStep == 1; 
 % ToDo change for Current ExportData = [MergeInd,MeanSameIndCurrent,NormMeanCurrent,MeanSameIndForce];
 ExportMeanSameInd = [MergeInd,MeanSameIndForce,AvgMaxCurrentAVG,AvgMaxCurrentAVG,NumberOfAvergagesPerInd,AvgMaxCurrentOffAVG,AvgMaxCurrentOffAVG];
@@ -1173,11 +1175,23 @@ indFitMaxForce = find(strcmpi(headers, 'ONFitMaxForce(A)'));
 FitMaxForce = raw(Stiffrow,indFitMaxForce); 
 FitMaxForce = cell2mat(FitMaxForce);
 
+indFitMaxCurSortForce = find(strcmpi(headers, 'ONFitMaxSORTForce(A)'));
+FitMaxCurSortForce = raw(Stiffrow,indFitMaxCurSortForce); 
+FitMaxCurSortForce = cell2mat(FitMaxCurSortForce );
+
+indFitMaxOFFCurSortForce = find(strcmpi(headers, 'OFFFitMaxSORTForce(A)'));
+FitMaxOFFCurSortForce = raw(Stiffrow,indFitMaxOFFCurSortForce); 
+FitMaxOFFCurSortForce = cell2mat(FitMaxOFFCurSortForce);
+
 AvgMaxCurrentNormInd = []; AvgMaxCurrentNormForce = [];
 AvgMaxCurrentNormInd = AvgMaxCurrentAVG/FitMax;
 AvgMaxCurrentNormForce = AvgMaxCurrentAVG/FitMaxForce;
+AvgMaxONCurrentNormSortForce = []; AvgMaxOFFCurrentNormSortForce = [];
+AvgMaxONCurrentNormSortForce = AvgMaxCurrentAVGSortForce/FitMaxCurSortForce;
+AvgMaxOFFCurrentNormSortForce= AvgMaxCurrentOffAVGSortForce/FitMaxOFFCurSortForce;
 
-ExportNormTraces = [];
+%%xportNormTraces = [];
+ExportNormSortForce = [];
 %%% update .mat file
 if isFiveStep == 1 || isStep == 1;
 save(sprintf('FiveStep-%s.mat',name)); %save(sprintf('%sTEST.mat',name))
@@ -1190,50 +1204,20 @@ fprintf(fid, 'NormCurFitInd-%s, NormCurFitForce-%s \n',name,name); %, MergeInd,M
 fclose(fid);
 dlmwrite(filename, ExportNormTraces, '-append', 'delimiter', '\t'); %Use '\t' to produce tab-delimited files.
 
+ExportNormSortForce = [AvgMaxONCurrentNormSortForce,AvgMaxOFFCurrentNormSortForce];
+filename = sprintf('NormCurSortForce-%s.csv',name) ;
+fid = fopen(filename, 'w');
+fprintf(fid, 'NormONCurSortForce-%s, NormOFFCurSortForce-%s \n',name,name); %, MergeInd,MeanSameIndCurrent, asdasd, ..\n); %\n means start a new line
+fclose(fid);
+dlmwrite(filename, ExportNormSortForce, '-append', 'delimiter', '\t'); %Use '\t' to produce tab-delimited files.
+
+
 else 
 save(sprintf('Ramp-%s.mat',name));
 %end
 end
 %AvgMaxCurrentNorm = AvgMaxCurrentNorm'; 
 
-
-
-%%
-
-% int_cols = all(isnan(MeanIndentationNew)|round(MeanIndentationNew)==MeanIndentationNew,1);
-% it = MeanIndentationNew(:,int_cols);
-% 
-% test = [1   NaN   2.2   3.2  4;
-%      NaN 7.9   5.1   NaN  5;
-%      3    5.5  NaN   4.1  NaN];
-% int_cols = all(isnan(MeanIndentationNew)|round(MeanIndentationNew)==MeanIndentationNew,1);
-% it = MeanIndentationNew(:,int_cols);
-% flt = MeanIndentationNew(:,~int_cols);
-
-% write excel sheet
-% col_header={name,'MeanInd','MeanCurrent','NormMeanCurrent','MeanForce','TracesPerIndentation'};     %Row cell array (for column labels)
-% %row_header(1:10,1)={'Time'};     %Column cell array (for row labels)
-% xlswrite(name,MergeInd,'Sheet1','B2');     %Write data
-% xlswrite(name,MeanSameIndCurrent,'Sheet1','C2');     %Write data
-% xlswrite(name,NormMeanCurrent,'Sheet1','D2');     %Write data
-% xlswrite(name,MeanSameIndForce,'Sheet1','E2');     %Write data
-% xlswrite(name,TracesPerIndentation,'Sheet1','F2'); 
-% xlswrite(name,col_header,'Sheet1','A1');     %Write column header
-% %xlswrite('My_file.xls',row_header,'Sheet1','A2');      %Write row header
-% col_header2={name,'Ind1','Ind2','Ind3','Ind4','Ind5','Ind6','Ind7','Ind8','Ind9','Ind10','Ind11','Ind12','Ind13','Ind14'}; %ToDO - get the values for the
-% %Indentations
-% xlswrite(name,MeanTraces,'Sheet2', 'B2');   
-% xlswrite(name,col_header2,'Sheet2','B1'); 
-
-%find number of nan values to find out the number of averages
-%average traces 
-%how to average two columns
-%  for k = 1:length(MergeInd);
-%      for i = 1:length(FindSameInd(:,k));
-% % MeanTracesCurrent(:,k) = nanmean(SortASubtract(FindSameInd(:,k)))
-% %B(:,nn+1) MeanTracesCurrent = nanmean(SortASubtract(:,1:2))
-%      end
-%  end
 
 
 

@@ -246,7 +246,8 @@ plot(Voltage,AvgMaxCurrentAVG)
 hold on
 plot(VcorInMV,AvgMaxCurrentAVG)
 
-
+figure()
+plot(AvgIVq)
 
 %% Export
 save(sprintf('IVSteps-%s.mat',name)); %save(sprintf('%sTEST.mat',name))

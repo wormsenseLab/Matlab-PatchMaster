@@ -13,38 +13,54 @@ elseif loadFileMode == 1
 end
 %%
 
-name = 'GN653-';
+name = 'TU2769-';
+x = 0.4; % um of Indentation Average for MergeInd
+y = 0.2; % uN of Indentation Average
 
 nameInd = 'AVGInd';
 nameNormOnCurInd = 'AVGNormCurInd';
 nameForce = 'AVGForce';
 nameNormOnForce= 'AVGNormCurForce';
 nameIndOnCur = 'AVGCur';
+nameSortForce = 'AVGSortForce';
+nameONCurSortForce = 'SortForceAVGCur';
+nameNormONSortForce = 'SortForceAVGNormCur';
 
 protName = strcat(name,nameInd); 
 protNameNormOnCur = strcat(name,nameNormOnCurInd);
 protNameOnCur = strcat(name,nameIndOnCur);
 protNameForce = strcat(name,nameForce);
 protNameOnForceNorm = strcat(name,nameNormOnForce);
+protNameSortForce = strcat(name,nameSortForce);
+protNameONCurSortForce = strcat(name,nameONCurSortForce);
+protNameNormONSortForce = strcat(name,nameNormONSortForce);
+
 
 protLoc = []; protLocNormOnCur = []; protLocOnCur = []; protLocForce = [];
-protLocNormOnForce = [];
+protLocNormOnForce = [];protLocSortForce=[];protLocONCurSortForce=[];protLocNormONSortForce=[];
 
 protLoc = find(strncmp(protName,text,length(protName)));
 protLocNormOnCur = find(strncmp(protNameNormOnCur,text,length(protNameNormOnCur))); 
-protLocOnCur = find(strncmp(protNameOnCur,text,12)); %length(protName)
-protLocForce = find(strncmp(protNameForce,text,12)); %length(protName)
+protLocOnCur = find(strncmp(protNameOnCur,text,length(protNameOnCur))); 
+protLocForce = find(strncmp(protNameForce,text,length(protNameForce))); %length(protName)
 protLocNormOnForce = find(strncmp(protNameOnForceNorm,text,length(protNameOnForceNorm))); 
+protLocSortForce = find(strncmp(protNameSortForce,text,12)); 
+protLocONCurSortForce = find(strncmp(protNameONCurSortForce,text,length(protNameONCurSortForce))); %length(protName)
+protLocNormONSortForce = find(strncmp(protNameNormONSortForce,text,length(protNameNormONSortForce))); 
 
 
 Indentation = []; NormOnCurInd = []; OnCurrent = [];
-Force = []; NormOnCurForce = [];
+Force = []; NormOnCurForce = []; ForceSortForce =[]; ONCurrentSortForce =[];
+NormOnCurSortForce =[];
 
 headersInd = {};
 headersNormOnCur = {};
 headersOnCur = {};
 headersForce = {};
 headersNormOnCurForce = {};
+headersForceSortForce = {};
+headersONCurSortForce = {};
+headersNormONSortForce = {};
 
 for i=1:length(protLoc);
    Indentation(:,i) = numbers(:,protLoc(i));
@@ -57,7 +73,15 @@ for i=1:length(protLoc);
    headersForce{i} = text(:,protLocForce(i)); 
    NormOnCurForce(:,i) = numbers(:,protLocNormOnForce(i));
    headersNormOnCurForce{i} = text(:,protLocNormOnForce(i)); 
+   %
+   ForceSortForce(:,i) = numbers(:,protLocSortForce(i));
+   headersForceSortForce{i} = text(:,protLocSortForce(i)); 
+   ONCurrentSortForce(:,i) = numbers(:,protLocONCurSortForce(i));
+   headersONCurSortForce{i} = text(:,protLocONCurSortForce(i)); 
+   NormOnCurSortForce(:,i) = numbers(:,protLocNormONSortForce(i));
+   headersNormONSortForce{i} = text(:,protLocNormONSortForce(i)); 
 end
+
 
 OnCurrentForce = [];
 Indentation = vertcat(Indentation(:));
@@ -67,26 +91,37 @@ OnCurrentForce = OnCurrent;
 Force = vertcat(Force(:));
 NormOnCurForce = vertcat(NormOnCurForce(:));
 
+ForceSortForce = vertcat(ForceSortForce(:));
+ONCurrentSortForce = vertcat(ONCurrentSortForce(:));
+NormOnCurSortForce = vertcat(NormOnCurSortForce(:));
+
 
 SortTransNormOnCurInd = []; IndentationTrans = []; TransOnCurrent =[];TransForce = [];
-SortForce = []; SortOnCurrent = []; TransNormOnCurForce = []; SortTransNormOnCurForce =[];SortOnCurrentForce=[];TransOnCurrentForce =[];
+SortForce = []; SortOnCurrent = []; 
+TransNormOnCurSortForce = []; SortTransNormOnCurSortForce =[];
+SortOnCurrentSortForce=[];TransOnCurrentSortForce =[];
+TransNormOnCurForce = [];
 
 IndentationTrans = Indentation';
 TransNormOnCurInd = NormOnCurInd';
 TransOnCurrent = OnCurrent';
-TransNormOnCurForce = NormOnCurForce';
+TransNormOnCurSortForce =NormOnCurSortForce';
 TransForce = Force';
-TransOnCurrentForce = OnCurrentForce'; 
+TransForceSortForce = ForceSortForce';
+TransOnCurrentSortForce = ONCurrentSortForce'; 
+TransNormOnCurForce = NormOnCurForce';
 
 [SortInd sorted_index] = sort(Indentation); 
-[SortForce sorted_indForce] = sort(Force); 
+[SortForce sorted_indForce] = sort(ForceSortForce); 
 
 
 SortOnCurrent = TransOnCurrent(sorted_index);
 SortTransNormOnCurInd  = TransNormOnCurInd(sorted_index);
+SortTransNormOnCurForce = TransNormOnCurForce(sorted_index);
 
-SortOnCurrentForce = TransOnCurrentForce(sorted_indForce);
-SortTransNormOnCurForce = TransNormOnCurForce(sorted_indForce);
+SortOnCurrentSortForce = TransOnCurrentSortForce(sorted_indForce);
+SortTransNormOnCurSortForce = TransNormOnCurSortForce(sorted_indForce);
+
 
 %SortInd = SortInd'
 SmallIndLogic = SortInd <= 3.0 ;
@@ -101,18 +136,16 @@ BigIndValues = SortInd(BigInd);
 %MergeSmallInd = builtin('_mergesimpts',SmallIndValues,0.2,'average');
 %MergeBigInd = builtin('_mergesimpts',BigIndValues,0.5,'average');
 
-MergeInd = builtin('_mergesimpts',SortInd,0.4,'average');
+MergeInd = builtin('_mergesimpts',SortInd,x,'average');
 MergeInd(any(isnan(MergeInd),2),:)=[]; %needs to be removed, when big and small are used
 
-display 'problem with merge force; findsameForce & MergeForce not same length'
-
-MergeForce = builtin('_mergesimpts',SortForce,0.37,'average');
+MergeForce = builtin('_mergesimpts',SortForce,y,'average');
 MergeForce(any(isnan(MergeForce),2),:)=[]; %needs to be removed, when big and small are used
 %MergeInd = [MergeSmallInd;MergeBigInd];
 
 
 tolerance = 0.2; % tolerance to group indentations
-toleranceForce = 0.080; 
+toleranceForce = 0.1; 
 %MergeInd(any(isnan(MergeInd),2),:)=[]; %remove NaN values of the matrix.
 %don't need it if i do logical indexing befor
 
@@ -191,16 +224,18 @@ FinalSTDNormCurForce =FinalSTDNormCurForce';
 
 
 %calculated for sorted Force
-FinalMeanNormCurSortForce = [];FinalSTDNormCurSortForce=[];FinalMeanOnCurrentSortForce=[];FinalSTDOnCurrentSortForce=[];FinalMeanForceSortForce=[];FinalSTDForceSortForce=[];
-for k = 1:length(MergeForce);
-%FindSameIndInitial{k} = find([SortInd] >MergeInd(k)-tolerance & [SortInd]<MergeInd(k)+tolerance);
-FinalMeanNormCurSortForce(k) = nanmean(SortTransNormOnCurForce(FindSameForce(:,k))); %average with same indentation
-FinalSTDNormCurSortForce(k) = nanstd(SortTransNormOnCurForce(FindSameForce(:,k)));
-FinalMeanOnCurrentSortForce(k) = nanmean(SortOnCurrentForce(FindSameForce(:,k)));
-FinalSTDOnCurrentSortForce(k) = nanstd(SortOnCurrentForce(FindSameForce(:,k)));
-FinalMeanForceSortForce(k) = nanmean(SortForce(FindSameForce(:,k)));
-FinalSTDForceSortForce(k) = nanstd(SortForce(FindSameForce(:,k)));
-end
+ FinalMeanNormCurSortForce = [];FinalSTDNormCurSortForce=[];
+ FinalMeanOnCurrentSortForce=[];FinalSTDOnCurrentSortForce=[];
+ FinalMeanForceSortForce=[];FinalSTDForceSortForce=[];
+ 
+ for k = 1:length(MergeForce);
+ FinalMeanForceSortForce(k) = nanmean(SortForce(FindSameForce(:,k)));
+ FinalSTDForceSortForce(k) = nanstd(SortForce(FindSameForce(:,k)));
+ FinalMeanOnCurrentSortForce(k) = nanmean(SortOnCurrentSortForce(FindSameForce(:,k)));
+ FinalSTDOnCurrentSortForce(k) = nanstd(SortOnCurrentSortForce(FindSameForce(:,k)));
+ FinalMeanNormCurSortForce(k) = nanmean(SortTransNormOnCurSortForce(FindSameForce(:,k))); %average with same indentation
+ FinalSTDNormCurSortForce(k) = nanstd(SortTransNormOnCurSortForce(FindSameForce(:,k)));
+ end
 
 
 FinalMeanNormCurSortForce = FinalMeanNormCurSortForce';
@@ -237,7 +272,7 @@ dlmwrite(filename, ExportAVGSignals, '-append', 'delimiter', '\t'); %Use '\t' to
 
 filename = sprintf('AWGsignalStepForce-%s.csv',name) ;
 fid = fopen(filename, 'w');
-fprintf(fid, 'AWGNormOnCurSortForce-%s, STDNormOnCurSortForce-%s,AWGOnCurSortForce-%s,STDOnCurSortForce-%s,AWGForceSortForce-%s, STDForceSortForce-%s, \n',name,name,name,name,name,name); %, MergeInd,MeanSameIndCurrent, asdasd, ..\n); %\n means start a new line
+fprintf(fid,  'AWGNormOnCurSortForce-%s, STDNormOnCurSortForce-%s,AWGOnCurSortForce-%s,STDOnCurSortForce-%s,AWGForceSortForce-%s, STDForceSortForce-%s, \n',name,name,name,name,name,name); %, MergeInd,MeanSameIndCurrent, asdasd, ..\n); %\n means start a new line
 fclose(fid);
 dlmwrite(filename, ExportAVGSignalsForce, '-append', 'delimiter', '\t'); %Use '\t' to produce tab-delimited files.
 
