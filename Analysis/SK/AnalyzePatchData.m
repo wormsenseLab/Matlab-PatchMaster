@@ -156,9 +156,9 @@ mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 %% Make list of approved traces (by selecting traces to exclude)
 
 % protList = 'DispRate';
-protList = {'WC_Probe'; 'WC_ProbeSmall';'WC_ProbeLarge'};
+protList = {'OnDt'};
 % protList = {'WC_Probe';'DispRate'};
-ExcludeSweeps(ephysData,allCells,1,protList,'full');
+ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
 % protList = '_CC';
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');

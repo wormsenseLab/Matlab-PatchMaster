@@ -92,8 +92,10 @@ for iCell = 1:length(allCells)
         % make sure you have enough points to fit the fast component if it does
         % turn out to be a double exponential. Else, fit a shorter time than
         % 5ms. Either way, stick with exp1 because it's simpler (and because
-        % you're focusing on the fast component) vs. exp2. Compare the two.
+        % you're focusing on the fast component) vs. exp2. 
         
+        % NOTE: The tau calculated here differs from taus calculated when
+        % fitting manually in Igor, causing the estimate of Rs to be too high.
         fitStart = find(ICt == max(ICt(45:60)));
         if max(ICt(45:60)) ~= 0 % avoids crash when recording was lost and all values were 0
             [~,fitInd] = min(abs(ICt(fitStart:fitStart+30)-(ICt(fitStart)/(2*exp(1)))));

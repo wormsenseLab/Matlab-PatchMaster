@@ -8,7 +8,7 @@
 % current setup.
 % 
 % USAGE:
-%   mechPeaks = IdAnalysis(ephysData, allCells)
+%   mechPeaks = IdAnalysis(ephysData, allCells, calibFlag)
 %
 % INPUTS:
 %   ephysData       struct          Imported data from ImportPatchData.
@@ -44,7 +44,7 @@
 %   output
 % TODO: Pull stimCom 0.408 factor out as defined variable
 
-function mechPeaks = IdAnalysis(ephysData, allCells, calibFlag)
+function [mechPeaks, sortedSizes, sortedLeakSub] = IdAnalysis(ephysData, allCells, calibFlag)
 
 % keyboard;
 
@@ -185,6 +185,7 @@ for iCell = 1:length(allCells)
     pkOffLoc = NaN(nSizes,1);
     onsetTau = NaN(nSizes,1);
     offsetTau = NaN(nSizes,1);
+    nReps = NaN(nSizes,1);
     theseIDs = cell(nSizes,1);
     
     if calibFlag == 1
@@ -198,7 +199,8 @@ for iCell = 1:length(allCells)
     for iSize = 1:nSizes
         sizeIdx = sizeStartIdx(iSize):sizeEndIdx(iSize);
         theseIDs{iSize} = sortedIDs(sizeIdx,:);
-        
+        nReps(iSize) = length(sizeIdx);
+
         if sizeEndIdx(iSize)-sizeStartIdx(iSize)>0
             meansBySize(iSize,:) = mean(sortedLeakSub(sizeIdx,:));
             if calibFlag==1
@@ -229,11 +231,10 @@ for iCell = 1:length(allCells)
          
     end
     
-    %TODO: Add nReps to output here
 
     if calibFlag==1
         mechPeaks{iCell,1} = [eachSize(~isnan(eachSize)) meanPDSize(~isnan(eachSize)) ...
-            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
+            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc nReps];
         mechPeaks{iCell,2} = meansBySize;
         mechPeaks{iCell,3} = meanPDTrace;
         mechPeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
@@ -241,7 +242,7 @@ for iCell = 1:length(allCells)
     else
         mechPeaks{iCell,1} = ...
             [eachSize(~isnan(eachSize)) nan(size(eachSize(~isnan(eachSize))))...
-            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc];
+            pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc nReps];
         mechPeaks{iCell,2} = meansBySize;
         mechPeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
         mechPeaks{iCell,5} = theseIDs;

@@ -1,23 +1,28 @@
 % findMRCs.m
 %
-%
+% TODO: Make it so stimStart can be a vector, to find multiple peaks in a
+% given trace (both pn and off currents, multiple on currents, etc.)
 
 function [pk, pkLoc, pkThresh, varargout] = findMRCs(stimStart, traceData, sf, dataType)
 
-smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling
+smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling freq (kHz)
 threshTime = 100; % use first n ms of trace for setting noise threshold
 
+% Number of timepoints to skip after stimulus onset to avoid the stimulus
+% artifact in peak-finding (dependent on sampling frequency in kHz).
 switch sf
     case 5
-        artifactOffset = sf*2;
+        artifactOffset = sf*2; 
     case 10
-        artifactOffset = sf*1.2;
+        artifactOffset = sf*1.2; 
     otherwise
-        artifactOffset = sf;
+        artifactOffset = sf; % in case of non-standard sf, play safe by not cutting off too many points
 end
 
 % Smooth data with a moving average for peak finding and flip if current
 % trace but not if voltage trace (for peak finding)
+% TODO: Add a flag to make this usable in reversal potential peak finding,
+% or use absolute value.
 switch dataType
     case 'A'
         smooMean = -smooth(traceData',smoothWindow,'moving');

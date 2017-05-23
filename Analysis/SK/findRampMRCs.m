@@ -1,4 +1,4 @@
-% findRamp.m
+% findRampMRCs.m
 %
 % Uses stimWindow instead of stimStart to allow for ramp peak-finding
 
@@ -7,6 +7,8 @@ function [pk, pkLoc, pkThresh, varargout] = findRampMRCs(stimWindow, traceData,s
 smoothWindow = sf; % n timepoints for moving average window for findPeaks (sf = 1ms worth)
 threshTime = 100; % use first n ms of trace for setting noise threshold
 
+% Number of timepoints to skip after stimulus onset to avoid the stimulus
+% artifact in peak-finding (dependent on sampling frequency in kHz).
 switch sf
     case 5
         artifactOffset = sf*2;

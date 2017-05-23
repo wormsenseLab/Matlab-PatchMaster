@@ -215,7 +215,7 @@ for iCell = 1:length(allCells)
             findRampMRCs(rampsByRate(iRate,:), meansByRate{iRate},sf);
         
         % Find MRC peaks at the offset of the step
-        %TODO: check if this is working properly - should always have off
+        %TODO: fix this - should always have off
         %current with the 8um step
         
         [pkOff(iRate), pkOffLoc(iRate), pkThresh(iRate), offsetTau(iRate), ~] = ...
