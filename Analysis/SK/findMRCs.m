@@ -53,12 +53,16 @@ if ~isempty(peaks)
         case 'V'
             pk = max(peaks)*1E3; %mV
     end
+    
+    %TODO: Use grpdelay to adjust for filter delay? If there is one, this
+    %might also help make the tau calculation more correct.
     peakLocs = peakLocs(peaks==max(peaks));
     pkLoc = peakLocs(1) + stimStart+artifactOffset; %account for start position
     
     % Find time for current to decay to 2/e of the peak or 75ms
     % after the peak, whichever comes first. Use that for fitting
     % the single exponential. Fit the unsmoothed mean trace.
+    
     [~,fitInd] = min(abs(traceData(pkLoc:75*sf+pkLoc)...
         - (traceData(pkLoc)/(2*exp(1)))));
     
