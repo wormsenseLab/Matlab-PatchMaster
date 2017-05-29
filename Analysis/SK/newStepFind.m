@@ -95,30 +95,40 @@ for iSweep = 1:nSweeps
     
     %TODO: Test stepMaxLength w one of the older traces w no filter, to see
     %if max 2 timepoints is actually what will work.
+    %TODO: Consider flag to use PD channel instead of stim channel. You
+    %can't just pass in one because you need command channel with low noise
+    %to find the timepoints.
     
     isStep = stLengthActual<=stepMaxLength;
     
+    % If step, find size by subtracting the command value from the 10ms
+    % immediately following the step vs. the 10ms prior (or threshTime ms).
     stepSize = arrayfun(@(x,y) mean(stimSweep(x+1:x+sf*threshTime)) - ...
         mean(stimSweep(y-sf*threshTime:y-1)), stLocEnd, stLocStart,'UniformOutput',false);
     stepSize = [stepSize{:}]'.*isStep*vToDispFactor;
     
+    % If ramp, find size using the mean at the three timepoints surrounding
+    % ramp end minus the 10ms (or threshTime ms) prior to start of ramp.
+    % (Step will probably not be immediately followed by anything else 
+    % within 10ms, but ramp might have triangle stimulus.)
     rampSize = arrayfun(@(x,y) mean(stimSweep(x:x+2)) - ...
         mean(stimSweep(y-sf*threshTime:y-1)), stLocEnd, stLocStart,'UniformOutput',false);
     rampSize = [rampSize{:}]'.*~isStep*vToDispFactor;
+    % Convert both from voltage to displacement size based on conversion
+    % factor for that particular piezo stack (in um). Get rid of any step 
+    % data in the ramps and vice versa.
     
-    stVel = 
-    %bsxfun or just do both stepSize and rampSize calculations, multiply
-    %each by isStep or ~isStep, then add (non-applicable values will be
-    %zeros).
+    % Combination of step and ramp sizes.
+    stSize = stepSize + rampSize;
+    
+    % Calculate stimulus velocity, in um/s.
+    stVel = stSize ./ (stLengthActual/sf/1000);
       
-    % For step: take difference of mean value of stimSweep 10ms before and 
-    % after stStart/End to get stepSize.
-    
-    % By default, round step size to nearest 0.1 to drop noise and allow
+    % By default, round step size to nearest 0.1um to drop noise and allow
     % grouping of step sizes. roundedTo is an optional input that can be set
     % larger or smaller depending on the range of step values used.
     roundedTo = 1/roundedTo;
-    allSizes = round(stepSize*roundedTo)/roundedTo;
+    stSize = round(stSize*roundedTo)/roundedTo;
     
     
     
@@ -126,8 +136,8 @@ for iSweep = 1:nSweeps
     % [startTimepoint  stopTimepoint  +/-stepSize  rampRate  sweep# stim#] 
     sweepStimuli(:,1) = stLocStart;
     sweepStimuli(:,2) = stLocEnd;
-    sweepStimuli(:,3) = 
-    sweepStimuli(:,4) = 
+    sweepStimuli(:,3) = stSize;
+    sweepStimuli(:,4) = stVel;
     sweepStimuli(:,5) = repmat(iSweep,length(stLocStartIdx),1);
     sweepStimuli(:,6) = (1:length(stLocStartIdx))';
     
