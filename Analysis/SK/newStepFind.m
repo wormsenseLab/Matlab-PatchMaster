@@ -22,6 +22,7 @@ threshTime = 10; %ms
 smoothWindow = sf;
 extStimFilterFreq = 2.5; %kHz
 vToDispFactor = 1/0.408;
+roundedTo = 1/0.1;
 
 % Find size of step (in um), as well as start and end indices.
 
@@ -63,6 +64,11 @@ for iSweep = 1:nSweeps
     stLocEndIdx = stLocEndIdx(stLength>=smoothWindow); %drop if too short to be a step
     stLength = stLength(stLength>=smoothWindow);
     stLocStartIdx = stLocEndIdx-stLength+1;
+    
+    %TODO: Drop "step" at end of trace, before signal goes to zero for
+    %protocols with varying time. Within 5ms of start/end, or within
+    %1.5*smoothWindow of a 5ms+ long true zero plateau. 
+    
     
     % Account for filter delay: (N samples - 1)/2. Add timepoints to start
     % and subtract from end bc I'm looking for the first threshold
@@ -122,32 +128,27 @@ for iSweep = 1:nSweeps
     stSize = stepSize + rampSize;
     
     % Calculate stimulus velocity, in um/s.
-    stVel = stSize ./ (stLengthActual/sf/1000);
+    stSpeed = abs(stSize) ./ (stLengthActual/sf/1000);
       
     % By default, round step size to nearest 0.1um to drop noise and allow
     % grouping of step sizes. roundedTo is an optional input that can be set
     % larger or smaller depending on the range of step values used.
-    roundedTo = 1/roundedTo;
     stSize = round(stSize*roundedTo)/roundedTo;
     
     
-    
     % Save into array that will be concatenated for the series.
-    % [startTimepoint  stopTimepoint  +/-stepSize  rampRate  sweep# stim#] 
+    % [startTimepoint  stopTimepoint  +/-stepSize  stimVelocity  sweep# stim#] 
     sweepStimuli(:,1) = stLocStart;
     sweepStimuli(:,2) = stLocEnd;
     sweepStimuli(:,3) = stSize;
-    sweepStimuli(:,4) = stVel;
+    sweepStimuli(:,4) = stSpeed;
     sweepStimuli(:,5) = repmat(iSweep,length(stLocStartIdx),1);
     sweepStimuli(:,6) = (1:length(stLocStartIdx))';
     
-    %TODO: Drop "step" at end of trace, before signal goes to zero for
-    %protocols with varying time. Within 5ms of start/end, or within
-    %1.5*smoothWindow of a 5ms+ long true zero plateau. 
-    
 
+    seriesStimuli = [seriesStimuli; sweepStimuli];
                 
 end
   
     
-    seriesStimuli = [seriesStimuli; sweepStimuli];
+
