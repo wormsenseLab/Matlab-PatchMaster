@@ -11,6 +11,9 @@
 % clean enough for ramp detection, but once step is found, can use
 % timepoints to find calibrated actual displacement).
 
+% Set 'roundedTo' to 0 for no rounding.
+% Optional input: include baseline values or not
+
 function seriesStimuli = newStepFind(nSweeps, stimData, sf, varargin)
 
 % INPUTS
@@ -27,7 +30,7 @@ p.addOptional('approvedTraces', 1:nSweeps, @(x) isnumeric(x));
 
 p.addParameter('nStim', 1, @(x) isnumeric(x) && isscalar(x) && x>0);
 p.addParameter('minStimInterval',300, @(x) isnumeric(x) && isscalar(x) && x>0);
-p.addParameter('roundedTo',0.1, @(x) isnumeric(x));
+p.addParameter('roundedTo',0, @(x) isnumeric(x));
 p.addParameter('endTime',0, @(x) isnumeric(x) && isscalar(x));
 p.addParameter('scaleFactor',1, @(x) isnumeric(x) && isscalar(x));
 p.parse(nSweeps, stimData, sf, varargin{:});
@@ -154,24 +157,27 @@ for iSweep = 1:nSweeps
     
     % Combination of step and ramp sizes.
     stSize = stepSize + rampSize;
-    
+    cumulStSize = cumsum(stSize);
     % Calculate stimulus velocity, in um/s.
     stSpeed = abs(stSize) ./ (stLengthActual/sf/1000);
       
     % By default, round step size to nearest 0.1um to drop noise and allow
     % grouping of step sizes. roundedTo is an optional input that can be set
     % larger or smaller depending on the range of step values used.
-    stSize = round(stSize*roundedTo)/roundedTo;
-    
+    if ~isinf(roundedTo) 
+        stSize = round(stSize*roundedTo)/roundedTo;
+        cumulStSize = round(cumulStSize*roundedTo)/roundedTo;
+    end
     
     % Save into array that will be concatenated for the series.
-    % [startTimepoint  stopTimepoint  +/-stepSize  stimVelocity  sweep# stim#] 
+    % [startTimepoint  stopTimepoint  +/-stepSize  cumulativeStepSize  stimVelocity  sweep# stim#] 
     sweepStimuli(:,1) = stLocStart;
     sweepStimuli(:,2) = stLocEnd;
     sweepStimuli(:,3) = stSize;
-    sweepStimuli(:,4) = stSpeed;
-    sweepStimuli(:,5) = repmat(iSweep,length(stLocStartIdx),1);
-    sweepStimuli(:,6) = (1:length(stLocStartIdx))';
+    sweepStimuli(:,4) = cumulStSize;
+    sweepStimuli(:,5) = stSpeed;
+    sweepStimuli(:,6) = repmat(iSweep,length(stLocStartIdx),1);
+    sweepStimuli(:,7) = (1:length(stLocStartIdx))';
     
 
     seriesStimuli = [seriesStimuli; sweepStimuli];
