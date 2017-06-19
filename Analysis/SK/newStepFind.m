@@ -11,18 +11,46 @@
 % clean enough for ramp detection, but once step is found, can use
 % timepoints to find calibrated actual displacement).
 
-cellName = 'FAT104';
-series = 22;
+function seriesStimuli = newStepFind(nSweeps, stimData, sf, varargin)
 
-stimData = ephysData.(cellName).data{2,series};
+% INPUTS
+% Validate inputs, allow optional inputs for more complicated usage of the
+% function, and set defaults for optional inputs not passed in.
+p = inputParser;
+
+p.addRequired('nSweeps', @(x) isnumeric(x) && isscalar(x) && x>0);
+p.addRequired('stimData', @(x) isnumeric(x));
+p.addRequired('sf', @(x) isnumeric(x) && isscalar(x) && x>0);
+
+p.addOptional('thresholdTime', 10, @(x) isnumeric(x) && isscalar(x) && x>0)
+p.addOptional('approvedTraces', 1:nSweeps, @(x) isnumeric(x));
+
+p.addParameter('nStim', 1, @(x) isnumeric(x) && isscalar(x) && x>0);
+p.addParameter('minStimInterval',300, @(x) isnumeric(x) && isscalar(x) && x>0);
+p.addParameter('roundedTo',0.1, @(x) isnumeric(x));
+p.addParameter('endTime',0, @(x) isnumeric(x) && isscalar(x));
+p.addParameter('scaleFactor',1, @(x) isnumeric(x) && isscalar(x));
+p.parse(nSweeps, stimData, sf, varargin{:});
+
+threshTime = p.Results.thresholdTime;
+approvedTraces = p.Results.approvedTraces;
+nStim = p.Results.nStim;
+minStimInterval = p.Results.minStimInterval;
+roundedTo = p.Results.roundedTo;
+endTime = p.Results.endTime;
+scaleFactor = p.Results.scaleFactor;
+% 
+% cellName = 'FAT104';
+% series = 22;
+% stimData = ephysData.(cellName).data{2,series};
+
 nSweeps = size(stimData,2);
-sf = ephysData.(cellName).samplingFreq{series}/1000; %kHz
+% sf = ephysData.(cellName).samplingFreq{series}/1000; %kHz
 si = 1/sf; %ms
-threshTime = 10; %ms
 smoothWindow = sf;
 extStimFilterFreq = 2.5; %kHz
-vToDispFactor = 1/0.408;
-roundedTo = 1/0.1;
+vToDispFactor = 1/scaleFactor;
+roundedTo = 1/roundedTo;
 
 % Find size of step (in um), as well as start and end indices.
 
@@ -148,6 +176,8 @@ for iSweep = 1:nSweeps
 
     seriesStimuli = [seriesStimuli; sweepStimuli];
                 
+end
+
 end
   
     

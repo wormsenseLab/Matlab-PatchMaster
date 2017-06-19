@@ -4,6 +4,13 @@
 % 
 % 
 %TODO: inputparser for matchtype
+%TODO: inputparser param for electrode data vs. calib (plotting properly,
+%plotting the right channel [either chan3 or search for 'mV'?)
+%TODO: Build another quick GUI to look through tree of sweeps (maybe
+%directory type? or 3 listboxes, first w fieldnames, second w series
+%numbers that populate when you select a fieldname, third w channel
+%number/channeltype/channelunit? single click? enter to plot?
+
 function selectedSweeps = ExcludeSweeps(ephysData, allCells, channel, protList, matchType)
 
 protLoc = cell(length(allCells),1);
