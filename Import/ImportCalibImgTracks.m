@@ -12,7 +12,6 @@
 
 function ephysData = ImportCalibImgTracks(ephysData, calibBase)
 
-% keyboard;
 % Pick Patchmaster files to import
 [filename, pathname] = uigetfile('*.csv', 'Pick csv files output from trackCircle.py', 'MultiSelect', 'on');
 
@@ -24,10 +23,12 @@ end
 for iFile = 1:length(filename)
    [~, recName] =  fileparts(filename{iFile});
    recName = strrep(recName,'result',''); 
+   recName = strrep(recName,'_','');
+
    
    % Find name of existing recording matching tracked image and read in
    % image tracking data into that field of the ephysData struct.
-   if ismember(lower(recName),lower(fieldnames(ephysData)))
+   if ismember(lower(recName),lower(strrep(fieldnames(ephysData),'_','')))
        trackCol = find(~cellfun('isempty',(regexpi(calibBase(1,:),'Usable Image Tracking'))));
        try trackRow = find(~cellfun('isempty',(regexpi(calibBase(:,1),recName))));
        catch
@@ -56,12 +57,5 @@ for iFile = 1:length(filename)
    
    
 end
-
-%read in ephysData, calibBase
-%uiselect csv files to read in as separate variables
-%match filename to calibData field names, case-insens, first or last
-%if match exists and is marked as usable in calibBase
-% then save var within that recording in subfield calibImgTrack
-%if no match or not usable, disp message to that effect
 
 end
