@@ -30,7 +30,7 @@ for iFile = 1:length(filename)
    % image tracking data into that field of the ephysData struct.
    if ismember(lower(recName),lower(strrep(fieldnames(ephysData),'_','')))
        trackCol = find(~cellfun('isempty',(regexpi(calibBase(1,:),'Usable Image Tracking'))));
-       try trackRow = find(~cellfun('isempty',(regexpi(calibBase(:,1),recName))));
+       try trackRow = find(strcmpi(recName,strrep(calibBase(:,1),'_','')));
        catch
            %If tracked image is not included in metadata sheet, let user know
            %and skip loading it.
