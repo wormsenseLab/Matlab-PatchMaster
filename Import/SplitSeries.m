@@ -86,7 +86,6 @@ for iGr = 1:length(grLoc)
         nChan = 0;
         chanType = cell(6,1);
         chanUnit = cell(6,1);
-
         
         while isTrace == 1
             if seLoc(serTot)+2+nChan > size(tree,1) ||...

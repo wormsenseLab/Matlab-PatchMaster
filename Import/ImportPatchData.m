@@ -8,7 +8,7 @@
 % EXAMPLE:
 %   ephysData = ImportPatchData()
 %   ephysData = ImportPatchData(previousData)
-%   [ephysData, tree] = ImportPatchdata()
+%   [ephysData, tree, stimTree] = ImportPatchdata()
 % 
 % OPTIONAL INPUTS: 
 %   previousData    struct        If you have previously created a data
@@ -29,6 +29,11 @@
 %                                 metadata tree to see what other
 %                                 information is available.
 % 
+%   stimTree        cell          Optional output, contains metadata about
+%                                 stimulus parameters from the pgfs used in
+%                                 each series. Column 1=group, col2=series,
+%                                 col4=stim segment.
+% 
 % IMPORTANT NOTES:
 % You must run sigTOOL at the beginning of every MATLAB session, though you
 % may close the sigTOOL window once it opens.
@@ -42,7 +47,7 @@
 % 
 % Created by Sammy Katta, 28-May-2014
 
-function [ephysData, tree] = ImportPatchData(varargin)
+function [ephysData, tree, stimTree] = ImportPatchData(varargin)
 
 % Pick Patchmaster files to import
 [filename, pathname] = uigetfile('*.dat', 'Pick Patchmaster files', 'MultiSelect', 'on');
@@ -74,7 +79,7 @@ for iFile = 1:length(filename)
     fName = fullfile(pathname, filename{iFile});
     
     % Run modified HEKA import function
-    [~, tree, data] = ImportHEKAtoMat(fName);
+    [~, tree, data, stimTree] = ImportHEKAtoMat(fName);
     % data output contains weirdly padded cells, the following will fix that
     
     % Collapse the padded data into a single row and pull apart
