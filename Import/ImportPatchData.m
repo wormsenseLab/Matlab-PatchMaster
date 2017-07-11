@@ -32,7 +32,7 @@
 %   stimTree        cell          Optional output, contains metadata about
 %                                 stimulus parameters from the pgfs used in
 %                                 each series. Column 1=group, col2=series,
-%                                 col4=stim segment.
+%                                 col3=channels, col4=stim segment.
 % 
 % IMPORTANT NOTES:
 % You must run sigTOOL at the beginning of every MATLAB session, though you
@@ -40,7 +40,7 @@
 % sigTOOL;
 % 
 % You must also replace SigTOOL's ImportHEKA function with ImportHEKAtoMat,
-% which actually outputs two Matlab variables (containing the data and
+% which actually outputs three Matlab variables (containing the data and
 % metadata for your file) into the workspace.
 % Place ImportHEKAtoMat.m in this folder:
 % 'sigTOOL\sigTOOL Neuroscience Toolkit\File\menu_Import\group_NeuroScience File Formats'
