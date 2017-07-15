@@ -43,6 +43,7 @@
 %   trace and calculated sizes (based on calibration if available) in
 %   output
 % TODO: Pull stimCom 0.408 factor out as defined variable
+% TODO: allCells usage is old? Read from unique(mechTracePicks(:,1))
 
 function [mechPeaks, sortedSizes, sortedLeakSub] = IdAnalysis(ephysData, allCells, calibFlag)
 

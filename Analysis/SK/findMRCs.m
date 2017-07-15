@@ -3,7 +3,7 @@
 % TODO: Make it so stimStart can be a vector, to find multiple peaks in a
 % given trace (both pn and off currents, multiple on currents, etc.)
 
-function [pk, pkLoc, pkThresh, varargout] = findMRCs(stimStart, traceData, sf, dataType)
+function seriesPeaks = findMRCs(seriesStimuli, traceData, sf, dataType)
 
 smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling freq (kHz)
 threshTime = 100; % use first n ms of trace for setting noise threshold

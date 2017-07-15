@@ -179,9 +179,8 @@ for iSweep = 1:nSweeps
     sweepStimuli(:,6) = repmat(iSweep,length(stLocStartIdx),1);
     sweepStimuli(:,7) = (1:length(stLocStartIdx))';
     
-
     seriesStimuli = [seriesStimuli; sweepStimuli];
-                
+    clear sweepStimuli
 end
 
 end
