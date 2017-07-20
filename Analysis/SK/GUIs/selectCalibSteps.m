@@ -1,4 +1,4 @@
-function handles = selectCalibSteps(plotData)
+function handles = selectCalibSteps(plotData,cellName)
 % Creates a GUI for selecting ranges of data on a plot over which to
 % average, in this case for the manual calibration steps.
 % 
@@ -51,9 +51,12 @@ handles.hFinish = uicontrol('Style','pushbutton',...
     'String','Finish Selection',...
     'Position',[475,200,90,25],...
     'Callback',@finishButton_Callback);
+handles.hNameText = uicontrol('Style','text',...
+    'String',sprintf('Recording: \n %s',cellName), ...
+    'Position',[475,100,90,30], ...
+    'HorizontalAlignment','left');
 handles.ha = axes('Units','Pixels','Position',[50,70,400,350]);
 %    align([hText,hSteps,hClear,hFinish],'Center','None');
-
 
 % Initialize the GUI.
 % Change units to normalized so components resize
@@ -65,6 +68,9 @@ handles.hSteps.Units = 'normalized';
 handles.hBegin.Units = 'normalized';
 handles.hClear.Units = 'normalized';
 handles.hFinish.Units = 'normalized';
+handles.hNameText.Units = 'normalized';
+
+handles.f.Position = [0,1,0.8,0.8];
 
 %Create a plot in the axes.
 plot(handles.ha, plotData);

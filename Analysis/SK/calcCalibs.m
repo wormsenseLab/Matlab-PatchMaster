@@ -29,7 +29,7 @@ for iCell = 1:length(calibCells)
     %if need be).
     if ephysData.(cellName).dataType{3} == 'V'
         calibData(:,iCell) = ephysData.(cellName).data{3,calibMetaData{iCell,2}};
-    elseif ephysData.(cellName.dataType{2} == 'V'
+    elseif ephysData.(cellName).dataType{2} == 'V'
         calibData(:,iCell) = ephysData.(cellName).data{2,calibMetaData{iCell,2}};
     else 
         disp('Photodiode calibration signal is neither channel 2 nor 3.');
