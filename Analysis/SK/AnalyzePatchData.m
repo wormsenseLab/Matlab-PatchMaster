@@ -16,7 +16,7 @@ ephysData = ImportPatchData();
 
 
 % Keep only data with given project prefixes/names.
-projects = {'FAT'};
+projects = {'FAT';'SYM'};
 
 ephysData = FilterProjectData(ephysData, projects);
 

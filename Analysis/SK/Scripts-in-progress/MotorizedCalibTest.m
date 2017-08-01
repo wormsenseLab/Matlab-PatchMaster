@@ -76,7 +76,7 @@ for iCell = 38:length(calibDataPD)
     % same start/end cursor).
     %TODO: Fix the datatip labels.
     handlesPD = selectCalibSteps(pdData3,calibPDCells{iCell});
-    handlesProbe = selectCalibSteps(probeData3,calibPRobeCells{iCell});
+    handlesProbe = selectCalibSteps(probeData3,calibProbeCells{iCell});
     
     % Pull out the mean value of the signal between the indices set by the
     % user's cursor placement. Store in stepValues with [recordings, steps]
@@ -94,8 +94,12 @@ for iCell = 38:length(calibDataPD)
         stepValuesProbe(iCell,j) = mean(probeData3(stepIdx(j,1):stepIdx(j,2)))';
     end
     close;
+
+%     seriesStimuli = newStepFind(1, probeData3, 10, 10);
     
 end
+
+clear pdData3 handlesPD handlesProbe stepIdx iCell j
 
 % Ask where to save and write out the .xls file with calib mean values from
 % PD signal channel
@@ -295,7 +299,7 @@ edgeCells = {'pzvspd_load_A3', 'pzvspd_load_B', 'pzvspd_loadC', 'pzvspd_loadD'}'
 
 fig.f6 = figure();
 for i = 1:length(centerCells)
-    plot(
+    plot();
     
 end
 

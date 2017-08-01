@@ -33,15 +33,20 @@ p.addParameter('minStimInterval',300, @(x) isnumeric(x) && isscalar(x) && x>0);
 p.addParameter('roundedTo',0, @(x) isnumeric(x));
 p.addParameter('endTime',0, @(x) isnumeric(x) && isscalar(x));
 p.addParameter('scaleFactor',1, @(x) isnumeric(x) && isscalar(x));
+p.addParameter('smoothWindow',0, @(x) isnumeric(x) && isscalar(x) && x>0);
 p.parse(nSweeps, stimData, sf, varargin{:});
 
-threshTime = p.Results.thresholdTime;
+threshTime = p.Results.thresholdTime; %ms
 approvedTraces = p.Results.approvedTraces;
 nStim = p.Results.nStim;
 minStimInterval = p.Results.minStimInterval;
 roundedTo = p.Results.roundedTo;
 endTime = p.Results.endTime;
 scaleFactor = p.Results.scaleFactor;
+smoothWindow = p.Results.smoothWindow;
+if smoothWindow == 0
+    smoothWindow = sf; %if smoothWindow is not set, set to 1ms worth of samples
+end
 % 
 % cellName = 'FAT104';
 % series = 22;
@@ -50,7 +55,6 @@ scaleFactor = p.Results.scaleFactor;
 nSweeps = size(stimData,2);
 % sf = ephysData.(cellName).samplingFreq{series}/1000; %kHz
 si = 1/sf; %ms
-smoothWindow = sf;
 extStimFilterFreq = 2.5; %kHz
 vToDispFactor = 1/scaleFactor;
 roundedTo = 1/roundedTo;
@@ -74,6 +78,9 @@ for iSweep = 1:nSweeps
     sweepDiffSmooth = smooth(sweepDiff, smoothWindow, 'moving');
     tDiff = diff(tVec);
     % If you want to plot, use diff(y)./diff(t)
+      
+    
+    %Next: modify threshold manually for each run to find steps...
     
     % Select threshold based on unsmoothed trace, then use threshold on
     % abs(smoothed trace) to capture peaks and plateaus completely.
