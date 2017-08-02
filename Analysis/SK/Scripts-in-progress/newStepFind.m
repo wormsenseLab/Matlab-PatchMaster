@@ -32,7 +32,7 @@ p.addParameter('nStim', 1, @(x) isnumeric(x) && isscalar(x) && x>0);
 p.addParameter('minStimInterval',300, @(x) isnumeric(x) && isscalar(x) && x>0);
 p.addParameter('roundedTo',0, @(x) isnumeric(x));
 p.addParameter('endTime',0, @(x) isnumeric(x) && isscalar(x));
-p.addParameter('scaleFactor',1, @(x) isnumeric(x) && isscalar(x));
+p.addParameter('scaleFactor',1, @(x) isnumeric(x) && isscalar(x)); %in V/um
 p.addParameter('smoothWindow',0, @(x) isnumeric(x) && isscalar(x) && x>0);
 p.parse(nSweeps, stimData, sf, varargin{:});
 
