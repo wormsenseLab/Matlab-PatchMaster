@@ -57,6 +57,7 @@ sortStimBy = 'num';
 sortSweepsBy = 'step magnitude';
 roundIntTo = 2;
 whichInt = 1;
+sortByStimNum = 1; %sort by which stim (here, first stim, which is on step)
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -73,8 +74,8 @@ protList = {'WC_Probe','WC_ProbeLarge','WC_ProbeSmall'};
 % Values for traces not on the list will be stored as NaN.
 for iCell = 1:length(allCells)
     
-    allStim = cell(1);
-    allLeakSub = [];
+    allStim = cell(0);
+    allLeakSub = cell(0);
     
     % Double check that the list of series given matches the indices of
     % the WC_Probe Id-curve protocols.
@@ -83,6 +84,7 @@ for iCell = 1:length(allCells)
     %Consider if you want to output stim and PD traces?
     cellName = allCells{iCell};
     allSeries = matchProts(ephysData,cellName,protList,'MatchType','full');
+
     nSeries = length(allSeries);
     pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
     
@@ -152,7 +154,8 @@ for iCell = 1:length(allCells)
         
         leakSubtract = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
-        
+        leakSubtractCell = num2cell(leakSubtract',2);
+
         seriesStimuli = ...
             newStepFind(nSweeps, stimComI, sf, 'scaleFactor', stimConversionFactor);
 
@@ -186,12 +189,18 @@ for iCell = 1:length(allCells)
         
         % Concatenate to the complete list of step sizes and
         % leak-subtracted traces across series for this recording
-        allLeakSub = [allLeakSub; leakSubtract'];
-        
-              
+        allLeakSub=[allLeakSub; leakSubtractCell];       
+                     
     end
     
+    % Pad all traces with NaNs at the end so they're the same length, for
+    % ease of manipulation as an array instead of a cell.
+    sweepLengths = cellfun('length',allLeakSub);
+    maxLength = max(sweepLengths);
+    allLeakSub=cellfun(@(x)cat(2,x,nan(1,maxLength-length(x))),allLeakSub,'UniformOutput',false);
+    allLeakSub = cell2mat(allLeakSub);
    
+    
 % KEEP this section separate for each Analysis fxn, because what you sort
 % by will change. (e.g., not by size for OnDt analysis). 
 
@@ -237,33 +246,24 @@ for iCell = 1:length(allCells)
 %offset, thresholding, fitting).
             
 
-        meansByParam = NaN(nSizes,length(sortedLeakSub));
+        meansByParam = cell(nSizes,1);
 
         % Use start and end indices for each step size to take the mean of the
         % leak-subtracted trace corresponding to that step size. Then smooth
         % and find peaks near the step times.
         for iSize = 1:nSizes
-            sizeIdx = paramStartIdx(iSize):paramEndIdx(iSize);
+            sizeIdx = paramStartIdx(iSize):paramEndIdx(iSize);        
+            theseSweeps = sortedLeakSub(sizeIdx,:);
 
             if paramEndIdx(iSize)-paramStartIdx(iSize)>0
-                meansByParam(iSize,:) = mean(sortedLeakSub(sizeIdx,:));
+                % meansByParam(iSize,:) = mean(sortedLeakSub(sizeIdx,:));
+                meansByParam{iSize} = nanmean(theseSweeps);
+                
             else
-                meansByParam(iSize,:) = sortedLeakSub(sizeIdx,:);
+                % meansByParam(iSize,:) = sortedLeakSub(sizeIdx,:);
+                meansByParam{iSize} = theseSweeps;
             end
-            
-
-%                 % Find MRC peaks if they exist at the onset of the step, otherwise
-%                 % set peak amplitude as NaN. Calculate decay constant tau based on
-%                 % single exponent fit for onset and offset currents.
-%                 
-%                 [pkOn(iSize), pkOnLoc(iSize), pkThresh(iSize), onsetTau(iSize), ~] = ...
-%                     findMRCs(startsByParam(iSize), meansByParam(iSize,:),sf, dataType);
-%                 
-%                 % Find MRC peaks at the offset of the step
-%                 
-%                 [pkOff(iSize), pkOffLoc(iSize), pkThresh(iSize), offsetTau(iSize), ~] = ...
-%                     findMRCs(endsByParam(iSize), meansByParam(iSize,:),sf, dataType);
-%                 
+                           
         end
         
               
@@ -277,9 +277,15 @@ for iCell = 1:length(allCells)
         stimMetaData(:,3) = eachSize;
         stimMetaData(:,4) = nReps;      
         
-        mechPeaks{iCell,iStim} = findMRCs(stimMetaData, meansByParam, sf, dataType);
-%         seriesPeaks = findMRCs(
+        seriesPeaks{iStim} = findMRCs(stimMetaData, meansByParam, sf, dataType);
 
+    end
+    
+    finalSortIdx = sortedStim{sortByStimNum,2};
+    
+    for iStim = 1:nStim
+        sortedStim{iStim,1} = sortedStim{iStim,1}(finalSortIdx,:);
+        seriesPeaks{iStim} = seriesPeaks{iStim}(finalSortIdx,:);
     end
 % keyboard;
     
