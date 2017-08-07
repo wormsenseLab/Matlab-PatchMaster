@@ -45,7 +45,7 @@
 % TODO: allCells usage is old? Read from unique(mechTracePicks(:,1))
 % TODO: 
 
-function [mechPeaks, sortedByParam, sortedLeakSub] = IdAnalysis(ephysData, calibFlag)
+function [mechPeaks, finalStim, finalLeakSub] = IdAnalysis(ephysData, calibFlag)
 
 % keyboard;
 
@@ -196,7 +196,7 @@ for iCell = 1:length(allCells)
     % Pad all traces with NaNs at the end so they're the same length, for
     % ease of manipulation as an array instead of a cell.
     sweepLengths = cellfun('length',allLeakSub);
-    maxLength = max(sweepLengths);
+        maxLength = max(sweepLengths);
     allLeakSub=cellfun(@(x)cat(2,x,nan(1,maxLength-length(x))),allLeakSub,'UniformOutput',false);
     allLeakSub = cell2mat(allLeakSub);
    
@@ -238,15 +238,15 @@ for iCell = 1:length(allCells)
         % decide which is the variable stim and sort all sweeps according
         % to that index? Should this be an input parameter? Timepoint or
         % stim number? Or plot and prompt the user to pick a stim location?
-        sortedStim{iStim,1} = allStim{iStim}(sortIdx,:);
-        sortedStim{iStim,2} = sortIdx;
+        sortedStim{1,iStim} = allStim{iStim}(sortIdx,:);
+        sortedStim{2,iStim} = sortIdx;
         
 %NEXT: Recombine findMRCs with findRampMRCS, since the latter already uses
 %stimWindow. Maybe set some input parameters for options (I vs. V, artifact
 %offset, thresholding, fitting).
             
 
-        meansByParam = cell(nSizes,1);
+        meansByParam = NaN(nSizes, length(sortedLeakSub));
 
         % Use start and end indices for each step size to take the mean of the
         % leak-subtracted trace corresponding to that step size. Then smooth
@@ -257,11 +257,11 @@ for iCell = 1:length(allCells)
 
             if paramEndIdx(iSize)-paramStartIdx(iSize)>0
                 % meansByParam(iSize,:) = mean(sortedLeakSub(sizeIdx,:));
-                meansByParam{iSize} = nanmean(theseSweeps);
+                meansByParam(iSize,:) = nanmean(theseSweeps);
                 
             else
                 % meansByParam(iSize,:) = sortedLeakSub(sizeIdx,:);
-                meansByParam{iSize} = theseSweeps;
+                meansByParam(iSize,:) = theseSweeps;
             end
                            
         end
@@ -273,19 +273,28 @@ for iCell = 1:length(allCells)
         % should take a buffer before/after the stimWindow. Save into
         % parameters for findMRCs input.
         
-        stimMetaData(:,1:2) = sortedStim{iStim}(paramStartIdx,1:2);
+        stimMetaData(:,1:2) = sortedStim{1,iStim}(paramStartIdx,1:2);
         stimMetaData(:,3) = eachSize;
         stimMetaData(:,4) = nReps;      
         
-        seriesPeaks{iStim} = findMRCs(stimMetaData, meansByParam, sf, dataType);
-
+        % Find mechanoreceptor current peaks and append to seriesPeaks for
+        % that stimulus number.
+        mechPeaks{iCell,1} = meansByParam;
+        try mechPeaks{iCell,iStim+1};
+        catch
+            mechPeaks{iCell,iStim+1} = [];
+        end
+            mechPeaks{iCell,iStim+1} = [mechPeaks{iCell,iStim+1};findMRCs(stimMetaData, meansByParam, sf, dataType)];
     end
     
-    finalSortIdx = sortedStim{sortByStimNum,2};
+    finalSortIdx = sortedStim{2,sortByStimNum};
+    finalLeakSub{iCell,1} = allLeakSub(finalSortIdx,:);
+% TODO: have column 2 be the stim trace used to find stim, for easy
+% plotting access, and col 3 = PD trace, once you have that set up.
     
-    for iStim = 1:nStim
-        sortedStim{iStim,1} = sortedStim{iStim,1}(finalSortIdx,:);
-        seriesPeaks{iStim} = seriesPeaks{iStim}(finalSortIdx,:);
+    finalStim{iCell,1} = cellName;
+    for iStim = 1:length(allStim)
+        finalStim{iCell,iStim+1} = sortedStim{1,iStim};
     end
 % keyboard;
     
