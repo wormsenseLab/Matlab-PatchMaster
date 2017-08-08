@@ -43,9 +43,9 @@
 %   trace and calculated sizes (based on calibration if available) in
 %   output
 % TODO: allCells usage is old? Read from unique(mechTracePicks(:,1))
-% TODO: 
+% TODO:
 
-function [mechPeaks, finalStim, finalLeakSub] = IdAnalysis(ephysData, calibFlag)
+function [mechPeaks, sortedStim, sortedLeakSub] = IdAnalysis(ephysData, calibFlag)
 
 % keyboard;
 
@@ -54,10 +54,11 @@ baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
 sortStimBy = 'num';
-sortSweepsBy = 'step magnitude';
+sortSweepsBy = {'magnitude', 'magnitude'};
 roundIntTo = 2;
 whichInt = 1;
 sortByStimNum = 1; %sort by which stim (here, first stim, which is on step)
+stimSortOrder = [1 2];
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -80,11 +81,11 @@ for iCell = 1:length(allCells)
     % Double check that the list of series given matches the indices of
     % the WC_Probe Id-curve protocols.
     
-    %SPLIT into function findStimuli here, through end of for series loop
-    %Consider if you want to output stim and PD traces?
+%SPLIT into function findStimuli here, through end of for series loop
+%Consider if you want to output stim and PD traces?
     cellName = allCells{iCell};
     allSeries = matchProts(ephysData,cellName,protList,'MatchType','full');
-
+    
     nSeries = length(allSeries);
     pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
     
@@ -107,59 +108,59 @@ for iCell = 1:length(allCells)
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
         dataType = ephysData.(cellName).dataunit{1,thisSeries};
         nSweeps = size(stimComI,2);
-
-%DECIDE: where use of photodiode signal should come in. Use the stimulus
-%command channel (or stim parameters from stimTree once that's working) to
-%find the putative step locations/stimulus profile. Then use the photodiode
-%trace to find the actual size/speed of the stimuli at that location. Find
-%PD-measured step sizes/speeds here and give optional output allPDStim.
-
-
-%         % if calibration should be used to calculate step sizes, get photodiode data
-%         % and use calib curve to transform photodiodeV trace into
-%         % measured displacement trace (then use same findSteps threshold)
-%         if calibFlag == 1
-%             try pdCalib = ephysData.(cellName).calibration;
-%             catch
-%                 fprintf('No calibration found for %s\n', cellName);
-%                 calibFlag = 2;
-%             end
-%             
-%             if calibFlag ==1
-%                 
-%                 photodiodeV = ephysData.(cellName).data{3,thisSeries}(:,pickedTraces);
-%                 
-%                 if isempty(photodiodeV)
-%                     photodiodeV = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces);
-%                 end
-%                 
-%                 
-%                 % Interpolate photodiode voltage to calculate measured disp
-%                 try measuredDisp = interp1(-pdCalib(2,:), pdCalib(1,:), -photodiodeV, 'linear','extrap');
-%                 catch
-%                     fprintf('Interpolation failed for %s, series %d\n',cellName,thisSeries);
-%                     calibFlag = 2;
-%                 end
-%                 %TODO: swap this for newStepFind as well
-%                 try [pdStepSize, pdStepStarts, pdStepEnds] = ...
-%                         findSteps(nSweeps, measuredDisp, sf, stepThresh, 'roundedTo', 0.05);
-%                 catch
-%                 end
-%                 
-%             end
-%             %TODO: Change roundedTo parameter for this use
-%             %TODO: Check that stepThresh is applicable for measuredDisp as well
-%         end
+        
+        %DECIDE: where use of photodiode signal should come in. Use the stimulus
+        %command channel (or stim parameters from stimTree once that's working) to
+        %find the putative step locations/stimulus profile. Then use the photodiode
+        %trace to find the actual size/speed of the stimuli at that location. Find
+        %PD-measured step sizes/speeds here and give optional output allPDStim.
+        
+        
+        %         % if calibration should be used to calculate step sizes, get photodiode data
+        %         % and use calib curve to transform photodiodeV trace into
+        %         % measured displacement trace (then use same findSteps threshold)
+        %         if calibFlag == 1
+        %             try pdCalib = ephysData.(cellName).calibration;
+        %             catch
+        %                 fprintf('No calibration found for %s\n', cellName);
+        %                 calibFlag = 2;
+        %             end
+        %
+        %             if calibFlag ==1
+        %
+        %                 photodiodeV = ephysData.(cellName).data{3,thisSeries}(:,pickedTraces);
+        %
+        %                 if isempty(photodiodeV)
+        %                     photodiodeV = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces);
+        %                 end
+        %
+        %
+        %                 % Interpolate photodiode voltage to calculate measured disp
+        %                 try measuredDisp = interp1(-pdCalib(2,:), pdCalib(1,:), -photodiodeV, 'linear','extrap');
+        %                 catch
+        %                     fprintf('Interpolation failed for %s, series %d\n',cellName,thisSeries);
+        %                     calibFlag = 2;
+        %                 end
+        %                 %TODO: swap this for newStepFind as well
+        %                 try [pdStepSize, pdStepStarts, pdStepEnds] = ...
+        %                         findSteps(nSweeps, measuredDisp, sf, stepThresh, 'roundedTo', 0.05);
+        %                 catch
+        %                 end
+        %
+        %             end
+        %             %TODO: Change roundedTo parameter for this use
+        %             %TODO: Check that stepThresh is applicable for measuredDisp as well
+        %         end
         
         
         leakSubtract = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
         leakSubtractCell = num2cell(leakSubtract',2);
-
+        
         seriesStimuli = ...
             newStepFind(nSweeps, stimComI, sf, 'scaleFactor', stimConversionFactor);
-
-        % add series number to seriesStimuli for referencing back from 
+        
+        % add series number to seriesStimuli for referencing back from
         % analyzed data to a particular trace
         seriesStimuli (:,8) = repmat(thisSeries,size(seriesStimuli,1),1);
         
@@ -189,114 +190,104 @@ for iCell = 1:length(allCells)
         
         % Concatenate to the complete list of step sizes and
         % leak-subtracted traces across series for this recording
-        allLeakSub=[allLeakSub; leakSubtractCell];       
-                     
+        allLeakSub=[allLeakSub; leakSubtractCell];
+        
     end
     
     % Pad all traces with NaNs at the end so they're the same length, for
     % ease of manipulation as an array instead of a cell.
     sweepLengths = cellfun('length',allLeakSub);
-        maxLength = max(sweepLengths);
-    allLeakSub=cellfun(@(x)cat(2,x,nan(1,maxLength-length(x))),allLeakSub,'UniformOutput',false);
+    maxLength = max(sweepLengths);
+    allLeakSub=cellfun(@(x)cat(2,x,NaN(1,maxLength-length(x))),allLeakSub,'UniformOutput',false);
     allLeakSub = cell2mat(allLeakSub);
-   
+    
+    nStim = length(allStim);
+    sweepsByParams = NaN(size(allLeakSub,1),nStim);
+    sortedStim = cell(1,nStim);
     
 % KEEP this section separate for each Analysis fxn, because what you sort
-% by will change. (e.g., not by size for OnDt analysis). 
-
-    for iStim = 1:length(allStim)
+% by will change. (e.g., not by size for OnDt analysis).
+    
+    for iStim = 1:nStim
         
-        % Sort by commanded size and take start/end indices of the data for each size
-        switch sortSweepsBy
-            case 'step magnitude'
-                [sortedByParam, sortIdx] = sort(round(allStim{iStim}(:,3),1));
-            case 'step position'
-                [sortedByParam, sortIdx] = sort(round(allStim{iStim}(:,4),1));
-            case 'ramp magnitude'
-                [sortedByParam, sortIdx] = sort(round(allStim{iStim}(:,3),1));
-            case 'ramp velocity'
-                [sortedByParam, sortIdx] = sort(round(allStim{iStim}(:,5),1));
-            case 'stim interval'
+    %FIX: don't need whichInt, just use interval previous to stim for iStim
+        
+        % For each parameter, go through all stimuli and round the relevant
+        % parameter to the nearest X so that sweeps can be grouped as being
+        % from the same stimulus profile.
+        switch sortSweepsBy{iStim}
+            case 'magnitude'
+                sweepsByParams(:,iStim) = round(allStim{iStim}(:,3),1);
+            case 'position'
+                sweepsByParams(:,iStim) = round(allStim{iStim}(:,4),1);
+            case 'velocity'
+                sweepsByParams(:,iStim) = round(allStim{iStim}(:,5),0);
+            case 'interval' %time interval between previous stim and current stim
                 a = cellfun(@(x) x(:,1:2),allStim,'un',0);
                 stimInt = diff([a{:}],1,2)/sf; %calculate interval between stimuli in ms
                 stimInt = round(stimInt(:,2:2:size(stimInt,2))/roundIntTo)*roundIntTo;
-                [sortedByParam, sortIdx] = sort(stimInt(:,whichInt));
+                sweepsByParams(:,iStim) = stimInt(:,whichInt);
+                %             case 'none'
+                %             otherwise
+                %                 [sortedByParam, sortIdx] = sort(round(allStim{iStim}(:,3),1));
         end
-        
-        [eachSize,paramStartIdx,~] = unique(sortedByParam,'first');
-        [~,paramEndIdx,~] = unique(sortedByParam,'last');
-        sortedLeakSub = allLeakSub(sortIdx,:);
-        
-        nSizes = sum(~isnan(eachSize));
-        nReps = paramEndIdx-paramStartIdx+1;
-        
-        stimMetaData = zeros(nSizes,4);
-        
-    %DECIDE: how to pick which stimNum is used for sorting sweeps by size/speed.
+    end
     
-        % Save the stimuli sorted by size and the sorting index so you can
-        % decide which is the variable stim and sort all sweeps according
-        % to that index? Should this be an input parameter? Timepoint or
-        % stim number? Or plot and prompt the user to pick a stim location?
-        sortedStim{1,iStim} = allStim{iStim}(sortIdx,:);
-        sortedStim{2,iStim} = sortIdx;
+    % Sort rows by successively less variable parameters based on
+    % stimSortOrder. Use unique to find unique sets of rows/stimulus
+    % profiles and separate them into groups.
+    [sweepsByParams, sortIdx] = sortrows(sweepsByParams, stimSortOrder);
+    sortedLeakSub = allLeakSub(sortIdx,:);
+    
+    for iStim = 1:nStim
+        sortedStim{iStim} = allStim{iStim}(sortIdx,:);
+    end
+    
+    [eachStimProfile, profileStartIdx, ~] = unique(sweepsByParams,'rows','first');
+    [~, profileEndIdx, ~] = unique(sweepsByParams,'rows','last');
+    nStimProfiles = min(sum(~isnan(eachStimProfile)));
+    nReps = profileEndIdx-profileStartIdx+1;
+    
+    % Take mean trace from all reps across all series for each stimulus
+    % profile. Find peaks in that mean trace.
+    
+    meansByStimProfile = NaN(nStimProfiles, length(sortedLeakSub));
+    
+    for iProfile = 1:nStimProfiles
+        groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
         
-%NEXT: Recombine findMRCs with findRampMRCS, since the latter already uses
-%stimWindow. Maybe set some input parameters for options (I vs. V, artifact
-%offset, thresholding, fitting).
-            
-
-        meansByParam = NaN(nSizes, length(sortedLeakSub));
-
-        % Use start and end indices for each step size to take the mean of the
-        % leak-subtracted trace corresponding to that step size. Then smooth
-        % and find peaks near the step times.
-        for iSize = 1:nSizes
-            sizeIdx = paramStartIdx(iSize):paramEndIdx(iSize);        
-            theseSweeps = sortedLeakSub(sizeIdx,:);
-
-            if paramEndIdx(iSize)-paramStartIdx(iSize)>0
-                % meansByParam(iSize,:) = mean(sortedLeakSub(sizeIdx,:));
-                meansByParam(iSize,:) = nanmean(theseSweeps);
-                
-            else
-                % meansByParam(iSize,:) = sortedLeakSub(sizeIdx,:);
-                meansByParam(iSize,:) = theseSweeps;
-            end
-                           
+        theseSweeps = sortedLeakSub(groupIdx{iProfile},:);
+        
+        if length(groupIdx{iProfile})>1
+            meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
+        else
+            meansByStimProfile(iProfile,:) = theseSweeps;
         end
         
-              
         % Use the first sweep for a given size to pick the stimulus window
-        % Assumes stim window doesn't change much within a given step size
-        % (should be fine within a couple timepoints because findMRCs
-        % should take a buffer before/after the stimWindow. Save into
-        % parameters for findMRCs input.
-        
-        stimMetaData(:,1:2) = sortedStim{1,iStim}(paramStartIdx,1:2);
-        stimMetaData(:,3) = eachSize;
-        stimMetaData(:,4) = nReps;      
-        
-        % Find mechanoreceptor current peaks and append to seriesPeaks for
-        % that stimulus number.
-        mechPeaks{iCell,1} = meansByParam;
-        try mechPeaks{iCell,iStim+1};
-        catch
-            mechPeaks{iCell,iStim+1} = [];
+        % Save into parameters to pass to findMRCs.
+        for iStim = 1:nStim
+            stimMetaData = NaN(nStimProfiles,4);
+            
+            stimMetaData(:,1:2) = sortedStim{1,iStim}(profileStartIdx,1:2);
+            stimMetaData(:,3) = eachStimProfile(:,iStim);
+            stimMetaData(:,4) = nReps;
+            
+            
+            % Find mechanoreceptor current peaks and append to seriesPeaks for
+            % that stimulus number.
+            mechPeaks{iCell,1} = meansByStimProfile;
+            mechPeaks{iCell,1+iStim} = findMRCs(stimMetaData, meansByStimProfile, sf, dataType);
+            
         end
-            mechPeaks{iCell,iStim+1} = [mechPeaks{iCell,iStim+1};findMRCs(stimMetaData, meansByParam, sf, dataType)];
+        
     end
     
-    finalSortIdx = sortedStim{2,sortByStimNum};
-    finalLeakSub{iCell,1} = allLeakSub(finalSortIdx,:);
-% TODO: have column 2 be the stim trace used to find stim, for easy
-% plotting access, and col 3 = PD trace, once you have that set up.
     
-    finalStim{iCell,1} = cellName;
-    for iStim = 1:length(allStim)
-        finalStim{iCell,iStim+1} = sortedStim{1,iStim};
-    end
-% keyboard;
+    % TODO: have column 2  of sortedLeakSub be the stim trace used to find stim, for easy
+    % plotting access, and col 3 = PD trace, once you have that set up.
+    
+    % keyboard;
     
     %
     %

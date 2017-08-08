@@ -1,7 +1,7 @@
 % findMRCs.m
 %
 
-function cellPeaks = findMRCs(stimParams, meanTraces, sf, dataType)
+function [cellPeaks, cellFit] = findMRCs(stimParams, meanTraces, sf, dataType)
 
 smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling freq (kHz)
 threshTime = 100; % use first n ms of trace for setting noise threshold
@@ -50,10 +50,10 @@ for iParam = 1:nParams
     % NEXT: Redo this look with a cell where stim was 2.5kHz filtered and use
     % that buffer instead, bc more cells have it. Or set timepoints based on
     % stim filter freqz
-     
+    
     stimStart = stimParams(iParam,1);
     stimEnd = stimParams(iParam,2);
-        
+    
     %NEXT: Change pk/pkLoc to part of a  larger array, add to it each time
     %like sweepStimuli, then concatenate sweep/stim # at end? Or just
     %assign at end to cellPeaks?
@@ -67,7 +67,7 @@ for iParam = 1:nParams
         %might also help make the tau calculation more correct.
         
         % smoothDelay = floor((smoothWindow-1)/2); %using floor for round number timepoints
-
+        
         peakLocs = peakLocs(peaks==pk);
         pkLoc = peakLocs(1) + stimParams(iParam,1)+artifactOffset; %account for start position
         
@@ -100,14 +100,14 @@ for iParam = 1:nParams
         tau = nan;
         pkFit = 0;
     end
-        
+    
     cellPeaks(iParam,2) = pkLoc;
     cellPeaks(iParam,3) = pk;
-%     cellPeaks(iParam,4) = pkDir;
+    %     cellPeaks(iParam,4) = pkDir;
     cellPeaks(iParam,6) = tau;
     cellFit{iParam} = pkFit; %fit object
 end
-cellPeaks(:,5) = pkThresh; 
+cellPeaks(:,5) = pkThresh;
 cellPeaks(:,1) = stimParams(:,3); %stimSize
 cellPeaks(:,7) = stimParams(:,4); %nReps
 end
