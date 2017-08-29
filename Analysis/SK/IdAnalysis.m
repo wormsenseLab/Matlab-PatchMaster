@@ -76,7 +76,6 @@ mechTracePicks = ImportMetaData();
 mechTracePicks = metaDataConvert(mechTracePicks);
 
 allCells = unique(mechTracePicks(:,1));
-allCells = allCells(2:end);
 
 mechPeaks = cell(length(allCells),1);
 % protList = {'WC_Probe','WC_ProbeLarge','WC_ProbeSmall'};
@@ -183,36 +182,40 @@ for iCell = 1:length(allCells)
         % timepoint to group stimuli across sweeps (e.g., on and off)
         switch sortStimBy
             case 'num'
-                paramCol = 7;
+                paramCol = 7; %set which column of seriesStimuli to look in
+                tol = 0; %set tolerance for separating by parameter
             case 'time'
                 paramCol = 1;
+                tol = 1;  
             case 'endTime'
                 paramCol = 2;
+                tol = 0;
         end
-        stimNums = unique(seriesStimuli(:,paramCol));
+        stimNums = uniquetol(seriesStimuli(:,paramCol),tol,'DataScale',1);
 
         
         % separate found stim parameters into groups and concatenate to
         % previous stimuli from the same series
-        
-    %NEXT fix: for case 'time', you have to match stim time values, not
-    %just use the stimNums index. 
+
         stimByNum = cell(length(stimNums),1);
         for iStim = 1:length(stimNums)
-            stimByNum{iStim} = seriesStimuli(seriesStimuli(:,paramCol)==stimNums(iStim),:);
-            
-            try allStim{iStim,1};
+            stimByNum{iStim} = ... % find param matches within tolerance and assign into stimByNum
+                seriesStimuli(ismembertol(seriesStimuli(:,paramCol),stimNums(iStim),tol,'DataScale',1),:);
+            try allStim{iStim,1}; %if allStim doesn't exist, initialize it
             catch
                 allStim{iStim,1} = [];
             end
             
-            if ~length(allStim{iStim})==0;
-                [~,whichStim]=ismembertol(stimNums,cellfun(@(x) x(1,1), allStim),1,'DataScale',1);
-%                 whichStim = find(stimNums(iStim) == cellfun(@(x) x(1,1), allStim));
+            if ~length(allStim{iStim})==0; %if values exist for that stimulus in allStim, 
+                           %match param w/ tolerance to the matching param
+                           %location in allStim
+                [~,whichStim]=ismembertol(stimNums,cellfun(@(x) x(1,paramCol), allStim),1,'DataScale',tol);
                 allStim{whichStim(iStim),1} = [allStim{whichStim(iStim),1};stimByNum{iStim}];
-            else
+                
+            else %if allStim exists but that stimulus is empty, start it up
                 allStim{iStim,1} = [allStim{iStim,1};stimByNum{iStim}];
             end
+            
         end
         
         % Concatenate to the complete list of step sizes and

@@ -269,7 +269,7 @@ scatter(OnDtTest.FAT032.dts,mean(OnDtTest.FAT032.off),'s')
 
 %% PrePulse/NoPrePulse
 
-test = IdAnalysis(ephysData,0);
+prepulseMRCs = IdAnalysis(ephysData,0);
 
 %% Look at current clamp
 allCells = fieldnames(ephysData);
