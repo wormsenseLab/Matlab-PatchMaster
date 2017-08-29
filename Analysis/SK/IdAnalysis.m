@@ -76,6 +76,7 @@ mechTracePicks = ImportMetaData();
 mechTracePicks = metaDataConvert(mechTracePicks);
 
 allCells = unique(mechTracePicks(:,1));
+allCells = allCells(2:end);
 
 mechPeaks = cell(length(allCells),1);
 % protList = {'WC_Probe','WC_ProbeLarge','WC_ProbeSmall'};
@@ -206,8 +207,9 @@ for iCell = 1:length(allCells)
             end
             
             if ~length(allStim{iStim})==0;
-                whichStim = find(stimNums(iStim) == cellfun(@(x) x(1,1), allStim));
-                allStim{whichStim,1} = [allStim{whichStim,1};stimByNum{iStim}];
+                [~,whichStim]=ismembertol(stimNums,cellfun(@(x) x(1,1), allStim),1,'DataScale',1);
+%                 whichStim = find(stimNums(iStim) == cellfun(@(x) x(1,1), allStim));
+                allStim{whichStim(iStim),1} = [allStim{whichStim(iStim),1};stimByNum{iStim}];
             else
                 allStim{iStim,1} = [allStim{iStim,1};stimByNum{iStim}];
             end
@@ -219,47 +221,78 @@ for iCell = 1:length(allCells)
         
     end
     
-    % If using the time sort, you likely want to compare a given
-    % timepoint across sweeps/series, even if the magnitude of the
-    % step there is zero and it isn't detected. This section fills
-    % in those timepoints with magnitude zero steps, if the
-    % fillZeroSteps flag == 1.
+    
+    
     if strfind(lower(sortStimBy),'time') && fillZeroSteps
+        seriesList = vertcat(allStim{:});
+        seriesList = seriesList(:,[6 8]);
+        seriesList = sortrows(unique(seriesList,'rows','stable'),[2 1]);
+        blankStim = NaN(length(seriesList),8);
+        blankStim(:,[6,8]) = seriesList;
+        filledStim = cell(length(allStim),1);
+        [filledStim{1:length(allStim),1}] = deal(blankStim);
+        
+        [~,ia,ib] = cellfun(@(a,b) intersect(a(:,[6 8]),b(:,[6 8]),'rows','stable'), ...
+            filledStim, allStim, 'un', 0);
         for iStim = 1:length(allStim)
-           zeroRows = find(allStim{iStim}(:,7)~=iStim); %find where stimNum doesn't match across sweeps
-           for iInsert = 1:length(zeroRows)
-               nInserts = iStim-allStim{iStim}(zeroRows,7); %find how many "zero stim" were in that sweep
-   %HERE? run a check of series/sweep number to decide in which stim the
-   %row needs to be inserted. nInserts = #of stim with missing row
-   %then insert rows from first stim forward (bc cumul disp is taken from
-   %previous stim)
-   %start by pulling out series/sweep columns, then find nonoverlapping
-   %row indices between stim x and stim 1. insert row, repeat for stim x
-   %vs. stim 2, etc.
-              
-               for nthInsert = nInserts(iInsert):-1:1 %go back and insert a row for each of those stim
-                   
-                   insertTimes = allStim{iStim-nthInsert}(1,1:2); %copy timepoint during previous stim
-                   try insertTotalDisp = allStim{iStim-nthInsert-1}(zeroRows(iInsert),4); %take cumulative/total displacement from the stim before that
-                   catch
-                       insertTotalDisp = 0; %if the previous stim was the first one, total displacement is zero
-                   end
-                   insertStimMeta = allStim{iStim}(zeroRows(iInsert),6:8); %copy metadata from current stim for sweep numbers etc.
-                   
-                   insert = [insertTimes, 0, insertTotalDisp, 0, insertStimMeta];
-                   
-                   % add in the relevant rows in the proper location
-                   allStim{iStim-nthInsert} = ...
-                       [allStim{iStim-nthInsert}(1:zeroRows(iInsert)-1,:); ...
-                       insert; ...
-                       allStim{iStim-nthInsert}(zeroRows(iInsert):end,:)];
-               end
-               
-               %fix the stim number in the current stim
-               allStim{iStim}(zeroRows(iInsert),7) = allStim{iStim}(zeroRows(iInsert),7)+nInserts(iInsert);
-           end
+            filledStim{iStim}(ia{iStim},[1:5, 7]) = allStim{iStim}(ib{iStim},[1:5, 7]);
+            
+            blankIdx = find(isnan(filledStim{iStim}(:,1)));
+            insertTimes = repmat(allStim{iStim}(1,1:2),length(blankIdx),1); %copy timepoint for given stim
+            try insertTotalDisp = filledStim{iStim-1}(blankIdx,4); %take cumulative/total displacement from the stim before that
+            catch
+                insertTotalDisp = zeros(length(blankIdx),1); %if the previous stim was the first one, total displacement is zero
+            end
+            
+            filledStim{iStim}(blankIdx,1:5) = ...
+                [insertTimes, zeros(length(blankIdx),1), insertTotalDisp, zeros(length(blankIdx),1)];
         end
+        
+        allStim = filledStim;
     end
+
+    
+%     % If using the time sort, you likely want to compare a given
+%     % timepoint across sweeps/series, even if the magnitude of the
+%     % step there is zero and it isn't detected. This section fills
+%     % in those timepoints with magnitude zero steps, if the
+%     % fillZeroSteps flag == 1.
+%     if strfind(lower(sortStimBy),'time') && fillZeroSteps
+%         for iStim = 1:length(allStim)
+%            zeroRows = find(allStim{iStim}(:,7)~=iStim); %find where stimNum doesn't match across sweeps
+%            for iInsert = 1:length(zeroRows)
+%                nInserts = iStim-allStim{iStim}(zeroRows,7); %find how many "zero stim" were in that sweep
+%    %HERE? run a check of series/sweep number to decide in which stim the
+%    %row needs to be inserted. nInserts = #of stim with missing row
+%    %then insert rows from first stim forward (bc cumul disp is taken from
+%    %previous stim)
+%    %start by pulling out series/sweep columns, then find nonoverlapping
+%    %row indices between stim x and stim 1. insert row, repeat for stim x
+%    %vs. stim 2, etc.
+%               
+%                for nthInsert = nInserts(iInsert):-1:1 %go back and insert a row for each of those stim
+%                    
+%                    insertTimes = allStim{iStim-nthInsert}(1,1:2); %copy timepoint during previous stim
+%                    try insertTotalDisp = allStim{iStim-nthInsert-1}(zeroRows(iInsert),4); %take cumulative/total displacement from the stim before that
+%                    catch
+%                        insertTotalDisp = 0; %if the previous stim was the first one, total displacement is zero
+%                    end
+%                    insertStimMeta = allStim{iStim}(zeroRows(iInsert),6:8); %copy metadata from current stim for sweep numbers etc.
+%                    
+%                    insert = [insertTimes, 0, insertTotalDisp, 0, insertStimMeta];
+%                    
+%                    % add in the relevant rows in the proper location
+%                    allStim{iStim-nthInsert} = ...
+%                        [allStim{iStim-nthInsert}(1:zeroRows(iInsert)-1,:); ...
+%                        insert; ...
+%                        allStim{iStim-nthInsert}(zeroRows(iInsert):end,:)];
+%                end
+%                
+%                %fix the stim number in the current stim
+%                allStim{iStim}(zeroRows(iInsert),7) = allStim{iStim}(zeroRows(iInsert),7)+nInserts(iInsert);
+%            end
+%         end
+%     end
 
     
     % Pad all traces with NaNs at the end so they're the same length, for
