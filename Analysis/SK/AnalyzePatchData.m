@@ -41,6 +41,14 @@ resists(i,2) = ephysData.(recs{i}).Rs(ephysData.(recs{i}).protRs);
 
 end
 
+%% Print all Rs for making FAT_IV_Assignments spreadsheet
+for i=1:length(recs)
+try fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).Rs)))
+catch
+    continue
+end
+end
+
 %% Import metadata with info about which IVq protocols to look at
 
 ephysMetaData = ImportMetaData(); %FAT-IV Assignments
@@ -156,7 +164,7 @@ mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 %% Make list of approved traces (by selecting traces to exclude)
 
 % protList = 'DispRate';
-protList = {'OnDt'};
+protList = {'PrePulse'};
 % protList = {'WC_Probe';'DispRate'};
 ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
@@ -258,6 +266,10 @@ hold on;
 scatter(OnDtTest.FAT032.dts,mean(OnDtTest.FAT032.on2),'d')
 scatter(OnDtTest.FAT032.dts,mean(OnDtTest.FAT032.off),'s')
 
+
+%% PrePulse/NoPrePulse
+
+test = IdAnalysis(ephysData,0);
 
 %% Look at current clamp
 allCells = fieldnames(ephysData);

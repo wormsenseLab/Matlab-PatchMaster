@@ -37,15 +37,23 @@
 %
 %
 % Created by Sammy Katta on 20-May-2015.
+% Updated most recently by Sammy Katta on 7-Aug-2017.
+% Documentation not updated yet, but fxn now allows output to be used for
+% many more types of analyses. Will soon rename.
 
 % TODO: Add flag for using stim com signal vs. PD signal (chan 2 vs chan 3)
 %   Done, but still uses stim com to group step sizes, and includes PD
 %   trace and calculated sizes (based on calibration if available) in
 %   output
 % TODO: allCells usage is old? Read from unique(mechTracePicks(:,1))
-% TODO:
+% NEXT: test with stimInterval, break down into intermediate fxns if still
+% necessary.
+% LATER: use inputParser to make more useful for other kinds of analysis.
+% LATER: add in PD step analysis (will need findMRCs modified), output
+% sorted stim command and PD traces with sortedLeakSub
+% LATER: add GUI for selecting sortSweepsBy for each stim segment
 
-function [mechPeaks, sortedStim, sortedLeakSub] = IdAnalysis(ephysData, calibFlag)
+function [mechPeaks, mechStim, mechTraces] = IdAnalysis(ephysData, calibFlag)
 
 % keyboard;
 
@@ -53,10 +61,12 @@ stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
-sortStimBy = 'num';
-sortSweepsBy = {'magnitude', 'magnitude'};
+sortStimBy = 'time';
+% sortSweepsBy = {'magnitude', 'magnitude'};
+sortSweepsBy = {'magnitude', 'magnitude','magnitude'};
 roundIntTo = 2;
 whichInt = 1;
+fillZeroSteps = 1;
 sortByStimNum = 1; %sort by which stim (here, first stim, which is on step)
 stimSortOrder = [1 2];
 
@@ -68,7 +78,8 @@ mechTracePicks = metaDataConvert(mechTracePicks);
 allCells = unique(mechTracePicks(:,1));
 
 mechPeaks = cell(length(allCells),1);
-protList = {'WC_Probe','WC_ProbeLarge','WC_ProbeSmall'};
+% protList = {'WC_Probe','WC_ProbeLarge','WC_ProbeSmall'};
+protList = {'PrePulse'};
 
 % Find applicable series and check against list of included series/traces
 % (this allows a cross-check on the protocol name) before analyzing
@@ -84,7 +95,7 @@ for iCell = 1:length(allCells)
 %SPLIT into function findStimuli here, through end of for series loop
 %Consider if you want to output stim and PD traces?
     cellName = allCells{iCell};
-    allSeries = matchProts(ephysData,cellName,protList,'MatchType','full');
+    allSeries = matchProts(ephysData,cellName,protList,'MatchType','last');
     
     nSeries = length(allSeries);
     pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
@@ -164,28 +175,42 @@ for iCell = 1:length(allCells)
         % analyzed data to a particular trace
         seriesStimuli (:,8) = repmat(thisSeries,size(seriesStimuli,1),1);
         
+        
+        
         % all on/off stimuli are still mixed together.
         % depending on input param, use either stimulus number or stimulus
         % timepoint to group stimuli across sweeps (e.g., on and off)
         switch sortStimBy
             case 'num'
-                stimNums = unique(seriesStimuli(:,7));
+                paramCol = 7;
             case 'time'
-                stimNums = unique(seriesStimuli(:,1));
+                paramCol = 1;
             case 'endTime'
-                stimNums = unique(seriesStimuli(:,2));
+                paramCol = 2;
         end
+        stimNums = unique(seriesStimuli(:,paramCol));
+
         
         % separate found stim parameters into groups and concatenate to
         % previous stimuli from the same series
+        
+    %NEXT fix: for case 'time', you have to match stim time values, not
+    %just use the stimNums index. 
         stimByNum = cell(length(stimNums),1);
         for iStim = 1:length(stimNums)
-            stimByNum{iStim} = seriesStimuli(seriesStimuli(:,7)==stimNums(iStim),:);
+            stimByNum{iStim} = seriesStimuli(seriesStimuli(:,paramCol)==stimNums(iStim),:);
+            
             try allStim{iStim,1};
             catch
                 allStim{iStim,1} = [];
             end
-            allStim{iStim,1} = [allStim{iStim,1};stimByNum{iStim}];
+            
+            if ~length(allStim{iStim})==0;
+                whichStim = find(stimNums(iStim) == cellfun(@(x) x(1,1), allStim));
+                allStim{whichStim,1} = [allStim{whichStim,1};stimByNum{iStim}];
+            else
+                allStim{iStim,1} = [allStim{iStim,1};stimByNum{iStim}];
+            end
         end
         
         % Concatenate to the complete list of step sizes and
@@ -194,6 +219,49 @@ for iCell = 1:length(allCells)
         
     end
     
+    % If using the time sort, you likely want to compare a given
+    % timepoint across sweeps/series, even if the magnitude of the
+    % step there is zero and it isn't detected. This section fills
+    % in those timepoints with magnitude zero steps, if the
+    % fillZeroSteps flag == 1.
+    if strfind(lower(sortStimBy),'time') && fillZeroSteps
+        for iStim = 1:length(allStim)
+           zeroRows = find(allStim{iStim}(:,7)~=iStim); %find where stimNum doesn't match across sweeps
+           for iInsert = 1:length(zeroRows)
+               nInserts = iStim-allStim{iStim}(zeroRows,7); %find how many "zero stim" were in that sweep
+   %HERE? run a check of series/sweep number to decide in which stim the
+   %row needs to be inserted. nInserts = #of stim with missing row
+   %then insert rows from first stim forward (bc cumul disp is taken from
+   %previous stim)
+   %start by pulling out series/sweep columns, then find nonoverlapping
+   %row indices between stim x and stim 1. insert row, repeat for stim x
+   %vs. stim 2, etc.
+              
+               for nthInsert = nInserts(iInsert):-1:1 %go back and insert a row for each of those stim
+                   
+                   insertTimes = allStim{iStim-nthInsert}(1,1:2); %copy timepoint during previous stim
+                   try insertTotalDisp = allStim{iStim-nthInsert-1}(zeroRows(iInsert),4); %take cumulative/total displacement from the stim before that
+                   catch
+                       insertTotalDisp = 0; %if the previous stim was the first one, total displacement is zero
+                   end
+                   insertStimMeta = allStim{iStim}(zeroRows(iInsert),6:8); %copy metadata from current stim for sweep numbers etc.
+                   
+                   insert = [insertTimes, 0, insertTotalDisp, 0, insertStimMeta];
+                   
+                   % add in the relevant rows in the proper location
+                   allStim{iStim-nthInsert} = ...
+                       [allStim{iStim-nthInsert}(1:zeroRows(iInsert)-1,:); ...
+                       insert; ...
+                       allStim{iStim-nthInsert}(zeroRows(iInsert):end,:)];
+               end
+               
+               %fix the stim number in the current stim
+               allStim{iStim}(zeroRows(iInsert),7) = allStim{iStim}(zeroRows(iInsert),7)+nInserts(iInsert);
+           end
+        end
+    end
+
+    
     % Pad all traces with NaNs at the end so they're the same length, for
     % ease of manipulation as an array instead of a cell.
     sweepLengths = cellfun('length',allLeakSub);
@@ -201,7 +269,11 @@ for iCell = 1:length(allCells)
     allLeakSub=cellfun(@(x)cat(2,x,NaN(1,maxLength-length(x))),allLeakSub,'UniformOutput',false);
     allLeakSub = cell2mat(allLeakSub);
     
+%FIX: nStim=4 for OnDt because of Patchmaster's 0 padding. Find a way to
+%exclude the last "step".
     nStim = length(allStim);
+% nStim=3;
+% allStim = allStim(1:nStim);
     sweepsByParams = NaN(size(allLeakSub,1),nStim);
     sortedStim = cell(1,nStim);
     
@@ -209,19 +281,20 @@ for iCell = 1:length(allCells)
 % by will change. (e.g., not by size for OnDt analysis).
     
     for iStim = 1:nStim
-        
-    %FIX: don't need whichInt, just use interval previous to stim for iStim
-        
+    
+    nTraces = size(allStim{iStim},1);
+    %LATER: don't need whichInt, just use interval previous to stim for iStim
+
         % For each parameter, go through all stimuli and round the relevant
         % parameter to the nearest X so that sweeps can be grouped as being
         % from the same stimulus profile.
         switch sortSweepsBy{iStim}
             case 'magnitude'
-                sweepsByParams(:,iStim) = round(allStim{iStim}(:,3),1);
+                sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,3),1);
             case 'position'
-                sweepsByParams(:,iStim) = round(allStim{iStim}(:,4),1);
+                sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,4),1);
             case 'velocity'
-                sweepsByParams(:,iStim) = round(allStim{iStim}(:,5),0);
+                sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,5),0);
             case 'interval' %time interval between previous stim and current stim
                 a = cellfun(@(x) x(:,1:2),allStim,'un',0);
                 stimInt = diff([a{:}],1,2)/sf; %calculate interval between stimuli in ms
@@ -242,6 +315,9 @@ for iCell = 1:length(allCells)
     for iStim = 1:nStim
         sortedStim{iStim} = allStim{iStim}(sortIdx,:);
     end
+    
+    % DECIDE: if unique(sweepsByParam) should only include columns from
+    % stimSortOrder or all stim columns.
     
     [eachStimProfile, profileStartIdx, ~] = unique(sweepsByParams,'rows','first');
     [~, profileEndIdx, ~] = unique(sweepsByParams,'rows','last');
@@ -315,6 +391,20 @@ for iCell = 1:length(allCells)
         calibFlag = 1;
     end
     
+    %DECIDE: which info do you want about the stimuli? Currently only have
+    %individual stim traces. Maybe this output can be mean or representative stim profile, and
+    %output 3 can be sortedLeakSub traces + sortedStim traces/data?
+    %NEXT: save stimComI and PD trace into sortedStimTraces,  take mean PD
+    %param?? Figure out how to end up with mean stim profile traces in both
+    %channels.
+    %Difficulty: you're using seriesStimuli to sort traces, so you need to
+    %find stim on individual traces first no matter what. Then you could
+    %group and take means of stim traces and run series stim again on the
+    %means and use those timepoints for peak finding so you'd also have a
+    %less noisy stim/PD trace.
+
+%     mechStim (iCell,1:length(sortedStim)+1) = sortedStim;
+
 end
 
 end
