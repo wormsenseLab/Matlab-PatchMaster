@@ -17,10 +17,12 @@ ephysData = ImportPatchData();
 
 % Keep only data with given project prefixes/names.
 projects = {'FAT';'SYM'};
+% projects = {'SAR','FAT'};
+
 
 ephysData = FilterProjectData(ephysData, projects);
 
-clear projects
+clear projects;
 %% Analyze capacity transient for C, Rs, and tau
 
 ephysData = CtAnalysis(ephysData);
@@ -164,12 +166,13 @@ mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 %% Make list of approved traces (by selecting traces to exclude)
 
 % protList = 'DispRate';
-protList = {'PrePulse'};
+% protList = {'PrePulse'};
 % protList = {'WC_Probe';'DispRate'};
-ExcludeSweeps(ephysData,allCells,1,protList,'last');
+protList = {'PrePulse'};
+% ExcludeSweeps(ephysData,allCells,1,protList,'first');
 
 % protList = '_CC';
-% ExcludeSweeps(ephysData,allCells,1,protList,'last');
+ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
 
 %% Look at interstimulus interval

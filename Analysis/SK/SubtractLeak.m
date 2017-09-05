@@ -53,7 +53,7 @@ p.addRequired('sf', @(x) isnumeric(x) && isscalar(x) && x>0);
 
 % default: include all sweeps; check that sweep number is smaller than
 % total sweep number
-p.addOptional('approvedTraces', [], @(x) isnumeric(x) && max(x)<nSweeps);
+p.addOptional('approvedTraces', [], @(x) isnumeric(x));
 % default: first 30ms used as baseline to find leak current
 p.addParameter('BaseLength', 30, @(x) isnumeric(x) && isscalar(x) && x>0)
 
