@@ -165,15 +165,22 @@ mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 
 %% Make list of approved traces (by selecting traces to exclude)
 
-% protList = 'DispRate';
+protList = 'DispRate';
 % protList = {'PrePulse'};
 % protList = {'WC_Probe';'DispRate'};
-protList = {'PrePulse'};
-% ExcludeSweeps(ephysData,allCells,1,protList,'first');
+% protList = {'PrePulse'};
+% protList ={'WC_Probe';'NoPre'};
+ExcludeSweeps(ephysData,newCells,1,protList,'first');
 
 % protList = '_CC';
-ExcludeSweeps(ephysData,allCells,1,protList,'last');
+% ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
+
+%% Generic IdAnalysis run
+
+dvMRCs = IdAnalysis(ephysData,0);
+
+vdMRCs = IdAnalysis(ephysData,0);
 
 %% Look at interstimulus interval
 % allCells = {'FAT059'; 'FAT061';'FAT062';'FAT063'};

@@ -61,9 +61,9 @@ stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
-sortStimBy = 'time';
-% sortSweepsBy = {'magnitude', 'magnitude'};
-sortSweepsBy = {'magnitude', 'magnitude','magnitude'};
+sortStimBy = 'num';
+sortSweepsBy = {'magnitude', 'magnitude'};
+% sortSweepsBy = {'velocity', 'magnitude','magnitude'};
 roundIntTo = 2;
 whichInt = 1;
 fillZeroSteps = 1;
@@ -78,8 +78,8 @@ mechTracePicks = metaDataConvert(mechTracePicks);
 allCells = unique(mechTracePicks(:,1));
 
 mechPeaks = cell(length(allCells),1);
-% protList = {'WC_Probe','WC_ProbeLarge','WC_ProbeSmall'};
-protList = {'PrePulse'};
+protList = {'WC_Probe','NoPrePulse','DispRate'};
+% protList = {'PrePulse'};
 
 % Find applicable series and check against list of included series/traces
 % (this allows a cross-check on the protocol name) before analyzing
@@ -95,7 +95,7 @@ for iCell = 1:length(allCells)
 %SPLIT into function findStimuli here, through end of for series loop
 %Consider if you want to output stim and PD traces?
     cellName = allCells{iCell};
-    allSeries = matchProts(ephysData,cellName,protList,'MatchType','last');
+    allSeries = matchProts(ephysData,cellName,protList,'MatchType','first');
     
     nSeries = length(allSeries);
     pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
@@ -231,21 +231,21 @@ for iCell = 1:length(allCells)
     % in those timepoints with magnitude zero steps, if the fillZeroSteps
     % flag is set to 1.
 
-    if strfind(lower(sortStimBy),'time') && fillZeroSteps
+    if ~isempty(strfind(lower(sortStimBy),'time')) && fillZeroSteps
         seriesList = vertcat(allStim{:});
         seriesList = seriesList(:,[6 8]);
-        seriesList = sortrows(unique(seriesList,'rows','stable'),[2 1]);
+        seriesList = sortrows(unique(seriesList,'rows','stable'),[2 1]); % find all unique series/sweep combos
         blankStim = NaN(length(seriesList),8);
         blankStim(:,[6,8]) = seriesList;
         filledStim = cell(length(allStim),1);
-        [filledStim{1:length(allStim),1}] = deal(blankStim);
+        [filledStim{1:length(allStim),1}] = deal(blankStim); %make a cell with nStim with the series/sweep list to be filled for each stim
         
         [~,ia,ib] = cellfun(@(a,b) intersect(a(:,[6 8]),b(:,[6 8]),'rows','stable'), ...
-            filledStim, allStim, 'un', 0);
+            filledStim, allStim, 'un', 0); % for each stim, find the rows for which entries already exist
         for iStim = 1:length(allStim)
             filledStim{iStim}(ia{iStim},[1:5, 7]) = allStim{iStim}(ib{iStim},[1:5, 7]);
             
-            blankIdx = find(isnan(filledStim{iStim}(:,1)));
+            blankIdx = find(isnan(filledStim{iStim}(:,1))); % for each stim, find sweeps where entries don't exist for that stim
             insertTimes = repmat(allStim{iStim}(1,1:2),length(blankIdx),1); %copy timepoint for given stim
             try insertTotalDisp = filledStim{iStim-1}(blankIdx,4); %take cumulative/total displacement from the stim before that
             catch
@@ -257,8 +257,26 @@ for iCell = 1:length(allCells)
         end
         
         allStim = filledStim;
+    
+    elseif ~isempty(strfind(lower(sortStimBy),'num')) && fillZeroSteps
+        seriesList = vertcat(allStim{:});
+        seriesList = seriesList(:,[6 8]);
+        seriesList = sortrows(unique(seriesList,'rows','stable'),[2 1]); % find all unique series/sweep combos
+        blankStim = NaN(length(seriesList),8);
+        blankStim(:,[6,8]) = seriesList;
+        filledStim = cell(length(allStim),1);
+        [filledStim{1:length(allStim),1}] = deal(blankStim); %make a cell with nStim with the series/sweep list to be filled for each stim
+        
+        [~,ia,ib] = cellfun(@(a,b) intersect(a(:,[6 8]),b(:,[6 8]),'rows','stable'), ...
+            filledStim, allStim, 'un', 0); % for each stim, find the rows for which entries already exist
+        for iStim = 1:length(allStim)
+            filledStim{iStim}(ia{iStim},[1:5, 7]) = allStim{iStim}(ib{iStim},[1:5, 7]);
+            
+        end
+        
+        allStim = filledStim;
+        
     end
-
     
 
 
@@ -322,7 +340,10 @@ for iCell = 1:length(allCells)
     
     [eachStimProfile, profileStartIdx, ~] = unique(sweepsByParams,'rows','first');
     [~, profileEndIdx, ~] = unique(sweepsByParams,'rows','last');
-    nStimProfiles = min(sum(~isnan(eachStimProfile)));
+    nStimProfiles = sum(sum(~isnan(eachStimProfile),2)>=nStim);
+    profileStartIdx = profileStartIdx(sum(~isnan(eachStimProfile),2)>=nStim);
+    profileEndIdx = profileEndIdx(sum(~isnan(eachStimProfile),2)>=nStim);
+    eachStimProfile = eachStimProfile(sum(~isnan(eachStimProfile),2)>=nStim,:);
     nReps = profileEndIdx-profileStartIdx+1;
     
     % Take mean trace from all reps across all series for each stimulus
