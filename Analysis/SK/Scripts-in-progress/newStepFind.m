@@ -90,7 +90,7 @@ for iSweep = 1:nSweeps
     % noise.
     stThresh = thselect(sweepDiff(1:threshTime*sf),'rigrsure');
     
-    stLoc = find(abs(sweepDiffSmooth./tDiff)>stThresh);
+    stLoc = find(abs(sweepDiffSmooth./tDiff)>5*stThresh);
     
     % Find lengths of plateaus/peaks above threshold. Drop any with length
     % < stimWindow (those will be artifacts at beginning or end of trace).
