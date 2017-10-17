@@ -23,6 +23,7 @@ function ephysData = CtAnalysis(ephysData)
 % keyboard;
 allCells = fieldnames(ephysData);
 % allCells = {'FAT126','FAT127'};
+allCells=allCells(end-20:end);
 
 for iCell = 1:length(allCells)
     cellName = allCells{iCell}; %split into project name and cell numbers when feeding input
@@ -108,10 +109,17 @@ for iCell = 1:length(allCells)
             t = 0:1/sf:fitTime;
             
             capFit = ezfit(t',ICt(fitStart:fitStart+fitInd),'y(x)=c+a*exp(b*x)',[5e-12, -3000, 8e-13]);
-%                 plot(capFit,t,ICt(intStart:intStart+fitInd));
-            
+
+        % Comparisons to old fitting code:
+        % scatter(t',ICt(fitStart:fitStart+fitInd));
+        % showfit('y(x)=c+a*exp(b*x)',[5e-12, -3000, 8e-13]);
+
+        % cFit = fit(t',ICt(fitStart:fitStart+fitInd),'exp1');
+        % plot(cFit,t,ICt(intStart:intStart+fitInd));
+
             % Calculate time constant in seconds for calculation
             tau(i) = -1/capFit.m(2);
+            % tau(i) = -1/capFit.b;
             % Calculate series resistance from tau = Rs*Cm, and divide by 1E6 for
             % units of megaohms.
             Rs(i) = tau(i)/C(i)/1E6;

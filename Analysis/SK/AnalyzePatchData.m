@@ -44,6 +44,8 @@ resists(i,2) = ephysData.(recs{i}).Rs(ephysData.(recs{i}).protRs);
 end
 
 %% Print all Rs for making FAT_IV_Assignments spreadsheet
+recs = fieldnames(ephysData);
+
 for i=1:length(recs)
 try fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).Rs)))
 catch
