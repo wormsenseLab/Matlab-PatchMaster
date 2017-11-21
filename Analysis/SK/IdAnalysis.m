@@ -53,7 +53,7 @@
 % sorted stim command and PD traces with sortedLeakSub
 % LATER: add GUI for selecting sortSweepsBy for each stim segment
 
-function [mechPeaks, mechStim, mechTraces] = IdAnalysis(ephysData, calibFlag)
+function [mechPeaks, mechStim, mechTraces] = IdAnalysis(ephysData, calibFlag, sortStimBy, protList, matchType)
 
 % keyboard;
 
@@ -61,8 +61,8 @@ stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
-sortStimBy = 'num';
-sortSweepsBy = {'magnitude', 'magnitude','magnitude'};
+% sortStimBy = 'num';
+sortSweepsBy = {'magnitude', 'magnitude','magnitude', 'magnitude', 'magnitude'};
 % sortSweepsBy = {'velocity', 'magnitude','magnitude'};
 roundIntTo = 2;
 whichInt = 1;
@@ -78,7 +78,7 @@ mechTracePicks = metaDataConvert(mechTracePicks);
 allCells = unique(mechTracePicks(:,1));
 
 mechPeaks = cell(length(allCells),1);
-protList = {'WC_Probe','NoPrePulse','DispRate'};
+% protList = {'WC_Probe','NoPrePulse','DispRate'};
 % protList = {'PrePulse'};
 
 % Find applicable series and check against list of included series/traces
@@ -374,8 +374,9 @@ for iCell = 1:length(allCells)
             
             % Find mechanoreceptor current peaks and append to seriesPeaks for
             % that stimulus number.
-            mechPeaks{iCell,1} = meansByStimProfile;
-            mechPeaks{iCell,1+iStim} = findMRCs(stimMetaData, meansByStimProfile, sf, dataType);
+            mechPeaks{iCell,1} = cellName;
+            mechPeaks{iCell,2} = meansByStimProfile;
+            mechPeaks{iCell,2+iStim} = findMRCs(stimMetaData, meansByStimProfile, sf, dataType);
             
         end
         
@@ -425,7 +426,7 @@ for iCell = 1:length(allCells)
     %means and use those timepoints for peak finding so you'd also have a
     %less noisy stim/PD trace.
 
-%     mechStim (iCell,1:length(sortedStim)+1) = sortedStim;
+    mechStim (iCell,2:length(sortedStim)+1) = sortedStim;
 
 end
 

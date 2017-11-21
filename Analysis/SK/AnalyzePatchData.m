@@ -11,8 +11,8 @@
 
 % Don't forget to run sigTOOL first!
 % [ephysData,tree] = ImportPatchData();
-ephysData = ImportPatchData();
-% ephysData = ImportPatchData(ephysData);
+% ephysData = ImportPatchData();
+ephysData = ImportPatchData(ephysData);
 
 
 % Keep only data with given project prefixes/names.
@@ -124,7 +124,7 @@ ivCells = allCells(whichCells);
 genotype = cell(length(ivCells),2);
 for i=1:length(ivCells)
 genotype(i,1) = ivCells(i);
-genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,2),ivCells(i)),3);
+genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),ivCells(i)),2);
 end
 wtCells = ivCells(strcmp(genotype(:,2),'TU2769'));
 fatCells = ivCells(strcmp(genotype(:,2),'GN381'));
@@ -169,10 +169,11 @@ mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 
 % protList = 'DispRate';
 % protList = {'PrePulse'};
-protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
+% protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
 % protList = {'PrePulse'};
-% protList ={'WC_Probe';'NoPre'};
-ExcludeSweeps(ephysData,newCells,1,protList,'full');
+protList ={'WC_Probe';'NoPre'};
+% protList = {'Pair8'};
+ExcludeSweeps(ephysData,newCells,1,protList,'first');
 
 % protList = '_CC';
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
@@ -180,9 +181,9 @@ ExcludeSweeps(ephysData,newCells,1,protList,'full');
 
 %% Generic IdAnalysis run
 
-dvMRCs = IdAnalysis(ephysData,0);
+protList ={'NoPre'};
 
-vdMRCs = IdAnalysis(ephysData,0);
+dvMRCs = IdAnalysis(ephysData,0,'num',protList);
 
 %% Look at interstimulus interval
 % allCells = {'FAT059'; 'FAT061';'FAT062';'FAT063'};
@@ -280,8 +281,9 @@ scatter(OnDtTest.FAT032.dts,mean(OnDtTest.FAT032.off),'s')
 
 
 %% PrePulse/NoPrePulse
-
-prepulseMRCs = IdAnalysis(ephysData,0);
+protList = {'PrePulse'};
+matchType = 'first';
+prepulseMRCs = IdAnalysis(ephysData,0, 'time',protList, matchType);
 
 %% Look at current clamp
 allCells = fieldnames(ephysData);
