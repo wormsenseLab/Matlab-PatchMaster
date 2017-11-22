@@ -13,19 +13,36 @@
 % INPUTS:
 %   ephysData       struct          Imported data from ImportPatchData.
 %
-%   allCells        cell array      List of recording names to analyze.
-%
-%   calibFlag       logical         Flag specifying whether to use
-%                                   photodiode calibration and photodiode
-%                                   signal to determine actual step size
-%                                   for all given cells.
-%                                   0 = don't use calib, 1 = use calib.
-%                                   (2 = internally set, skip calib for cell).
+%   protList        cell array      Names of protocols to match (this is a
+%                                   redundancy measure to make sure the
+%                                   settings are correct for the particular
+%                                   xls file you are inputting. Default is
+%                                   to match the whole name.
+% 
+% OPTIONAL INPUTS:
+% 
+%   matchType       char            Specifies whether to match names in
+%                   {'full'         protList to beginning, end, or full
+%                    'first'        protocol names in ephysData. Default is
+%                    'last'}        'full'.
+%                                   
+%   sortStimBy      char            Specifies whether to separate stimuli
+%                   {'num'          by number (useful for protocols with
+%                    'time'}        same # of steps at different times) or
+%                                   by time (for protocols that may have
+%                                   zero-magnitude steps at a given time).
+%                                   Default is 'num'.
+% 
+%   calibFlag       logical         Specifies whether to use photodiode
+%                                   signal data instead of stimulus command
+%                                   for step sizes (not currently working).
+%                                   Default is 0 (just use command signal).
 %
 % PROMPTED INPUTS:
 %   ImportMetaData asks for a metadata file in .xls format containing the
 %   list of traces to analyze in the same format as files output by
-%   ExcludeSweeps(). This will get double-checked against allCells.
+%   ExcludeSweeps(). This will get double-checked against recordings that 
+%   match the protocol list.
 %
 % OUTPUTS:
 %   mechPeaks       cell array      Nested cell array with a cell for each
@@ -53,17 +70,29 @@
 % sorted stim command and PD traces with sortedLeakSub
 % LATER: add GUI for selecting sortSweepsBy for each stim segment
 
-function [mechPeaks, mechStim, mechTraces] = IdAnalysis(ephysData, calibFlag, sortStimBy, protList, matchType)
+function [mechPeaks, mechStim, mechTraces] = IdAnalysis(ephysData, protList, varargin)
 
-% keyboard;
+p = inputParser;
+p.addRequired('ephysData', @(x) isstruct(x));
+p.addRequired('protList', @(x) iscell(x));
+
+p.addOptional('matchType', 'full', @(x) ischar(x));
+p.addOptional('sortStimBy', 'num', @(x) sum(strcmp(x,{'num','time'})));
+p.addOptional('calibFlag', 0, @(x) islogical(x));
+
+p.parse(ephysData, protList, varargin{:});
+
+matchType = p.Results.matchType;
+sortStimBy = p.Results.sortStimBy;
+calibFlag = p.Results.calibFlag;
 
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
 % sortStimBy = 'num';
-sortSweepsBy = {'magnitude', 'magnitude','magnitude', 'magnitude', 'magnitude'};
-% sortSweepsBy = {'velocity', 'magnitude','magnitude'};
+% sortSweepsBy = {'magnitude', 'magnitude','magnitude', 'magnitude', 'magnitude'};
+sortSweepsBy = {'velocity', 'magnitude','magnitude', 'magnitude'};
 roundIntTo = 2;
 whichInt = 1;
 fillZeroSteps = 1;
@@ -95,7 +124,7 @@ for iCell = 1:length(allCells)
 %SPLIT into function findStimuli here, through end of for series loop
 %Consider if you want to output stim and PD traces?
     cellName = allCells{iCell};
-    allSeries = matchProts(ephysData,cellName,protList,'MatchType','first');
+    allSeries = matchProts(ephysData,cellName,protList,'MatchType',matchType);
     
     nSeries = length(allSeries);
     pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
@@ -313,7 +342,11 @@ for iCell = 1:length(allCells)
             case 'position'
                 sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,4),1);
             case 'velocity'
-                sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,5),0);
+                trioRound = round(allStim{iStim}(:,5),0); %round small velocities to nearest 1
+                trioRound(abs(trioRound)>500 && abs(trioRound)<1500) = ...
+                    round(trioRound(abs(trioRound)>500 && abs(trioRound)<1500)./5)*5; %round medium to nearest 5
+                trioRound(abs(trioRound)>1500) = round(trioRound(abs(trioRound)>1500),-1); %round large to nearest 10
+                sweepsByParams(1:nTraces,iStim) = trioRound;
             case 'interval' %time interval between previous stim and current stim
                 a = cellfun(@(x) x(:,1:2),allStim,'un',0);
                 stimInt = diff([a{:}],1,2)/sf; %calculate interval between stimuli in ms

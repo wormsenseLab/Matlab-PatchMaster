@@ -34,6 +34,7 @@ p.addParameter('roundedTo',0, @(x) isnumeric(x));
 p.addParameter('endTime',0, @(x) isnumeric(x) && isscalar(x));
 p.addParameter('scaleFactor',1, @(x) isnumeric(x) && isscalar(x)); %in V/um
 p.addParameter('smoothWindow',0, @(x) isnumeric(x) && isscalar(x) && x>0);
+p.addParameter('threshFactor',5, @(x) isnumeric(x) && isscalar(x) && x>0);
 p.parse(nSweeps, stimData, sf, varargin{:});
 
 threshTime = p.Results.thresholdTime; %ms
@@ -47,6 +48,7 @@ smoothWindow = p.Results.smoothWindow;
 if smoothWindow == 0
     smoothWindow = sf; %if smoothWindow is not set, set to 1ms worth of samples
 end
+threshFactor = p.Results.threshFactor;
 %
 % cellName = 'FAT104';
 % series = 22;
@@ -78,8 +80,8 @@ for iSweep = 1:nSweeps
     sweepDiffSmooth = smooth(sweepDiff, smoothWindow, 'moving');
     tDiff = diff(tVec);
     % If you want to plot, use diff(y)./diff(t)
-    % plot(sweepDiffSmooth./tDiff)
-    % plot(sweepDiff./tDiff)
+    plot(sweepDiffSmooth./tDiff)
+%     plot(sweepDiff./tDiff)
     
     %Next: modify threshold manually for each run to find steps...
     
@@ -90,7 +92,7 @@ for iSweep = 1:nSweeps
     % noise.
     stThresh = thselect(sweepDiff(1:threshTime*sf),'rigrsure');
     
-    stLoc = find(abs(sweepDiffSmooth./tDiff)>5*stThresh);
+    stLoc = find(abs(sweepDiffSmooth./tDiff)>threshFactor*stThresh);
     
     % Find lengths of plateaus/peaks above threshold. Drop any with length
     % < stimWindow (those will be artifacts at beginning or end of trace).
@@ -102,7 +104,7 @@ for iSweep = 1:nSweeps
     d(2:2:floor((length(a)-1)/2)*2) = c;
 %     stLocEndIdx=find([a;inf]>3);  % 1 for anything that's not a consecutive step
     stLocEndIdx=find([d;inf]>3);
-    
+     
     % 3 allows for a dropped timepoint/little
     % bit of noise without dropping the whole run.
     stLength=diff([0;stLocEndIdx]); %find length of the sequences (not accounting for filter delay)
