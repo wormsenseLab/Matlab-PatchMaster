@@ -45,12 +45,14 @@
 %   match the protocol list.
 %
 % OUTPUTS:
-%   mechPeaks       cell array      Nested cell array with a cell for each
-%                                   recording. Columns per recording:
-%                                   [step size (um); peak current at step
-%                                   onset (pA); peak current at offset;
-%                                   onset tau (ms); offset tau; onset
-%                                   location (sample); offset location]
+%   mechPeaks       cell array      Nested cell array with a row for each
+%                                   recording. CellName, Average Trace, 
+%                                   then for each stimulus, MRC stats on
+%                                   [size/velocity (um or um/s); location 
+%                                   (datapoint); peak current (pA); 
+%                                   direction (+/-); threshold used (pA);
+%                                   decay tau from exp1 fit (ms);
+%                                   number of sweeps averaged].
 %
 %
 % Created by Sammy Katta on 20-May-2015.
@@ -80,11 +82,14 @@ p.addOptional('matchType', 'full', @(x) ischar(x));
 p.addOptional('sortStimBy', 'num', @(x) sum(strcmp(x,{'num','time'})));
 p.addOptional('calibFlag', 0, @(x) islogical(x));
 
+p.addParameter('tauType','fit', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'}));
+
 p.parse(ephysData, protList, varargin{:});
 
 matchType = p.Results.matchType;
 sortStimBy = p.Results.sortStimBy;
 calibFlag = p.Results.calibFlag;
+tauType = p.Results.tauType;
 
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
@@ -343,8 +348,9 @@ for iCell = 1:length(allCells)
                 sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,4),1);
             case 'velocity'
                 trioRound = round(allStim{iStim}(:,5),0); %round small velocities to nearest 1
-                trioRound(abs(trioRound)>500 && abs(trioRound)<1500) = ...
-                    round(trioRound(abs(trioRound)>500 && abs(trioRound)<1500)./5)*5; %round medium to nearest 5
+                trioRound(abs(trioRound)<500) = round(trioRound(abs(trioRound)<500)/2)*2; %round large to nearest 10
+                trioRound(abs(trioRound)>500 & abs(trioRound)<1500) = ...
+                    round(trioRound(abs(trioRound)>500 & abs(trioRound)<1500)/5)*5; %round medium to nearest 5
                 trioRound(abs(trioRound)>1500) = round(trioRound(abs(trioRound)>1500),-1); %round large to nearest 10
                 sweepsByParams(1:nTraces,iStim) = trioRound;
             case 'interval' %time interval between previous stim and current stim
@@ -409,7 +415,8 @@ for iCell = 1:length(allCells)
             % that stimulus number.
             mechPeaks{iCell,1} = cellName;
             mechPeaks{iCell,2} = meansByStimProfile;
-            mechPeaks{iCell,2+iStim} = findMRCs(stimMetaData, meansByStimProfile, sf, dataType);
+            mechPeaks{iCell,2+iStim} = findMRCs(stimMetaData, meansByStimProfile, sf, dataType, ...
+                'tauType', tauType);
             
         end
         

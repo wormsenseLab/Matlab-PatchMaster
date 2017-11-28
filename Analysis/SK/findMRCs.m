@@ -1,7 +1,19 @@
 % findMRCs.m
 %
 
-function [cellPeaks, cellFit] = findMRCs(stimParams, meanTraces, sf, dataType)
+function [cellPeaks, cellFit] = findMRCs(stimParams, meanTraces, sf, dataType, varargin)
+p = inputParser;
+
+p.addRequired('stimParams');
+p.addRequired('meanTraces');
+p.addRequired('sf', @(x) isnumeric(x) && isscalar(x) && x>0);
+p.addRequired('dataType', @(x) ischar(x));
+
+p.addParameter('tauType','fit', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'}));
+
+p.parse(stimParams, meanTraces, sf, dataType, varargin{:});
+
+tauType = p.Results.tauType;
 
 smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling freq (kHz)
 threshTime = 100; % use first n ms of trace for setting noise threshold
@@ -71,27 +83,35 @@ for iParam = 1:nParams
         peakLocs = peakLocs(peaks==pk);
         pkLoc = peakLocs(1) + stimParams(iParam,1)+artifactOffset; %account for start position
         
+        switch tauType
+            case 'fit'
+                
+                % Find time for current to decay to 2/e of the peak or 75ms
+                % after the peak, whichever comes first. Use that for fitting
+                % the single exponential. Fit the unsmoothed mean trace.
+                
+                [~,fitInd] = min(abs(meanTraces(iParam,pkLoc:75*sf+pkLoc)...
+                    - (meanTraces(iParam,pkLoc)/(2*exp(1)))));
+                
+                fitTime = fitInd/sf; % seconds
+                tVec = 0:1/sf:fitTime;
+                
+                pkFit = fit(tVec',meanTraces(iParam,pkLoc:pkLoc+fitInd)','exp1');
+                                
+                tau = -1/pkFit.b;
+            case 'thalfmax'
+                halfpk = pk/2;
+                halfLocs = find(smooMean(iParam,stimStart:stimEnd+(sf*1000/50))>halfpk);
+                
+                tau = (halfLocs(1)-1)/sf; %ms
+        end
+        
         switch dataType
             case 'A'
                 pk = pk*1E12; %pA
             case 'V'
                 pk = pk*1E3; %mV
         end
-        
-        
-        % Find time for current to decay to 2/e of the peak or 75ms
-        % after the peak, whichever comes first. Use that for fitting
-        % the single exponential. Fit the unsmoothed mean trace.
-        
-        [~,fitInd] = min(abs(meanTraces(iParam,pkLoc:75*sf+pkLoc)...
-            - (meanTraces(iParam,pkLoc)/(2*exp(1)))));
-        
-        fitTime = fitInd/sf; % seconds
-        tVec = 0:1/sf:fitTime;
-        
-        pkFit = fit(tVec',meanTraces(iParam,pkLoc:pkLoc+fitInd)','exp1');
-        tau = -1/pkFit.b;
-        
         
     else
         pk = 0;

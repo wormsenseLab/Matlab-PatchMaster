@@ -183,7 +183,7 @@ ExcludeSweeps(ephysData,allCells,1,protList,'first');
 
 protList ={'DispRate'};
 
-rateMRCs = IdAnalysis(ephysData,protList,'first','time');
+testMRCs = IdAnalysis(ephysData,protList,'first','num','tauType','thalfmax');
 
 %% Look at interstimulus interval
 % allCells = {'FAT059'; 'FAT061';'FAT062';'FAT063'};

@@ -80,7 +80,7 @@ for iSweep = 1:nSweeps
     sweepDiffSmooth = smooth(sweepDiff, smoothWindow, 'moving');
     tDiff = diff(tVec);
     % If you want to plot, use diff(y)./diff(t)
-    plot(sweepDiffSmooth./tDiff)
+%     plot(sweepDiffSmooth./tDiff)
 %     plot(sweepDiff./tDiff)
     
     %Next: modify threshold manually for each run to find steps...
@@ -94,17 +94,29 @@ for iSweep = 1:nSweeps
     
     stLoc = find(abs(sweepDiffSmooth./tDiff)>threshFactor*stThresh);
     
+    %Ignore first n timepoints, which may be caught by the diff function.
+    %(Using sf, so basically ignoring a diff in first 5 or 10 timepoints).
+    stLoc = stLoc(stLoc>sf);
+    
     % Find lengths of plateaus/peaks above threshold. Drop any with length
     % < stimWindow (those will be artifacts at beginning or end of trace).
     % Find indices for start and end of stimuli.
     a=diff(stLoc);
-    b=diff(stLoc(1:2:end)); % instead of taking diff for every point, take it across every other point (helps avoid dropping the slow ramps and shouldn't affect the fast ones)
+    % instead of taking diff for every point, take it across every other 
+    % point (helps avoid dropping the slow ramps, but results in negative
+    % step length for the steps.)
+    b=diff(stLoc(1:2:end)); 
     c=diff(stLoc(2:2:end));
     d(1:2:floor(length(a)/2)*2,1) = b;
     d(2:2:floor((length(a)-1)/2)*2) = c;
 %     stLocEndIdx=find([a;inf]>3);  % 1 for anything that's not a consecutive step
     stLocEndIdx=find([d;inf]>3);
-     
+    %This gives 2x timepoints if there's more than one stim, which causes
+    %diff to only tag the step before the end. Could either use even
+    %numbered ones (but that would miss the first stim if there's only one
+    %stim, so instead, use odd+1).
+    stLocEndIdx = stLocEndIdx(1:2:end)+1;
+    
     % 3 allows for a dropped timepoint/little
     % bit of noise without dropping the whole run.
     stLength=diff([0;stLocEndIdx]); %find length of the sequences (not accounting for filter delay)
@@ -112,15 +124,6 @@ for iSweep = 1:nSweeps
     stLength = stLength(stLength>=smoothWindow-1);
     stLocStartIdx = stLocEndIdx-stLength+1;
         
-    
-    % Account for filter delay: (N samples - 1)/2. Add timepoints to start
-    % and subtract from end bc I'm looking for the first threshold
-    % crossing and not a peak, and assuming that the peak/plateau is high
-    % enough that averaging in a single point of it will raise the smoothed
-    % signal above the threshold (pretty much true). Opposite holds for
-    % the end timepoint, where it should be the last in the smoothWindow.
-    smoothDelay = floor((smoothWindow-1)/2); %using floor for round number timepoints
-
     %Drop "step" at end of trace, before signal goes to zero for
     %protocols with varying time. Look for at least 5 zeros in a row within
     %the 10 points following the "stimulus" end location.
@@ -134,11 +137,19 @@ for iSweep = 1:nSweeps
         stLocStartIdx=stLocStartIdx(1:end-1);
     end
 
-    
+        
+    % Account for filter delay: (N samples - 1)/2. Add timepoints to start
+    % and subtract from end bc I'm looking for the first threshold
+    % crossing and not a peak, and assuming that the peak/plateau is high
+    % enough that averaging in a single point of it will raise the smoothed
+    % signal above the threshold (pretty much true). Opposite holds for
+    % the end timepoint, where it should be the last in the smoothWindow.
+    smoothDelay = floor((smoothWindow-1)/2); %using floor for round number timepoints
+
     % Find actual timepoints where stimuli start/end, and stim length,
     % corrected for the filter delay.
     stLocStart = stLoc(stLocStartIdx)+smoothDelay;
-    stLocEnd = stLoc(stLocEndIdx)-smoothDelay;
+    stLocEnd = stLoc(stLocEndIdx)-smoothDelay+1;
     stLengthActual = stLocEnd-stLocStart;
     
     
@@ -189,7 +200,7 @@ for iSweep = 1:nSweeps
     stSize = stepSize + rampSize;
     cumulStSize = cumsum(stSize);
     % Calculate stimulus velocity, in um/s.
-    stSpeed = abs(stSize) ./ (stLengthActual/sf/1000);
+    stSpeed = stSize ./ (stLengthActual/sf/1000);
     
     % By default, round step size to nearest 0.1um to drop noise and allow
     % grouping of step sizes. roundedTo is an optional input that can be set
