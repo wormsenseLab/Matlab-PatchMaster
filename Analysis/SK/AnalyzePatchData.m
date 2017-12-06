@@ -27,6 +27,25 @@ clear projects;
 
 ephysData = CtAnalysis(ephysData);
 
+%% Import metadata with info about which IVq protocols to look at
+
+ephysMetaData = ImportMetaData(); %FAT-IV Assignments
+ephysRecordingBase = ImportMetaData();  %Recording Database
+
+%% Read in genotypes
+
+allCells = fieldnames(ephysData);
+
+genotype = cell(length(allCells),2);
+for i=1:length(allCells)
+genotype(i,1) = allCells(i);
+try genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),allCells(i)),2);
+catch
+    continue
+end
+end
+
+clear i
 %% Print list of Rs
 
 recs = fieldnames(ephysData);
@@ -52,11 +71,6 @@ catch
     continue
 end
 end
-
-%% Import metadata with info about which IVq protocols to look at
-
-ephysMetaData = ImportMetaData(); %FAT-IV Assignments
-ephysRecordingBase = ImportMetaData();  %Recording Database
 
 %% Assign numbers of IVq series to look at
 
@@ -167,23 +181,41 @@ mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 
 %% Make list of approved traces (by selecting traces to exclude)
 
-protList = 'DispRate';
+% protList = 'DispRate';
 % protList = {'PrePulse'};
 % protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
 % protList = {'PrePulse'};
 % protList ={'WC_Probe';'NoPre'};
-% protList = {'Pair8'};
-ExcludeSweeps(ephysData,allCells,1,protList,'first');
+% ExcludeSweeps(ephysData,allCells,1,protList,'first');
 
+
+% protList = {'Pair8'};
 % protList = '_CC';
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
+protList = {'Sine10_num'};
+ExcludeSweeps(ephysData,allCells,1,protList,'full');
 
 %% Generic IdAnalysis run
 
-protList ={'DispRate'};
+% protList ={'DispRate'};
+% sortSweeps = {'velocity','magnitude','magnitude','magnitude'};
+% matchType = 'first';
+% intMRCs = IdAnalysis(ephysData,protList,matchType,'num', ...
+%     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
-testMRCs = IdAnalysis(ephysData,protList,'first','num','tauType','thalfmax');
+
+% protList = {'Pair8'};
+% matchType = 'last';
+% sortSweeps = {'magnitude','magnitude','interval','magnitude'};
+% testMRCs = IdAnalysis(ephysData,protList,matchType,'num','sortSweepsBy',sortSweeps);
+
+
+protList ={'WC_Probe', 'noPre'};
+sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+matchType = 'first';
+intStepMRCs = IdAnalysis(ephysData,protList,matchType,'num', ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
 %% Look at interstimulus interval
 % allCells = {'FAT059'; 'FAT061';'FAT062';'FAT063'};

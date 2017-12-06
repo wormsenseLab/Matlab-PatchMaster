@@ -80,9 +80,12 @@ p.addRequired('protList', @(x) iscell(x));
 
 p.addOptional('matchType', 'full', @(x) ischar(x));
 p.addOptional('sortStimBy', 'num', @(x) sum(strcmp(x,{'num','time'})));
-p.addOptional('calibFlag', 0, @(x) islogical(x));
 
+p.addParameter('calibFlag', 0); %0 for stim command, 1 for PD signal
 p.addParameter('tauType','fit', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'}));
+p.addParameter('sortSweepsBy',{'magnitude','magnitude','magnitude','magnitude'}, @(x) iscell(x));
+p.addParameter('integrateCurrent',0);
+p.addParameter('fillZero',1);
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -90,17 +93,18 @@ matchType = p.Results.matchType;
 sortStimBy = p.Results.sortStimBy;
 calibFlag = p.Results.calibFlag;
 tauType = p.Results.tauType;
+sortSweepsBy = p.Results.sortSweepsBy;
+integrateFlag = p.Results.integrateCurrent;
+fillZeroSteps = p.Results.fillZero;
 
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
 % sortStimBy = 'num';
-% sortSweepsBy = {'magnitude', 'magnitude','magnitude', 'magnitude', 'magnitude'};
-sortSweepsBy = {'velocity', 'magnitude','magnitude', 'magnitude'};
+% sortSweepsBy = {'velocity', 'magnitude','magnitude', 'magnitude'};
 roundIntTo = 2;
 whichInt = 1;
-fillZeroSteps = 1;
 sortByStimNum = 1; %sort by which stim (here, first stim, which is on step)
 stimSortOrder = [1 2];
 
@@ -416,7 +420,7 @@ for iCell = 1:length(allCells)
             mechPeaks{iCell,1} = cellName;
             mechPeaks{iCell,2} = meansByStimProfile;
             mechPeaks{iCell,2+iStim} = findMRCs(stimMetaData, meansByStimProfile, sf, dataType, ...
-                'tauType', tauType);
+                'tauType', tauType, 'integrateCurrent',integrateFlag);
             
         end
         
