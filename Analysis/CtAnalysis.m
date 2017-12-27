@@ -18,12 +18,20 @@
 % 
 % Created by Sammy Katta, 15-May-2015.
 
-function ephysData = CtAnalysis(ephysData)
+function ephysData = CtAnalysis(ephysData,varargin)
 
-% keyboard;
-allCells = fieldnames(ephysData);
-% allCells = {'FAT126','FAT127'};
-allCells=allCells(end-20:end);
+p = inputParser;
+
+p.addRequired('ephysData', @(x) isstruct(x));
+
+p.addOptional('allCells', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}))
+
+p.parse(ephysData,varargin{:});
+allCells = p.Results.allCells;
+
+if isempty(allCells)
+    allCells = fieldnames(ephysData);
+end
 
 for iCell = 1:length(allCells)
     cellName = allCells{iCell}; %split into project name and cell numbers when feeding input
@@ -49,6 +57,10 @@ for iCell = 1:length(allCells)
         % are equivalent)
         ctNeg = -1.*ephysData.(cellName).data{1,protLoc(i)};
         ctPos = ephysData.(cellName).data{1,protLoc(i)+1};
+        
+        if size(ctNeg,2)<10 || size(ctPos,2)<10
+            continue
+        end
         
         ctNeg = bsxfun(@minus, ctNeg, mean(ctNeg(1:20,:)));
         ctPos = bsxfun(@minus, ctPos, mean(ctPos(1:20,:)));

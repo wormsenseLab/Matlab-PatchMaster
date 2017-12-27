@@ -3,7 +3,6 @@
 % selectedSweeps = ExcludeSweeps(ephysData, allCells, channel, protList, matchType)
 % 
 % 
-%TODO: inputparser for matchtype
 %TODO: inputparser param for electrode data vs. calib (plotting properly,
 %plotting the right channel [either chan3 or search for 'mV'?)
 %TODO: Build another quick GUI to look through tree of sweeps (maybe
@@ -11,7 +10,28 @@
 %numbers that populate when you select a fieldname, third w channel
 %number/channeltype/channelunit? single click? enter to plot?
 
-function selectedSweeps = ExcludeSweeps(ephysData, allCells, channel, protList, matchType)
+function selectedSweeps = ExcludeSweeps(ephysData, protList, varargin)
+
+p = inputParser;
+p.addRequired('ephysData', @(x) isstruct(x));
+p.addRequired('protList', @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
+
+p.addOptional('allCells', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}))
+p.addParameter('channel', 1, @(x) isnumeric(x); %1 for stim command, 3 for PD signal
+
+p.addParameter('matchType', 'full', @(x) ischar(x));
+p.addParameter('solution', 'IC2', @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
+
+p.parse(ephysData, protList, varargin{:});
+
+allCells = p.Results.allCells;
+channel = p.Results.channel;
+matchType = p.Results.matchType;
+solution = p.Results.solution;
+
+if isempty(allCells)
+    allCells = fieldnames(ephysData);
+end
 
 protLoc = cell(length(allCells),1);
 totSeries = 0;

@@ -25,7 +25,10 @@ ephysData = FilterProjectData(ephysData, projects);
 clear projects;
 %% Analyze capacity transient for C, Rs, and tau
 
-ephysData = CtAnalysis(ephysData);
+% ephysData = CtAnalysis(ephysData);
+ephysData = CtAnalysis(ephysData,newCells);
+
+clear lastfit;
 
 %% Import metadata with info about which IVq protocols to look at
 
