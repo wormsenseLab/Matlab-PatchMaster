@@ -113,6 +113,8 @@ stimSortOrder = [1 2];
 mechTracePicks = ImportMetaData();
 mechTracePicks = metaDataConvert(mechTracePicks);
 
+% TODO: allow for filtered subsets of "allCells" to be used (e.g., only
+% wild-type recordings, or only recordings using XM2). Use FilterRecordings
 allCells = unique(mechTracePicks(:,1));
 
 mechPeaks = cell(length(allCells),1);
@@ -120,18 +122,16 @@ mechPeaks = cell(length(allCells),1);
 % protList = {'PrePulse'};
 
 % Find applicable series and check against list of included series/traces
-% (this allows a cross-check on the protocol name) before analyzing
+% (this allows a cross-check on the protocol name) before analyzing. 
 % Values for traces not on the list will be stored as NaN.
 for iCell = 1:length(allCells)
     
     allStim = cell(0);
     allLeakSub = cell(0);
     
-    % Double check that the list of series given matches the indices of
-    % the WC_Probe Id-curve protocols.
+    % Double check that the list of series given matches the indices of the
+    % protocol names specified in the input.
     
-%SPLIT into function findStimuli here, through end of for series loop
-%Consider if you want to output stim and PD traces?
     cellName = allCells{iCell};
     allSeries = matchProts(ephysData,cellName,protList,'MatchType',matchType);
     

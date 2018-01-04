@@ -32,8 +32,8 @@ clear lastfit;
 
 %% Import metadata with info about which IVq protocols to look at
 
-ephysMetaData = ImportMetaData(); %FAT-IV Assignments
-ephysRecordingBase = ImportMetaData();  %Recording Database
+ephysIVMetaData = ImportMetaData(); %FAT-IV Assignments
+ephysMetaDatabase = ImportMetaData();  %Recording Database
 
 %% Read in genotypes
 
@@ -42,7 +42,7 @@ allCells = fieldnames(ephysData);
 genotype = cell(length(allCells),2);
 for i=1:length(allCells)
 genotype(i,1) = allCells(i);
-try genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),allCells(i)),2);
+try genotype(i,2) = ephysMetaDatabase(strcmp(ephysMetaDatabase(:,1),allCells(i)),2);
 catch
     continue
 end
@@ -86,13 +86,13 @@ CellToArray = @(x) reshape([x{:}],size(x,1),size(x,2), size(x,3));
 % ct_ivq protocol run for that recording was the one you want to use for  
 % whole-cell, put "2" in col 2 for that recording). Make sure it has three 
 % sequential ivq pgfs.
-allCells = ephysMetaData(2:end,1);
+allCells = ephysIVMetaData(2:end,1);
 
 %TODO: don't assume headers: try/catch it
-protStart = ephysMetaData(2:end,2:3)'; 
+protStart = ephysIVMetaData(2:end,2:3)'; 
 protStart = CellToArray(protStart);
 
-protRs = ephysMetaData(2:end,4)';
+protRs = ephysIVMetaData(2:end,4)';
 protRs = CellToArray(protRs);
 
 
@@ -141,7 +141,7 @@ ivCells = allCells(whichCells);
 genotype = cell(length(ivCells),2);
 for i=1:length(ivCells)
 genotype(i,1) = ivCells(i);
-genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,1),ivCells(i)),2);
+genotype(i,2) = ephysMetaDatabase(strcmp(ephysMetaDatabase(:,1),ivCells(i)),2);
 end
 wtCells = ivCells(strcmp(genotype(:,2),'TU2769'));
 fatCells = ivCells(strcmp(genotype(:,2),'GN381'));

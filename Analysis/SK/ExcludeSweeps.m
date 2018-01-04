@@ -17,8 +17,8 @@ p.addRequired('ephysData', @(x) isstruct(x));
 p.addRequired('protList', @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 
 p.addOptional('allCells', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}))
-p.addParameter('channel', 1, @(x) isnumeric(x); %1 for stim command, 3 for PD signal
 
+p.addParameter('channel', 1, @(x) isnumeric(x); %1 for stim command, 3 for PD signal
 p.addParameter('matchType', 'full', @(x) ischar(x));
 p.addParameter('solution', 'IC2', @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 
