@@ -4,8 +4,8 @@
 %                     Enter = Done
 %
 
-function [keepSweep, goBack] = selectSweepsGUI(data,dataType,channel,leakSize,sf,cellName,protName)
-nCols = 4;
+function [keepSweep, goBack] = selectSweepsGUI(data,dataType,channel,leakSize,sf,cellName,protName,nCols)
+
 goBack = 0; % pass this as 1 if user clicks "Previous" button
 %TODO: Set figure size so you can actually see the plots (maybe YLim on axes too)
 

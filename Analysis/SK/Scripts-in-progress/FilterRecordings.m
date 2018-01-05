@@ -18,7 +18,7 @@ p.addOptional('allCells', cell(0));
 % TODO: adjust the regexprep (~line 48) on metadata to get rid of special 
 % characters (parentheses, symbols, greek letters) for full ability to
 % match and filter by any column in the database.
-p.addParameter('strain', cell(0));
+p.addParameter('strain', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('externalSolution', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('internalSolution', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('cellType', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));

@@ -33,22 +33,55 @@ clear lastfit;
 %% Import metadata with info about which IVq protocols to look at
 
 ephysIVMetaData = ImportMetaData(); %FAT-IV Assignments
+
+%% Import Recording Database
 ephysMetaDatabase = ImportMetaData();  %Recording Database
 
-%% Read in genotypes
+%% Make list of approved traces (by selecting traces to exclude)
 
-allCells = fieldnames(ephysData);
+% protList = 'DispRate';
+% protList = {'PrePulse'};
+% protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
+% protList = {'PrePulse'};
+% protList ={'WC_Probe';'NoPre'};
+% ExcludeSweeps(ephysData,allCells,1,protList,'first');
 
-genotype = cell(length(allCells),2);
-for i=1:length(allCells)
-genotype(i,1) = allCells(i);
-try genotype(i,2) = ephysMetaDatabase(strcmp(ephysMetaDatabase(:,1),allCells(i)),2);
-catch
-    continue
-end
-end
 
-clear i
+% protList = {'Pair8'};
+% protList = '_CC';
+% ExcludeSweeps(ephysData,allCells,1,protList,'last');
+
+% protList = {'Sine10_num'};
+protList ={'WC_Probe8'};
+strainList = {'TU2769'};
+internalList = {'IC6'};
+cellTypeList = {'ALMR'};
+
+filteredCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
+    'strain', strainList, 'internal', internalList, 'cellType', cellTypeList);
+ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', 'full');
+
+%% Generic IdAnalysis run
+
+% protList ={'DispRate'};
+% sortSweeps = {'velocity','magnitude','magnitude','magnitude'};
+% matchType = 'first';
+% intMRCs = IdAnalysis(ephysData,protList,matchType,'num', ...
+%     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+
+
+% protList = {'Pair8'};
+% matchType = 'last';
+% sortSweeps = {'magnitude','magnitude','interval','magnitude'};
+% testMRCs = IdAnalysis(ephysData,protList,matchType,'num','sortSweepsBy',sortSweeps);
+
+
+protList ={'WC_Probe', 'noPre'};
+sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+matchType = 'first';
+intStepMRCs = IdAnalysis(ephysData,protList,matchType,'num', ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+
 %% Print list of Rs
 
 recs = fieldnames(ephysData);
@@ -182,43 +215,6 @@ mechPeaksWT = mechPeaksWT(~cellfun('isempty',mechPeaksWT(:,1)),:);
 mechCellsFat = allCells(~cellfun('isempty',mechPeaksFat(:,1)));
 mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
 
-%% Make list of approved traces (by selecting traces to exclude)
-
-% protList = 'DispRate';
-% protList = {'PrePulse'};
-% protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
-% protList = {'PrePulse'};
-% protList ={'WC_Probe';'NoPre'};
-% ExcludeSweeps(ephysData,allCells,1,protList,'first');
-
-
-% protList = {'Pair8'};
-% protList = '_CC';
-% ExcludeSweeps(ephysData,allCells,1,protList,'last');
-
-protList = {'Sine10_num'};
-ExcludeSweeps(ephysData,allCells,1,protList,'full');
-
-%% Generic IdAnalysis run
-
-% protList ={'DispRate'};
-% sortSweeps = {'velocity','magnitude','magnitude','magnitude'};
-% matchType = 'first';
-% intMRCs = IdAnalysis(ephysData,protList,matchType,'num', ...
-%     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
-
-
-% protList = {'Pair8'};
-% matchType = 'last';
-% sortSweeps = {'magnitude','magnitude','interval','magnitude'};
-% testMRCs = IdAnalysis(ephysData,protList,matchType,'num','sortSweepsBy',sortSweeps);
-
-
-protList ={'WC_Probe', 'noPre'};
-sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
-matchType = 'first';
-intStepMRCs = IdAnalysis(ephysData,protList,matchType,'num', ...
-    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
 %% Look at interstimulus interval
 % allCells = {'FAT059'; 'FAT061';'FAT062';'FAT063'};
@@ -263,6 +259,22 @@ for i=1:5
     plot(h3s,tVec3{i},iVecOn3{i},'b');
     plot(h3s,tVec3{i},iVecOff3{i},'r');    
 end
+
+%% Read in genotypes
+
+allCells = fieldnames(ephysData);
+
+genotype = cell(length(allCells),2);
+for i=1:length(allCells)
+genotype(i,1) = allCells(i);
+try genotype(i,2) = ephysMetaDatabase(strcmp(ephysMetaDatabase(:,1),allCells(i)),2);
+catch
+    continue
+end
+end
+
+clear i
+
 %% Plot single MRC sets
 % Draw stim protocol for MRCs
 dt = 0.2; % ms, based on sampling frequency (5kHz in current WC_Probe)
