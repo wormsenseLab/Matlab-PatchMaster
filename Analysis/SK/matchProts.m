@@ -59,6 +59,7 @@ end
 
 % Find matches for the protocol name in the list of series names for the
 % given recording, based on the user's specification.
+%NOTE: In Matlab R2016b+, see if this can be replaced by fxn contains().
 protLoc = cell(length(protName),1);
 for i = 1:length(protName)
     switch matchType
