@@ -39,8 +39,8 @@ end
 
 % find metadata rows for the cells specified by allCells to pull out the
 % relevant parameters used for filtering.
-allCellInd = cellfun(@(x) strcmp(ephysMetadata(:,1),x),allCells,'un',0)';
-allCellInd = logical(sum([allCellInd{:}],2));
+allCellInd = cellfun(@(x) find(strcmp(ephysMetadata(:,1),x)),allCells,'un',0)';
+allCellInd = [allCellInd{:}];
 
 
 % find columns in metadata spreadsheet whose headers match the filter
