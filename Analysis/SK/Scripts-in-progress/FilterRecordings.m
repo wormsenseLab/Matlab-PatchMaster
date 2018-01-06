@@ -1,10 +1,44 @@
 % FilterRecordings.m
 % 
+% This function filters the list of recording names to be analyzed based on
+% metadata in the RecordingDatabase.xlsx format. 
+% 
+% USAGE: 
+%   filteredCells = FilterRecordings(ephysData,ephysMetadata)
+%   filteredCells = FilterRecordings(ephysData,ephysMetadata,allCells)
+%   filteredCells = FilterRecordings(ephysData,ephysMetadata,'internal',{'IC2'})
+% 
+% INPUTS:
+%   ephysData           struct      Struct containing data created by the
+%                                   function ImportPatchData.
+% 
+%   ephysMetadata       cell        Cell array version of metadata records,
+%                                   created by using ImportMetaData() on
+%                                   RecordingDatabase.xlsx.
+% 
+% OPTIONAL INPUTS:
+%   allCells            cell        Cell array of strings, containing a
+%                                   list of recording names. Useful if
+%                                   further narrowing down an
+%                                   already-filtered list of recordings.
+% 
+% FILTER PARAMETERS:
+%   Parameter-value pairs can be used to specify which columns of the
+%   recording database to filter by, such as strain name or solutions used.
+%   The parameter name references the column (e.g., 'strain'), and the 
+%   value should be a cell array of strings (e.g., {'TU2769'} or
+%   {'TU2769','TU253'}.
+% 
+%   The function can be expanded to include other string-based filters by
+%   simply adding an addParameter line to the inputParser section at the
+%   beginning.
+% 
 % 
 % Created by Sammy Katta on 4 Jan 2018.
 
 function filteredCells = FilterRecordings(ephysData,ephysMetadata,varargin)
 
+% PARSE INPUTS
 p = inputParser;
 % metadata spreadsheet (optional or required? only necessary if using the filtering parameters)
 p.addRequired('ephysData');
@@ -37,6 +71,8 @@ if isempty(allCells)
    allCells =  fieldnames(ephysData);
 end
 
+
+% FILTERING CODE STARTS HERE
 % find metadata rows for the cells specified by allCells to pull out the
 % relevant parameters used for filtering.
 allCellInd = cellfun(@(x) find(strcmp(ephysMetadata(:,1),x)),allCells,'un',0)';
