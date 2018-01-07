@@ -40,9 +40,9 @@ ephysMetaDatabase = ImportMetaData();  %Recording Database
 %% Make list of approved traces (by selecting traces to exclude)
 
 % protList = 'DispRate';
-% protList = {'PrePulse'};
+protList = {'
+    PrePulse'};
 % protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
-% protList = {'PrePulse'};
 % protList ={'WC_Probe';'NoPre'};
 % ExcludeSweeps(ephysData,allCells,1,protList,'first');
 
@@ -52,13 +52,14 @@ ephysMetaDatabase = ImportMetaData();  %Recording Database
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
 % protList = {'Sine10_num'};
-protList ={'WC_Probe8'};
-strainList = {'TU2769'};
-internalList = {'IC6'};
+% protList ={'WC_Probe8'};
+strainList = {'GN381'};
+internalList = {'IC2'};
 cellTypeList = {'ALMR'};
 
 filteredCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
     'strain', strainList, 'internal', internalList, 'cellType', cellTypeList);
+
 ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', 'full');
 
 %% Generic IdAnalysis run
@@ -76,11 +77,18 @@ ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', 'full');
 % testMRCs = IdAnalysis(ephysData,protList,matchType,'num','sortSweepsBy',sortSweeps);
 
 
-protList ={'WC_Probe', 'noPre'};
+protList ={'NoPrePulse'};
 sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
-matchType = 'first';
-intStepMRCs = IdAnalysis(ephysData,protList,matchType,'num', ...
+matchType = 'full';
+wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+
+
+% protList ={'PrePulse'};
+% sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+% matchType = 'last';
+% wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'time','matchType',matchType, ...
+%     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
 %% Print list of Rs
 

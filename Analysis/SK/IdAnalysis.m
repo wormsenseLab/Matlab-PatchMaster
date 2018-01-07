@@ -78,9 +78,10 @@ p = inputParser;
 p.addRequired('ephysData', @(x) isstruct(x));
 p.addRequired('protList', @(x) iscell(x));
 
-p.addOptional('matchType', 'full', @(x) ischar(x));
+p.addOptional('allCells', cell(0));
 p.addOptional('sortStimBy', 'num', @(x) sum(strcmp(x,{'num','time'})));
 
+p.addParameter('matchType', 'full', @(x) sum(strcmp(x,{'first','last','full'})));
 p.addParameter('calibFlag', 0); %0 for stim command, 1 for PD signal
 p.addParameter('tauType','fit', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'}));
 p.addParameter('sortSweepsBy',{'magnitude','magnitude','magnitude','magnitude'}, @(x) iscell(x));
@@ -89,6 +90,7 @@ p.addParameter('fillZero',1);
 
 p.parse(ephysData, protList, varargin{:});
 
+allCells = p.Results.allCells;
 matchType = p.Results.matchType;
 sortStimBy = p.Results.sortStimBy;
 calibFlag = p.Results.calibFlag;
@@ -113,9 +115,11 @@ stimSortOrder = [1 2];
 mechTracePicks = ImportMetaData();
 mechTracePicks = metaDataConvert(mechTracePicks);
 
-% TODO: allow for filtered subsets of "allCells" to be used (e.g., only
-% wild-type recordings, or only recordings using XM2). Use FilterRecordings
-allCells = unique(mechTracePicks(:,1));
+% Allow for pre-filtered subsets of "allCells" (from FilterRecordings) to 
+% be used - otherwise take names from imported metadata sheet.
+if isempty(allCells)
+    allCells = unique(mechTracePicks(:,1));
+end
 
 mechPeaks = cell(length(allCells),1);
 % protList = {'WC_Probe','NoPrePulse','DispRate'};
@@ -138,7 +142,7 @@ for iCell = 1:length(allCells)
     nSeries = length(allSeries);
     pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
     
-    if nSeries == 0
+    if nSeries == 0 || isempty(pickedSeries)
         continue
     end
     

@@ -28,6 +28,9 @@
 %   The parameter name references the column (e.g., 'strain'), and the 
 %   value should be a cell array of strings (e.g., {'TU2769'} or
 %   {'TU2769','TU253'}.
+%   
+%   Current parameter options: 'strain', 'internalSolution',
+%   'externalSolution', 'cellType', 'wormPrep'.
 % 
 %   The function can be expanded to include other string-based filters by
 %   simply adding an addParameter line to the inputParser section at the
