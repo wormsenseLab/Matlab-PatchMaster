@@ -1,7 +1,25 @@
 % findMRCs.m
 %
+% OUTPUT:
+% cellPeaks: 
+% [stimSize/Vel/Interval pkLoc pkCurrent pkThresh tauAct tauDecay nReps]
+% 
 
-function [cellPeaks, cellFit] = findMRCs(stimParams, meanTraces, sf, dataType)
+function [cellPeaks, cellFit] = findMRCs(stimParams, meanTraces, sf, dataType, varargin)
+p = inputParser;
+
+p.addRequired('stimParams');
+p.addRequired('meanTraces');
+p.addRequired('sf', @(x) isnumeric(x) && isscalar(x) && x>0);
+p.addRequired('dataType', @(x) ischar(x));
+
+p.addParameter('tauType','fit', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'}));
+p.addParameter('integrateCurrent', 0); %1 to make column #8 with area under the curve
+
+p.parse(stimParams, meanTraces, sf, dataType, varargin{:});
+
+tauType = p.Results.tauType;
+integrateFlag = p.Results.integrateCurrent;
 
 smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling freq (kHz)
 threshTime = 100; % use first n ms of trace for setting noise threshold
@@ -54,22 +72,56 @@ for iParam = 1:nParams
     stimStart = stimParams(iParam,1);
     stimEnd = stimParams(iParam,2);
     
-    %NEXT: Change pk/pkLoc to part of a  larger array, add to it each time
-    %like sweepStimuli, then concatenate sweep/stim # at end? Or just
-    %assign at end to cellPeaks?
-    [peaks, peakLocs] = findpeaks(abs(smooMean(iParam,stimStart+artifactOffset:stimEnd+(sf*1000/50))),...
+    % find peaks within stimulus (up to 20ms after end of stimulus)    
+    [peaks, peakLocs] = findpeaks(abs(smooMean(iParam,stimStart+artifactOffset:stimEnd+(sf*20))),...
         'minpeakheight',pkThresh(iParam));
     if ~isempty(peaks)
         
-        pk = max(peaks);
+        pk = max(peaks); %take the largest peak
         
         %TODO: Use grpdelay to adjust for filter delay? If there is one, this
-        %might also help make the tau calculation more correct.
+        %might also help make the tau calculation more correct. (half-max
+        %timepoints for smooMean are the same as for meanTraces though,
+        %because it's a moving average filter?)
         
         % smoothDelay = floor((smoothWindow-1)/2); %using floor for round number timepoints
         
         peakLocs = peakLocs(peaks==pk);
         pkLoc = peakLocs(1) + stimParams(iParam,1)+artifactOffset; %account for start position
+        
+        switch tauType
+            case 'fit'
+                
+                % Find time for current to decay to 2/e of the peak or 75ms
+                % after the peak, whichever comes first. Use that for fitting
+                % the single exponential. Fit the unsmoothed mean trace.
+                
+                [~,fitInd] = min(abs(meanTraces(iParam,pkLoc:75*sf+pkLoc)...
+                    - (meanTraces(iParam,pkLoc)/(2*exp(1)))));
+                
+                fitTime = fitInd/sf; % seconds
+                tVec = 0:1/sf:fitTime;
+                
+                pkFit = fit(tVec',meanTraces(iParam,pkLoc:pkLoc+fitInd)','exp1');
+                                
+                tauDecay = -1/pkFit.b;
+                
+                cellFit{iParam} = pkFit; %fit object
+                tauAct = nan;
+
+            case 'thalfmax' %use the timepoint of half-maximal current instead of exp fit
+                halfpk = pk/2;
+                halfLocs = find(smooMean(iParam,stimStart:stimEnd+(sf*200))>=halfpk);
+                
+                tauAct = (halfLocs(1)-1)/sf; %ms
+                
+                decayHalfLocs = find(smooMean(iParam,pkLoc:pkLoc+(sf*100))<=halfpk);
+                % decayExpLocs = find(smooMean(iParam,pkLoc:pkLoc+(sf*100))<= pk*exp(1));
+                tauDecay = (decayHalfLocs(1)-1)/sf;
+                
+                % cellFit(iParam,1) = tau;
+                % cellFit(iParam,2) = tauDecay;                              
+        end
         
         switch dataType
             case 'A'
@@ -78,36 +130,40 @@ for iParam = 1:nParams
                 pk = pk*1E3; %mV
         end
         
-        
-        % Find time for current to decay to 2/e of the peak or 75ms
-        % after the peak, whichever comes first. Use that for fitting
-        % the single exponential. Fit the unsmoothed mean trace.
-        
-        [~,fitInd] = min(abs(meanTraces(iParam,pkLoc:75*sf+pkLoc)...
-            - (meanTraces(iParam,pkLoc)/(2*exp(1)))));
-        
-        fitTime = fitInd/sf; % seconds
-        tVec = 0:1/sf:fitTime;
-        
-        pkFit = fit(tVec',meanTraces(iParam,pkLoc:pkLoc+fitInd)','exp1');
-        tau = -1/pkFit.b;
-        
+        % Integrate current for total charge carried
+        if integrateFlag
+            % trapz uses the trapezoidal method to integrate & calculate area under
+            % the curve. But it assumes unit spacing, so divide by the sampling
+            % frequency to get units of seconds.            
+            try intPeak = trapz(meanTraces(iParam,stimStart:stimEnd+(300*sf))/sf);
+            catch
+                intPeak = trapz(meanTraces(iParam,stimStart:end)/sf);
+            end
+                
+            %intPeakArtifact = trapz(meanTraces(iParam,stimStart+artifactOffset:stimEnd+(sf*1E3/50))/sf);
+            %intPeakHalf = trapz(meanTraces(iParam,halfLocs(1)-1:decayHalfLocs(1)-1)/sf);
+            
+            cellPeaks(iParam,8) = intPeak;
+        end
         
     else
         pk = 0;
         pkLoc = nan;
         
-        tau = nan;
+        tauAct = nan;
+        tauDecay = nan;
         pkFit = 0;
     end
     
     cellPeaks(iParam,2) = pkLoc;
     cellPeaks(iParam,3) = pk;
-    %     cellPeaks(iParam,4) = pkDir;
-    cellPeaks(iParam,6) = tau;
-    cellFit{iParam} = pkFit; %fit object
+    cellPeaks(iParam,5) = tauAct;
+    cellPeaks(iParam,6) = tauDecay;
+    
+
+
 end
-cellPeaks(:,5) = pkThresh;
+cellPeaks(:,4) = pkThresh;
 cellPeaks(:,1) = stimParams(:,3); %stimSize
 cellPeaks(:,7) = stimParams(:,4); %nReps
 end

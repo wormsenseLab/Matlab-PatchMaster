@@ -11,19 +11,84 @@
 
 % Don't forget to run sigTOOL first!
 % [ephysData,tree] = ImportPatchData();
-ephysData = ImportPatchData();
-% ephysData = ImportPatchData(ephysData);
+% ephysData = ImportPatchData();
+ephysData = ImportPatchData(ephysData);
 
 
 % Keep only data with given project prefixes/names.
 projects = {'FAT';'SYM'};
+% projects = {'SAR','FAT'};
+
 
 ephysData = FilterProjectData(ephysData, projects);
 
-clear projects
+clear projects;
 %% Analyze capacity transient for C, Rs, and tau
 
-ephysData = CtAnalysis(ephysData);
+% ephysData = CtAnalysis(ephysData);
+ephysData = CtAnalysis(ephysData,newCells);
+
+clear lastfit;
+
+%% Import metadata with info about which IVq protocols to look at
+
+ephysIVMetaData = ImportMetaData(); %FAT-IV Assignments
+
+%% Import Recording Database
+ephysMetaDatabase = ImportMetaData();  %Recording Database
+
+%% Make list of approved traces (by selecting traces to exclude)
+
+% protList = 'DispRate';
+protList = {'
+    PrePulse'};
+% protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
+% protList ={'WC_Probe';'NoPre'};
+% ExcludeSweeps(ephysData,allCells,1,protList,'first');
+
+
+% protList = {'Pair8'};
+% protList = '_CC';
+% ExcludeSweeps(ephysData,allCells,1,protList,'last');
+
+% protList = {'Sine10_num'};
+% protList ={'WC_Probe8'};
+strainList = {'GN381'};
+internalList = {'IC2'};
+cellTypeList = {'ALMR'};
+
+filteredCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
+    'strain', strainList, 'internal', internalList, 'cellType', cellTypeList);
+
+ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', 'full');
+
+%% Generic IdAnalysis run
+
+% protList ={'DispRate'};
+% sortSweeps = {'velocity','magnitude','magnitude','magnitude'};
+% matchType = 'first';
+% intMRCs = IdAnalysis(ephysData,protList,matchType,'num', ...
+%     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+
+
+% protList = {'Pair8'};
+% matchType = 'last';
+% sortSweeps = {'magnitude','magnitude','interval','magnitude'};
+% testMRCs = IdAnalysis(ephysData,protList,matchType,'num','sortSweepsBy',sortSweeps);
+
+
+protList ={'NoPrePulse'};
+sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+matchType = 'full';
+wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+
+
+% protList ={'PrePulse'};
+% sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+% matchType = 'last';
+% wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'time','matchType',matchType, ...
+%     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
 %% Print list of Rs
 
@@ -41,10 +106,15 @@ resists(i,2) = ephysData.(recs{i}).Rs(ephysData.(recs{i}).protRs);
 
 end
 
-%% Import metadata with info about which IVq protocols to look at
+%% Print all Rs for making FAT_IV_Assignments spreadsheet
+recs = fieldnames(ephysData);
 
-ephysMetaData = ImportMetaData(); %FAT-IV Assignments
-ephysRecordingBase = ImportMetaData();  %Recording Database
+for i=1:length(recs)
+try fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).Rs)))
+catch
+    continue
+end
+end
 
 %% Assign numbers of IVq series to look at
 
@@ -57,13 +127,13 @@ CellToArray = @(x) reshape([x{:}],size(x,1),size(x,2), size(x,3));
 % ct_ivq protocol run for that recording was the one you want to use for  
 % whole-cell, put "2" in col 2 for that recording). Make sure it has three 
 % sequential ivq pgfs.
-allCells = ephysMetaData(2:end,1);
+allCells = ephysIVMetaData(2:end,1);
 
 %TODO: don't assume headers: try/catch it
-protStart = ephysMetaData(2:end,2:3)'; 
+protStart = ephysIVMetaData(2:end,2:3)'; 
 protStart = CellToArray(protStart);
 
-protRs = ephysMetaData(2:end,4)';
+protRs = ephysIVMetaData(2:end,4)';
 protRs = CellToArray(protRs);
 
 
@@ -112,7 +182,7 @@ ivCells = allCells(whichCells);
 genotype = cell(length(ivCells),2);
 for i=1:length(ivCells)
 genotype(i,1) = ivCells(i);
-genotype(i,2) = ephysRecordingBase(strcmp(ephysRecordingBase(:,2),ivCells(i)),3);
+genotype(i,2) = ephysMetaDatabase(strcmp(ephysMetaDatabase(:,1),ivCells(i)),2);
 end
 wtCells = ivCells(strcmp(genotype(:,2),'TU2769'));
 fatCells = ivCells(strcmp(genotype(:,2),'GN381'));
@@ -152,16 +222,6 @@ mechCellsWT = allCells(~cellfun('isempty',mechPeaksWT(:,1)));
 mechPeaksWT = mechPeaksWT(~cellfun('isempty',mechPeaksWT(:,1)),:);
 mechCellsFat = allCells(~cellfun('isempty',mechPeaksFat(:,1)));
 mechPeaksFat = mechPeaksFat(~cellfun('isempty',mechPeaksFat(:,1)),:);
-
-%% Make list of approved traces (by selecting traces to exclude)
-
-% protList = 'DispRate';
-protList = {'OnDt'};
-% protList = {'WC_Probe';'DispRate'};
-ExcludeSweeps(ephysData,allCells,1,protList,'last');
-
-% protList = '_CC';
-% ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
 
 %% Look at interstimulus interval
@@ -207,6 +267,22 @@ for i=1:5
     plot(h3s,tVec3{i},iVecOn3{i},'b');
     plot(h3s,tVec3{i},iVecOff3{i},'r');    
 end
+
+%% Read in genotypes
+
+allCells = fieldnames(ephysData);
+
+genotype = cell(length(allCells),2);
+for i=1:length(allCells)
+genotype(i,1) = allCells(i);
+try genotype(i,2) = ephysMetaDatabase(strcmp(ephysMetaDatabase(:,1),allCells(i)),2);
+catch
+    continue
+end
+end
+
+clear i
+
 %% Plot single MRC sets
 % Draw stim protocol for MRCs
 dt = 0.2; % ms, based on sampling frequency (5kHz in current WC_Probe)
@@ -258,6 +334,11 @@ hold on;
 scatter(OnDtTest.FAT032.dts,mean(OnDtTest.FAT032.on2),'d')
 scatter(OnDtTest.FAT032.dts,mean(OnDtTest.FAT032.off),'s')
 
+
+%% PrePulse/NoPrePulse
+protList = {'PrePulse'};
+matchType = 'first';
+prepulseMRCs = IdAnalysis(ephysData,0, 'time',protList, matchType);
 
 %% Look at current clamp
 allCells = fieldnames(ephysData);

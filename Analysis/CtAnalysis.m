@@ -18,10 +18,20 @@
 % 
 % Created by Sammy Katta, 15-May-2015.
 
-function ephysData = CtAnalysis(ephysData)
+function ephysData = CtAnalysis(ephysData,varargin)
 
-% keyboard;
-allCells = fieldnames(ephysData);
+p = inputParser;
+
+p.addRequired('ephysData', @(x) isstruct(x));
+
+p.addOptional('allCells', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}))
+
+p.parse(ephysData,varargin{:});
+allCells = p.Results.allCells;
+
+if isempty(allCells)
+    allCells = fieldnames(ephysData);
+end
 
 for iCell = 1:length(allCells)
     cellName = allCells{iCell}; %split into project name and cell numbers when feeding input
@@ -47,6 +57,10 @@ for iCell = 1:length(allCells)
         % are equivalent)
         ctNeg = -1.*ephysData.(cellName).data{1,protLoc(i)};
         ctPos = ephysData.(cellName).data{1,protLoc(i)+1};
+        
+        if size(ctNeg,2)<10 || size(ctPos,2)<10
+            continue
+        end
         
         ctNeg = bsxfun(@minus, ctNeg, mean(ctNeg(1:20,:)));
         ctPos = bsxfun(@minus, ctPos, mean(ctPos(1:20,:)));
@@ -97,6 +111,8 @@ for iCell = 1:length(allCells)
         
         % NOTE: The tau calculated here differs from taus calculated when
         % fitting manually in Igor, causing the estimate of Rs to be too high.
+        
+        
         fitStart = find(ICt == max(ICt(45:60)));
         if max(ICt(45:60)) ~= 0 % avoids crash when recording was lost and all values were 0
             [~,fitInd] = min(abs(ICt(fitStart:fitStart+30)-(ICt(fitStart)/(2*exp(1)))));
@@ -104,11 +120,18 @@ for iCell = 1:length(allCells)
             fitTime = fitInd/sf; % seconds
             t = 0:1/sf:fitTime;
             
-            capFit = fit(t',ICt(fitStart:fitStart+fitInd),'exp1');
-            %     plot(capFit,t,ICt(intStart:intStart+minInd));
-            
+            capFit = ezfit(t',ICt(fitStart:fitStart+fitInd),'y(x)=c+a*exp(b*x)',[5e-12, -3000, 8e-13]);
+
+        % Comparisons to old fitting code:
+        % scatter(t',ICt(fitStart:fitStart+fitInd));
+        % showfit('y(x)=c+a*exp(b*x)',[5e-12, -3000, 8e-13]);
+
+        % cFit = fit(t',ICt(fitStart:fitStart+fitInd),'exp1');
+        % plot(cFit,t,ICt(intStart:intStart+fitInd));
+
             % Calculate time constant in seconds for calculation
-            tau(i) = -1/capFit.b;
+            tau(i) = -1/capFit.m(2);
+            % tau(i) = -1/capFit.b;
             % Calculate series resistance from tau = Rs*Cm, and divide by 1E6 for
             % units of megaohms.
             Rs(i) = tau(i)/C(i)/1E6;

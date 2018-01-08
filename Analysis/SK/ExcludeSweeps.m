@@ -3,7 +3,6 @@
 % selectedSweeps = ExcludeSweeps(ephysData, allCells, channel, protList, matchType)
 % 
 % 
-%TODO: inputparser for matchtype
 %TODO: inputparser param for electrode data vs. calib (plotting properly,
 %plotting the right channel [either chan3 or search for 'mV'?)
 %TODO: Build another quick GUI to look through tree of sweeps (maybe
@@ -11,7 +10,29 @@
 %numbers that populate when you select a fieldname, third w channel
 %number/channeltype/channelunit? single click? enter to plot?
 
-function selectedSweeps = ExcludeSweeps(ephysData, allCells, channel, protList, matchType)
+function selectedSweeps = ExcludeSweeps(ephysData, protList, varargin)
+
+p = inputParser;
+p.addRequired('ephysData', @(x) isstruct(x));
+p.addRequired('protList', @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
+
+p.addOptional('allCells', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}))
+
+p.addParameter('channel', 1, @(x) isnumeric(x)); %1 for stim command, 3 for PD signal
+p.addParameter('matchType', 'full', @(x) ischar(x));
+
+p.parse(ephysData, protList, varargin{:});
+
+allCells = p.Results.allCells;
+channel = p.Results.channel;
+matchType = p.Results.matchType;
+
+if isempty(allCells)
+    allCells = fieldnames(ephysData);
+end
+
+maxPlots = 12;
+maxCols = 4;
 
 protLoc = cell(length(allCells),1);
 totSeries = 0;
@@ -41,21 +62,35 @@ for iCell = 1:length(allCells)
         [leakSubtract, leakSize] = SubtractLeak(data,sf);
         data(:,:,2) = leakSubtract;
         
-        % Run the GUI for the current series
-        %TODO: Get Esc key to pass out an error to catch (currently, error
-        %seems to be passed to uiwait instead of out to ExcludeSweeps).
-        %TODO: Get -1,0,+1 output for next/previous button and use to
-        %modify iSeries. Okay to clear previous selection, or do we need
-        %to replay excluded traces?
-        [keepSweeps, goBack] = selectSweepsGUI(data,dataType,channel,leakSize,sf,thisCell,protName);
-        %         catch
-        %             fprintf('Exited on %s series %d',cellName,protLoc{iCell});
-        %             return;
-        %         end
-        
+        % Run the GUI, with a maximum number of plots per page (especially
+        % useful for series with many reps). Can also adjust maximum
+        % number of columns.
+        keepSweeps = [];
+        for i = 1:maxPlots:nSweeps
+            
+            if nSweeps >= i+maxPlots-1
+                pageSweeps = i:i+maxPlots-1;
+            else
+                pageSweeps = i:nSweeps;
+            end
+            % Run the GUI for the current series
+            %TODO: Get Esc key to pass out an error to catch (currently, error
+            %seems to be passed to uiwait instead of out to ExcludeSweeps).
+            %TODO: Get -1,0,+1 output for next/previous button and use to
+            %modify iSeries. Okay to clear previous selection, or do we need
+            %to replay excluded traces?
+            [keepPageSweeps, goBack] = selectSweepsGUI(...
+                data(:,pageSweeps,:),dataType,channel,leakSize,sf,thisCell,protName,maxCols);
+            %         catch
+            %             fprintf('Exited on %s series %d',cellName,protLoc{iCell});
+            %             return;
+            %         end
+            
+            keepSweeps = [keepSweeps keepPageSweeps];
+        end
         
         % Format the list of sweeps into a text string for the Excel sheet
-        sweeps = sweeps(keepSweeps);
+        sweeps = sweeps(logical(keepSweeps));
         
         if ~isempty(sweeps)
             

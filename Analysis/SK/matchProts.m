@@ -33,6 +33,10 @@
 %
 % Created by Sammy Katta on 23 February 2016.
 
+% TODO: Add in optional fxnality for filtering series/protocols based on
+% recording genotype, internal/external solutions, cell type, and worm
+% prep.
+
 function protLoc = matchProts(ephysData, cellName, protName, varargin)
 
 % Parse inputs and allow proper input of parameter/value pairs.
@@ -41,6 +45,8 @@ p.addRequired('ephysData');
 p.addRequired('cellName');
 p.addRequired('protName');
 
+% consider whether you want to specify default filtering parameters or use zero-length cells
+% for no filtering
 p.addParameter('MatchType', 'full', @(x) validateattributes(x,{'char'},{'nonempty'}));
 p.parse(ephysData, cellName, protName, varargin{:});
 
@@ -53,6 +59,7 @@ end
 
 % Find matches for the protocol name in the list of series names for the
 % given recording, based on the user's specification.
+%NOTE: In Matlab R2016b+, see if this can be replaced by fxn contains().
 protLoc = cell(length(protName),1);
 for i = 1:length(protName)
     switch matchType
