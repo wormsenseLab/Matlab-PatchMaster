@@ -8,7 +8,8 @@
 % current setup.
 %
 % USAGE:
-%   mechPeaks = IdAnalysis(ephysData, allCells, calibFlag)
+%   mechPeaks = IdAnalysis(ephysData, protList)
+%   mechPeaks = IdAnalysis(ephysData, protList, 'sortStimBy', 'num', calibFlag, 0)
 %
 % INPUTS:
 %   ephysData       struct          Imported data from ImportPatchData.
@@ -19,7 +20,7 @@
 %                                   xls file you are inputting. Default is
 %                                   to match the whole name.
 % 
-% OPTIONAL INPUTS:
+% OPTIONAL PARAMETER-VALUE INPUTS:
 % 
 %   matchType       char            Specifies whether to match names in
 %                   {'full'         protList to beginning, end, or full
@@ -64,10 +65,8 @@
 %   Done, but still uses stim com to group step sizes, and includes PD
 %   trace and calculated sizes (based on calibration if available) in
 %   output
-% TODO: allCells usage is old? Read from unique(mechTracePicks(:,1))
 % NEXT: test with stimInterval, break down into intermediate fxns if still
 % necessary.
-% LATER: use inputParser to make more useful for other kinds of analysis.
 % LATER: add in PD step analysis (will need findMRCs modified), output
 % sorted stim command and PD traces with sortedLeakSub
 % LATER: add GUI for selecting sortSweepsBy for each stim segment

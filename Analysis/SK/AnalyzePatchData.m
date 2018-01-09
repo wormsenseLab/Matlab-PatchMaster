@@ -40,7 +40,7 @@ ephysMetaDatabase = ImportMetaData();  %Recording Database
 %% Make list of approved traces (by selecting traces to exclude)
 
 % protList = 'DispRate';
-protList = {'PrePulse'};
+% protList = {'PrePulse'};
 % protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
 % protList ={'WC_Probe';'NoPre'};
 % ExcludeSweeps(ephysData,allCells,1,protList,'first');
@@ -51,9 +51,9 @@ protList = {'PrePulse'};
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
 % protList = {'Sine10_num'};
-% protList ={'WC_Probe8'};
-strainList = {'GN381'};
-internalList = {'IC2'};
+protList ={'WC_Probe8'};
+strainList = {'TU2769'};
+internalList = {'IC6'};
 cellTypeList = {'ALMR'};
 
 filteredCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
@@ -76,18 +76,26 @@ ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', 'full');
 % testMRCs = IdAnalysis(ephysData,protList,matchType,'num','sortSweepsBy',sortSweeps);
 
 
-protList ={'PrePulse'};
-sortSweeps = {'position','position','position','position'};
-matchType = 'full';
-wtPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
-    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
-
-
 % protList ={'PrePulse'};
-% sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
-% matchType = 'last';
-% wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'time','matchType',matchType, ...
+% sortSweeps = {'position','position','position','position'};
+% matchType = 'full';
+% wtPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
 %     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+
+
+protList ={'WC_Probe8'};
+sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+matchType = 'full';
+wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'time','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+clear protList sortSweeps matchType
+
+%% NonStat Noise Analysis
+
+
+protList ={'WC_Probe8'};
+matchType = 'full';
+test = NonStatNoiseAnalysis(ephysData,protList,filteredCells,'matchType',matchType);
 clear protList sortSweeps matchType
 %% Print list of Rs
 
