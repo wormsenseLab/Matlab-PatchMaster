@@ -40,8 +40,7 @@ ephysMetaDatabase = ImportMetaData();  %Recording Database
 %% Make list of approved traces (by selecting traces to exclude)
 
 % protList = 'DispRate';
-protList = {'
-    PrePulse'};
+protList = {'PrePulse'};
 % protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
 % protList ={'WC_Probe';'NoPre'};
 % ExcludeSweeps(ephysData,allCells,1,protList,'first');
@@ -77,10 +76,10 @@ ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', 'full');
 % testMRCs = IdAnalysis(ephysData,protList,matchType,'num','sortSweepsBy',sortSweeps);
 
 
-protList ={'NoPrePulse'};
-sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+protList ={'PrePulse'};
+sortSweeps = {'position','position','position','position'};
 matchType = 'full';
-wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
+wtPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
 
@@ -89,7 +88,7 @@ wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType,
 % matchType = 'last';
 % wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'time','matchType',matchType, ...
 %     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
-
+clear protList sortSweeps matchType
 %% Print list of Rs
 
 recs = fieldnames(ephysData);
