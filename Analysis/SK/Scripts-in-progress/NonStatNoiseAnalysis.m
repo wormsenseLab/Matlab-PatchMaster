@@ -4,7 +4,7 @@
 % 
 % Created by Sammy Katta on 5th Jan 2018.
 
-function [noiseTraces] = NonStatNoiseAnalysis(ephysData, protList, varargin)
+function [nonStatOutput] = NonStatNoiseAnalysis(ephysData, protList, varargin)
 
 p = inputParser;
 p.addRequired('ephysData', @(x) isstruct(x));
@@ -17,6 +17,7 @@ p.addParameter('matchType', 'full', @(x) sum(strcmp(x,{'first','last','full'})))
 p.addParameter('windowSize', 8, @(x) isnumeric(x) && mod(x,2)==0);
 % length of time (ms) per stimulus over which the responses will be averaged
 p.addParameter('responseTime', 200, @(x) isnumeric(x) && x>0); 
+p.addParameter('excludeVariableStim', 'false', @(x) islogical);
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -24,6 +25,7 @@ allCells = p.Results.allCells;
 matchType = p.Results.matchType;
 averagingWindow = p.Results.windowSize; 
 responseTime = p.Results.responseTime;
+excludeStimVar = p.Results.excludeVariableStim;
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -75,6 +77,16 @@ for iCell = 1:length(allCells)
         
         probeI = ephysData.(cellName).data{1,thisSeries}(:,pickedTraces);
         stimComI = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces); %in V, not um
+        
+        %TODO: add exclusion criteria
+        % if flag is set, use photodiode trace to exclude sweeps? (before
+        % separating into windows)? recordings? where the coefficient of
+        % variance of the PD trace over the stimulus region is greater than
+        % CV for the MRC trace.
+        if excludeStimVar
+            pdV = ephysData.(cellName).data{3,thisSeries}(:,pickedTraces); %in V, not um
+        end
+        
         % sampling frequency in kHz
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
         nSweeps = size(stimComI,2);
@@ -103,9 +115,8 @@ for iCell = 1:length(allCells)
         stimLoc = unique(seriesStimuli(:,1:2),'rows');
         nStim = size(stimLoc,1);
         
-        %NEXT: for iSweep=1:averagingWindow/2:nSweeps-1, take average of x
-        %leak-subtracted sweeps within the window, then subtract average
-        %from each individual sweep.q
+        %TODO: add PD-variance-based exclusion filtering here
+        
         %NEXT: use seriesStimuli location/sweep number to set time
         %boundaries for where to look at the response
         %NEXT: save variance (subtracted trace) and mean current for each
@@ -125,12 +136,27 @@ for iCell = 1:length(allCells)
             
         end
         
+        
         windowMeans = [windowMeans{~cellfun('isempty',windowMeans)}];  
+        
+        % Subtract the mean response within each window to leave only the 
+        % variation around the large current (ideally these represent 
+        % single-channel fluctuations from the channels of interest, which 
+        % have higher open probability during the evoked response).
         meanSubtract = meanSubtract(~cellfun('isempty',meanSubtract));
         windowVars = cellfun(@(x) var(x,0,2), meanSubtract, 'un', 0);
-        windowVars = [windowVars{:}];
+        windowVars = [windowVars{:}]; % variance of mean-subtracted sweeps
+        
+        
+        
+        % Save everything to output struct
+        nonStatOutput.(cellName)(iSeries).slidingMean = windowMeans;
+        nonStatOutput.(cellName)(iSeries).slidingVar = windowVars;
+        nonStatOutput.(cellName).sweepsPerWindow = averagingWindow;
         
     end
+    
+    
     
 end
 

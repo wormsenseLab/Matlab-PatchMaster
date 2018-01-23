@@ -61,6 +61,7 @@ filteredCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
 
 ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', 'full');
 
+clear protList strainList internalList cellTypeList
 %% Generic IdAnalysis run
 
 % protList ={'DispRate'};
@@ -96,7 +97,7 @@ clear protList sortSweeps matchType
 protList ={'WC_Probe8'};
 matchType = 'full';
 test = NonStatNoiseAnalysis(ephysData,protList,filteredCells,'matchType',matchType);
-clear protList sortSweeps matchType
+clear protList matchType
 %% Print list of Rs
 
 recs = fieldnames(ephysData);
