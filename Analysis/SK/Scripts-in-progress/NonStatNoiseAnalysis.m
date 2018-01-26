@@ -46,7 +46,7 @@ stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
 
 
 for iCell = 1:length(allCells)
-    cellName = allCells(iCell)
+    cellName = allCells(iCell);
    
     
     allStim = cell(0);
@@ -137,7 +137,7 @@ for iCell = 1:length(allCells)
         end
         
         
-        windowMeans = [windowMeans{~cellfun('isempty',windowMeans)}];  
+        windowMeans = [windowMeans{~cellfun('isempty',windowMeans)}];       
         
         % Subtract the mean response within each window to leave only the 
         % variation around the large current (ideally these represent 
@@ -146,13 +146,19 @@ for iCell = 1:length(allCells)
         meanSubtract = meanSubtract(~cellfun('isempty',meanSubtract));
         windowVars = cellfun(@(x) var(x,0,2), meanSubtract, 'un', 0);
         windowVars = [windowVars{:}]; % variance of mean-subtracted sweeps
-        
-        
+                
+        % Also calculate a non-sliding mean and variance over all sweeps
+        % for comparison.
+        totalMean = mean(probeI,2);
+        totalSubtract = probeI - repmat(totalMean,1,size(probeI,2));
+        totalVar = var(totalSubtract,0,2);
         
         % Save everything to output struct
         nonStatOutput.(cellName)(iSeries).slidingMean = windowMeans;
         nonStatOutput.(cellName)(iSeries).slidingVar = windowVars;
-        nonStatOutput.(cellName).sweepsPerWindow = averagingWindow;
+        nonStatOutput.(cellName)(iSeries).sweepsPerWindow = averagingWindow;
+        nonStatOutput.(cellName)(iSeries).totalMean = totalMean;
+        nonStatOutput.(cellName)(iSeries).totalVar = totalVar;
         
     end
     

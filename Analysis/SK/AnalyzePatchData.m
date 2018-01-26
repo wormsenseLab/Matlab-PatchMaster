@@ -51,17 +51,19 @@ ephysMetaDatabase = ImportMetaData();  %Recording Database
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
 % protList = {'Sine10_num'};
-protList ={'WC_Probe8'};
+protList ={'WC_Probe3'};
 strainList = {'TU2769'};
 internalList = {'IC6'};
 cellTypeList = {'ALMR'};
+stimPosition = {'anterior'};
 
 filteredCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
-    'strain', strainList, 'internal', internalList, 'cellType', cellTypeList);
+    'strain', strainList, 'internal', internalList, ...
+    'cellType', cellTypeList, 'stimLocation', stimPosition);
 
 ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', 'full');
 
-clear protList strainList internalList cellTypeList
+clear protList strainList internalList cellTypeList stimPosition;
 %% Generic IdAnalysis run
 
 % protList ={'DispRate'};
@@ -96,7 +98,7 @@ clear protList sortSweeps matchType
 
 protList ={'WC_Probe8'};
 matchType = 'full';
-test = NonStatNoiseAnalysis(ephysData,protList,filteredCells,'matchType',matchType);
+noiseAnalysisData_8 = NonStatNoiseAnalysis(ephysData,protList,filteredCells,'matchType',matchType);
 clear protList matchType
 %% Print list of Rs
 

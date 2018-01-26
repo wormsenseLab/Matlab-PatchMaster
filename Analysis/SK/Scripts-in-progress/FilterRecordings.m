@@ -60,6 +60,7 @@ p.addParameter('externalSolution', cell(0), @(x) iscell(x) && ~isempty(x) && isc
 p.addParameter('internalSolution', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('cellType', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('wormPrep', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
+p.addParameter('stimLocation', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 
 p.parse(ephysData, ephysMetadata, varargin{:});
 
@@ -97,16 +98,19 @@ end
 paramInd = [];
 subMetadata = cell(length(allCells),length(useParams));
 
+% Pull out metadata columns specified for filtering
 for i=1:length(useParams)
-    paramInd(i) = find(strcmpi(regexprep(ephysMetadata(1,:), '\s+', ''),filterHeaders{useParams(i)}));
+    paramInd(i) = find(strncmpi(regexprep(ephysMetadata(1,:), '\s+', ''),filterHeaders{useParams(i)},length(filterHeaders{useParams(i)})));
     % convert numbers and NaNs (from empty slots) to strings to allow use 
     % of ismember for matching
     subMetadata(:,i) = cellfun(@num2str,ephysMetadata(allCellInd,paramInd(i)),'un',0);
 end
 
 % subMetadata = cellfun(@num2str,subMetadata,'un',0);
+% Find which recordings have parameters matching each of the individual
+% specified parameters (case-insensitive).
 for i = 1:length(useParams)
-    try isParam(:,i) = ismember(subMetadata(:,i),filterParams.(filterHeaders{useParams(i)}));
+    try isParam(:,i) = ismember(lower(subMetadata(:,i)),lower(filterParams.(filterHeaders{useParams(i)})));
     catch
         fprintf('Could not match %s in metadata',char(filterParams.(filterHeaders{i})'));
         continue
