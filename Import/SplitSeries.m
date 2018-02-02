@@ -4,6 +4,7 @@
 % 
 % EXAMPLE:
 %   [structA] = SplitSeries(tree, data, saveName, structA)
+%   [structA] = SplitSeries(tree, data, saveName, structA, stimTree)
 % 
 % INPUTS:
 %   tree        struct          The metadata tree, from importing a HEKA
@@ -20,6 +21,10 @@
 %   structA     struct          The output data structure to which new
 %                               fields will be appended. May be empty.
 % 
+% OPTIONAL INPUTS:
+%   stimTree    cell            The stimulus metadata tree, from importing
+%                               a .dat file.
+% 
 % OUTPUTS:
 %   structA     struct          Output data structure in same format, with
 %                               newly appended fields representing groups.
@@ -30,20 +35,34 @@
 % 
 % Created by Sammy Katta on 27 May 2014.
 
-function [structA] = SplitSeries(tree, data, stimTree, structA, saveName)
+function [structA] = SplitSeries(tree, data, structA, saveName, varargin)
+
+p = inputParser;
+p.addRequired('tree');
+p.addRequired('data');
+p.addRequired('structA');
+p.addRequired('saveName');
+
+p.addOptional('stimTree', cell(0), @(x) iscell(x));
+
+p.parse(tree, data, structA, saveName, varargin{:});
+
+stimTree = p.Results.stimTree;
 
 % Find which rows in tree contain group, series, and sweep metadata
 grLoc = find(~cellfun('isempty',tree(:,2)));
 seLoc = find(~cellfun('isempty',tree(:,3)));
-stLoc = find(~cellfun('isempty',stimTree(:,2)));
 
-% The number of entries with stimulus parameters should match the total
-% number of series.
-if length(seLoc) ~= length(stLoc)
-    fprintf('%s stimulus data does not match total number of series\n', saveName)
-    return
-end
+if ~isempty(stimTree)
+    stLoc = find(~cellfun('isempty',stimTree(:,2)));
     
+    % The number of entries with stimulus parameters should match the total
+    % number of series.
+    if length(seLoc) ~= length(stLoc)
+        fprintf('%s stimulus data does not match total number of series\n', saveName)
+        return
+    end
+end
 % swLoc = find(~cellfun('isempty',tree(:,4)));
 
 % Figure out how many series are in each group/biological cell by pulling
@@ -121,17 +140,21 @@ for iGr = 1:length(grLoc)
             traceTot = traceTot+1;
         end
         
-        % Pull out the relevant section of the stimTree for the series at 
-        % hand. nChan may not be the same for stimTree if you have channels
-        % with DA output but no *stored* AD input (i.e., more channels in
-        % stimTree than in dataTree). 
-        try 
-            stLocEnd = stLoc(serTot+1)-1;
-        catch
-            stLocEnd = size(stimTree,1);
-        end
         
-        grpStim{iSer} = stimTree(stLoc(serTot):stLocEnd,2:4);
+        if ~isempty(stimTree)
+            % Pull out the relevant section of the stimTree for the series at
+            % hand. nChan may not be the same for stimTree if you have channels
+            % with DA output but no *stored* AD input (i.e., more channels in
+            % stimTree than in dataTree).
+            try
+                stLocEnd = stLoc(serTot+1)-1;
+            catch
+                stLocEnd = size(stimTree,1);
+            end
+            
+            grpStim{iSer} = stimTree(stLoc(serTot):stLocEnd,2:4);
+            
+        end
 
         % Move on to the next round
         serTot = serTot+1;
@@ -146,7 +169,10 @@ for iGr = 1:length(grLoc)
     structA.(currGr).samplingFreq = grpFs;
     structA.(currGr).startTimes = grpTimes;
     structA.(currGr).ccHold = grpHolds;
-    structA.(currGr).stimTree = grpStim;
+    
+    if ~isempty(stimTree)
+        structA.(currGr).stimTree = grpStim;
+    end
 
 end
 

@@ -11,8 +11,8 @@
 
 % Don't forget to run sigTOOL first!
 % [ephysData,tree] = ImportPatchData();
-% ephysData = ImportPatchData();
-ephysData = ImportPatchData(ephysData);
+ephysData = ImportPatchData();
+% ephysData = ImportPatchData(ephysData);
 
 
 % Keep only data with given project prefixes/names.

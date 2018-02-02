@@ -14,6 +14,14 @@
 %   previousData    struct        If you have previously created a data
 %                                 struct with this function, input it
 %                                 to append more fields (groups) to it.
+% 
+% OPTIONAL PARAMETER INPUTS:
+%   includeStim     logical       If true, ImportPatchData will save the
+%                                 stimTree section for each series within
+%                                 the ephysData struct. Optional for
+%                                 limiting file size. Can be different for
+%                                 separate runs of ImportPatchData, as it
+%                                 affects each group separately.
 %
 % OUTPUT:
 %   ephysData       struct        Data is output as a nested struct. Each
@@ -57,22 +65,19 @@ if ~iscell(filename)
     filename = {filename};
 end
 
+p = inputParser;
+p.addOptional('ephysData', struct(), @(x) isstruct(x));
+
+p.addParameter('includeStim', 'false', @(x) islogical(logical(x)));
+
+p.parse(varargin{:});
+
+ephysData = p.Results.ephysData;
+includeStim = p.Results.includeStim;
+
 % If user doesn't give an existing data struct, create a new one. If user 
 % does input a struct, use it and add to it. If user inputs something that
 % is not a struct, throw an error. 
-switch nargin
-    case 0
-        ephysData = struct();
-    case 1
-        ephysData = varargin{1};
-        if ~isstruct(ephysData)
-            error('PatchDataAnalysis:inputNotStruct', ...
-                'Input must be a struct to which you wish to append new data fields.')
-        end
-    otherwise
-        error('PatchDataAnalysis:tooManyArguments',...
-            'Input must be a single struct to which you wish to append new data fields.');
-end
 
 % Load files
 for iFile = 1:length(filename)
@@ -96,7 +101,11 @@ for iFile = 1:length(filename)
     
     % Split the data into series by recording name, etc. and assign into
     % the final data structure
-    ephysData = SplitSeries(tree, dCollapse, stimTree, ephysData, saveName);
+    ephysData = SplitSeries(tree, dCollapse, ephysData, saveName);
+    
+    if includeStim
+        ephysData = SplitSeries(tree, dCollapse, ephysData, saveName, stimTree);
+    end
     
 end
 
