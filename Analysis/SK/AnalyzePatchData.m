@@ -50,10 +50,17 @@ ephysMetaDatabase = ImportMetaData();  %Recording Database
 % protList = '_CC';
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
-% protList = {'Sine10_num'};
-protList ={'WC_Probe3'};
+% protList ={'WC_Probe3'};
+% matchType = 'full';
+% strainList = {'TU2769'};
+% internalList = {'IC6'};
+% cellTypeList = {'ALMR'};
+% stimPosition = {'anterior'};
+
+protList ={'_time'};
+matchType = 'last';
 strainList = {'TU2769'};
-internalList = {'IC6'};
+internalList = {'IC2'};
 cellTypeList = {'ALMR'};
 stimPosition = {'anterior'};
 
@@ -61,9 +68,9 @@ filteredCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
     'strain', strainList, 'internal', internalList, ...
     'cellType', cellTypeList, 'stimLocation', stimPosition);
 
-ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', 'full');
+ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', matchType);
 
-clear protList strainList internalList cellTypeList stimPosition;
+clear protList strainList internalList cellTypeList stimPosition matchType ans;
 %% Generic IdAnalysis run
 
 % protList ={'DispRate'};

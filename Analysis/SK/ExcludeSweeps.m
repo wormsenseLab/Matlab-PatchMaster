@@ -20,19 +20,20 @@ p.addOptional('allCells', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1})
 
 p.addParameter('channel', 1, @(x) isnumeric(x)); %1 for stim command, 3 for PD signal
 p.addParameter('matchType', 'full', @(x) ischar(x));
+p.addParameter('maxCols',4,@(x) isnumeric(x));
 
 p.parse(ephysData, protList, varargin{:});
 
 allCells = p.Results.allCells;
 channel = p.Results.channel;
 matchType = p.Results.matchType;
+maxCols = p.Results.maxCols;
 
 if isempty(allCells)
     allCells = fieldnames(ephysData);
 end
 
 maxPlots = 12;
-maxCols = 4;
 
 protLoc = cell(length(allCells),1);
 totSeries = 0;
@@ -73,14 +74,21 @@ for iCell = 1:length(allCells)
             else
                 pageSweeps = i:nSweeps;
             end
+            
+            if nSweeps < maxCols
+                nCols = nSweeps;
+            else
+                nCols = maxCols;
+            end
             % Run the GUI for the current series
             %TODO: Get Esc key to pass out an error to catch (currently, error
             %seems to be passed to uiwait instead of out to ExcludeSweeps).
             %TODO: Get -1,0,+1 output for next/previous button and use to
             %modify iSeries. Okay to clear previous selection, or do we need
             %to replay excluded traces?
+           
             [keepPageSweeps, goBack] = selectSweepsGUI(...
-                data(:,pageSweeps,:),dataType,channel,leakSize,sf,thisCell,protName,maxCols);
+                data(:,pageSweeps,:),dataType,channel,leakSize,sf,thisCell,protName,nCols);
             %         catch
             %             fprintf('Exited on %s series %d',cellName,protLoc{iCell});
             %             return;

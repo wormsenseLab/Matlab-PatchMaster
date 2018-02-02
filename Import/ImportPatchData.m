@@ -96,7 +96,7 @@ for iFile = 1:length(filename)
     
     % Split the data into series by recording name, etc. and assign into
     % the final data structure
-    ephysData = SplitSeries(tree, dCollapse, ephysData, saveName);
+    ephysData = SplitSeries(tree, dCollapse, stimTree, ephysData, saveName);
     
 end
 
