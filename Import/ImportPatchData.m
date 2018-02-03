@@ -21,7 +21,8 @@
 %                                 the ephysData struct. Optional for
 %                                 limiting file size. Can be different for
 %                                 separate runs of ImportPatchData, as it
-%                                 affects each group separately.
+%                                 affects each group separately. Default is
+%                                 'false'.
 %
 % OUTPUT:
 %   ephysData       struct        Data is output as a nested struct. Each

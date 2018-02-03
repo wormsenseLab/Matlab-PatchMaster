@@ -11,7 +11,7 @@
 
 % Don't forget to run sigTOOL first!
 % [ephysData,tree] = ImportPatchData();
-ephysData = ImportPatchData();
+ephysData = ImportPatchData('incl',1);
 % ephysData = ImportPatchData(ephysData);
 
 
@@ -106,6 +106,13 @@ clear protList sortSweeps matchType
 protList ={'WC_Probe8'};
 matchType = 'full';
 noiseAnalysisData_8 = NonStatNoiseAnalysis(ephysData,protList,filteredCells,'matchType',matchType);
+clear protList matchType
+
+%% Frequency Dependence Analysis
+
+protList ={'_time'};
+matchType = 'last';
+test = FrequencyAnalysis(ephysData, ephysMetaDatabase, protList, 'matchType', matchType);
 clear protList matchType
 %% Print list of Rs
 
