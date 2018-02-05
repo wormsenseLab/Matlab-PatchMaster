@@ -29,12 +29,11 @@ end
 
 sinePeaks = cell(length(allCells),1);
 
-baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
+baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline for leak subtraction
+steadyTime = 100; % length of time (ms) to use for calculating steady state mean at end of sine
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
 whichChan = 2; %channel number for stimulus command
-emptySeg = 4;
-emptyFreq = 0;
 
 for iCell = 1:length(allCells)
     
@@ -70,52 +69,33 @@ for iCell = 1:length(allCells)
         dataType = ephysData.(cellName).dataunit{1,thisSeries};
         nSweeps = size(stimComI,2);
         
-        % Read from stimTree to find sine frequency and timepoints
-        try thisTree = ephysData.(cellName).stimTree{thisSeries};
-        catch      
-            error('Please upload a stimTree for %s. (Run ImportPatchData with includeStim flag).\n',cellName);
-        end
         
-        chLoc = find(cellfun(@(x) ~isempty(x),thisTree(:,2)));
-        
-        try segLoc = chLoc(whichChan)+1:chLoc(whichChan+1)-1;
-        catch
-            segLoc = chLoc(whichChan)+1:size(thisTree,1);
-        end
-        
-        thisFreq = 1/thisTree{chLoc(whichChan),2}.chSine_Cycle; % sine freq in Hz
-        thisAmpl = thisTree{chLoc(whichChan),2}.chSine_Amplitude; % amplitude in commanded um
-        
-        for iSeg = 1:length(segLoc)
-            segType (iSeg) = thisTree{segLoc(iSeg),3}.seClass; 
-            segLength(iSeg) = thisTree{segLoc(iSeg),3}.seDuration * sf * 1e3; %length in samples
-            
-            if iSeg == 1
-                segStart = [1];
-            else
-                segStart(iSeg) = segStart(iSeg-1)+segLength(iSeg-1);
-            end
-        end
-        
-        isSine = find(ismember(segType,3));
-        if isempty(isSine)
-            thisFreq = emptyFreq;
-            thisAmpl = 0;
-            isSine = emptySeg;
-        end
-        
-        isSquare = find(ismember(segType,4));
-        
-        sineLoc = arrayfun(@(x) segStart(x):segStart(x)+segLength(x)-1, isSine, 'un', 0);
-        %Check that this works as start/end points instead of all points
-        squareLoc = arrayfun(@(x) [segStart(x), segStart(x)+segLength(x)-1], isSquare);
+        % Subtract the baseline leak current for each series
+        leakSubtract = ...
+            SubtractLeak(probeI, sf, 'BaseLength', baseTime);
+        leakSubtractCell = num2cell(leakSubtract',2);
+                
 
-        for iSine = 1:length(sineLoc)
-            sineTrace{iSine} = probeI(sineLoc{iSine});
-        end
+        clear thisFreq;
+        % Find location, frequency, and amplitude of sine, and locations of
+        % flanking square pulses
+        [thisFreq, thisAmpl, sineLoc, squareLoc] = ...
+            retrieveSineFreq(ephysData, cellName, thisSeries, whichChan);
         
-              
-%NEXT: insert leak subtraction and pull sineTrace from leakSub instead
+        if ~exist(thisFreq,'var')
+            fprintf('Please upload a stimTree for %s. (Run ImportPatchData with includeStim flag).\n',cellName);
+        end
+
+        % For later: when using multiple sines in a given sweep        
+        % for iSine = 1:length(sineLoc)
+        %     sineTrace{iSine} = leakSubtract(sineLoc{iSine});
+        % end
+        
+        sineTrace = leakSubtract(sineLoc{1});
+        
+        steadyStateI = mean(sineTrace(end-steadyTime*sf:end));
+        
+        
 %NEXT: take average of beginning and end of sine section (x ms? x% of
 %trace? x cycles?) and save to output cell array
 %output: sine freq, amplitude, duration, peak at start, beginning average, end
@@ -129,7 +109,7 @@ for iCell = 1:length(allCells)
 
 %THEN: output freq dependence and adaptation like mechPeaks, with cell
 %name, trace, cell array containing each recording's average output
-
+        
 
     end
 end
