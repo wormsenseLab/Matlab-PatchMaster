@@ -161,7 +161,6 @@ for iParam = 1:nParams
     cellPeaks(iParam,6) = tauDecay;
     
 
-
 end
 cellPeaks(:,4) = pkThresh;
 cellPeaks(:,1) = stimParams(:,3); %stimSize
