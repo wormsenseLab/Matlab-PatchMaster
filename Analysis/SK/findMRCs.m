@@ -30,7 +30,7 @@ nParams = size(meanTraces,1);
 % Determined empirically.
 switch sf
     case 5
-        artifactOffset = sf*2; % 2ms
+        artifactOffset = sf*1.2; % 1.2ms
     case 10
         artifactOffset = sf*1.2; %1.2ms
     otherwise
