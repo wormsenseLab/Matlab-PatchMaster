@@ -132,7 +132,7 @@ for iSweep = 1:nSweeps
     catch
         stLocZeroTest = sweepDiffSmooth(stLoc(stLocEndIdx(end)):end);
     end
-    if sum(stLocZeroTest==0)>=5
+    if sum(diff(stLocZeroTest==0))>=4
         stLocEndIdx=stLocEndIdx(1:end-1);
         stLocStartIdx=stLocStartIdx(1:end-1);
     end

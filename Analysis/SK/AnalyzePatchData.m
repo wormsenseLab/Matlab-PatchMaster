@@ -60,19 +60,18 @@ protList ={'WC_Probe';'NoPre'};
 % protList ={'_time'};
 matchType = 'first';
 strainList = {'TU2769'};
-internalList = {'IC6'};
+internalList = {'IC2'};
 % cellTypeList = {'ALMR'};
-stimPosition = {'posterior'};
+stimPosition = {'anterior'};
+wormPrep = {'dissected'};
 
-newCells = allCells(155:158);
-
-posteriorCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
+posteriorCells = FilterRecordings(ephysData, ephysMetaDatabase, nearCells,...
     'strain', strainList, 'internal', internalList, ...
-     'stimLocation', stimPosition);
+     'stimLocation', stimPosition, 'wormPrep', wormPrep);
 
 ExcludeSweeps(ephysData, protList, posteriorCells, 'matchType', matchType);
 
-clear protList strainList internalList cellTypeList stimPosition matchType ans;
+clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
 %% Generic IdAnalysis run
 
 % protList ={'DispRate'};
@@ -96,10 +95,10 @@ clear protList strainList internalList cellTypeList stimPosition matchType ans;
 
 
 % protList ={'WC_Probe8'};
-protList = {'WC_Probe'};
+protList = {'WC_Probe','NoPre'};
 sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
 matchType = 'first';
-wtNoPreMRCs = IdAnalysis(ephysData,protList,posteriorCells,'time','matchType',matchType, ...
+posteriorMRCs = IdAnalysis(ephysData,protList,posteriorCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
 clear protList sortSweeps matchType
 
