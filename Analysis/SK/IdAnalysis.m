@@ -86,6 +86,7 @@ p.addParameter('tauType','fit', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'})
 p.addParameter('sortSweepsBy',{'magnitude','magnitude','magnitude','magnitude'}, @(x) iscell(x));
 p.addParameter('integrateCurrent',0);
 p.addParameter('fillZero',1);
+p.addParameter('sepByStimDistance',0)
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -97,6 +98,7 @@ tauType = p.Results.tauType;
 sortSweepsBy = p.Results.sortSweepsBy;
 integrateFlag = p.Results.integrateCurrent;
 fillZeroSteps = p.Results.fillZero;
+distFlag = p.Results.sepByStimDistance;
 
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
@@ -107,7 +109,7 @@ stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
 roundIntTo = 2;
 whichInt = 1;
 sortByStimNum = 1; %sort by which stim (here, first stim, which is on step)
-stimSortOrder = [1 2];
+stimSortOrder = [1 2 3];
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -139,7 +141,12 @@ for iCell = 1:length(allCells)
     allSeries = matchProts(ephysData,cellName,protList,'MatchType',matchType);
     
     nSeries = length(allSeries);
-    pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
+    
+    if distFlag
+        pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3,4]);
+    else
+        pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
+    end
     
     if nSeries == 0 || isempty(pickedSeries)
         continue
@@ -160,6 +167,9 @@ for iCell = 1:length(allCells)
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
         dataType = ephysData.(cellName).dataunit{1,thisSeries};
         nSweeps = size(stimComI,2);
+        try thisDist = pickedSeries{iSeries,3};
+        catch 
+        end
         
         %DECIDE: where use of photodiode signal should come in. Use the stimulus
         %command channel (or stim parameters from stimTree once that's working) to
@@ -216,7 +226,16 @@ for iCell = 1:length(allCells)
         % analyzed data to a particular trace
         seriesStimuli (:,8) = repmat(thisSeries,size(seriesStimuli,1),1);
         
-        
+        if exist('thisDist','var') && ~isnan(thisDist)
+            seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1),1);
+        else 
+            % if no stim distance is included, must be zeros instead of
+            % NaNs because unique will consider every NaN unique when
+            % sorting by stim for zeroFill later.
+            seriesStimuli(:,9) = zeros(size(seriesStimuli,1),1);
+        end
+%NEXT: where do I have to add in this parameter so I can use it when
+%sorting for unique stimProfiles? It has to get into sweepsByParams.
         
         % all on/off stimuli are still mixed together.
         % depending on input param, use either stimulus number or stimulus
@@ -262,7 +281,8 @@ for iCell = 1:length(allCells)
         % Concatenate to the complete list of step sizes and
         % leak-subtracted traces across series for this recording
         allLeakSub=[allLeakSub; leakSubtractCell];
-        
+       
+        clear thisDist;
     end
     
     
@@ -274,10 +294,10 @@ for iCell = 1:length(allCells)
 
     if ~isempty(strfind(lower(sortStimBy),'time')) && fillZeroSteps
         seriesList = vertcat(allStim{:});
-        seriesList = seriesList(:,[6 8]);
+        seriesList = seriesList(:,[6 8 9]);
         seriesList = sortrows(unique(seriesList,'rows','stable'),[2 1]); % find all unique series/sweep combos
-        blankStim = NaN(length(seriesList),8);
-        blankStim(:,[6,8]) = seriesList;
+        blankStim = NaN(length(seriesList),9);
+        blankStim(:,[6,8 9]) = seriesList;
         filledStim = cell(length(allStim),1);
         [filledStim{1:length(allStim),1}] = deal(blankStim); %make a cell with nStim with the series/sweep list to be filled for each stim
         
@@ -301,10 +321,10 @@ for iCell = 1:length(allCells)
     
     elseif ~isempty(strfind(lower(sortStimBy),'num')) && fillZeroSteps
         seriesList = vertcat(allStim{:});
-        seriesList = seriesList(:,[6 8]);
+        seriesList = seriesList(:,[6 8 9]);
         seriesList = sortrows(unique(seriesList,'rows','stable'),[2 1]); % find all unique series/sweep combos
-        blankStim = NaN(length(seriesList),8);
-        blankStim(:,[6,8]) = seriesList;
+        blankStim = NaN(length(seriesList),9);
+        blankStim(:,[6,8 9]) = seriesList;
         filledStim = cell(length(allStim),1);
         [filledStim{1:length(allStim),1}] = deal(blankStim); %make a cell with nStim with the series/sweep list to be filled for each stim
         
@@ -332,9 +352,11 @@ for iCell = 1:length(allCells)
 %FIX: nStim=4 for OnDt because of Patchmaster's 0 padding. Find a way to
 %exclude the last "step".
     nStim = length(allStim);
-% nStim=3;
-% allStim = allStim(1:nStim);
+    % nStim=3;
+    % allStim = allStim(1:nStim);
+
     sweepsByParams = NaN(size(allLeakSub,1),nStim);
+
     sortedStim = cell(1,nStim);
     
 % KEEP this section separate for each Analysis fxn, because what you sort
@@ -371,6 +393,9 @@ for iCell = 1:length(allCells)
         end
     end
     
+    if distFlag
+        sweepsByParams = [allStim{1}(:,9) sweepsByParams];
+    end
     % Sort rows by successively less variable parameters based on
     % stimSortOrder. Use unique to find unique sets of rows/stimulus
     % profiles and separate them into groups.
@@ -414,9 +439,9 @@ for iCell = 1:length(allCells)
             stimMetaData = NaN(nStimProfiles,4);
             
             stimMetaData(:,1:2) = sortedStim{1,iStim}(profileStartIdx,1:2);
-            stimMetaData(:,3) = eachStimProfile(:,iStim);
-            stimMetaData(:,4) = nReps;
-            
+            stimMetaData(:,3) = eachStimProfile(:,iStim+1);
+            stimMetaData(:,4) = nReps;        
+            stimMetaData(:,5) = eachStimProfile(:,1);
             
             % Find mechanoreceptor current peaks and append to seriesPeaks for
             % that stimulus number.
@@ -478,3 +503,4 @@ for iCell = 1:length(allCells)
 end
 
 end
+

@@ -1,4 +1,8 @@
 % FrequencyAnalysis.m
+% 
+% 
+% parameters in SinePeaks{:,3}:
+% [sineStart sineEnd sineFreq nReps steadyI sqOn1 sqOff1 sqOn2 sqOff2 sqOnRatio sqOffRatio]
 
 function sinePeaks = FrequencyAnalysis(ephysData, ephysMetaData, protList, varargin)
 
@@ -12,6 +16,7 @@ p.addOptional('allCells', cell(0));
 p.addParameter('matchType', 'full', @(x) sum(strcmp(x,{'first','last','full'})));
 p.addParameter('tauType','thalfmax', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'}));
 p.addParameter('integrateCurrent',1);
+p.addParameter('normToOn1',0);
 
 p.parse(ephysData, ephysMetaData, protList, varargin{:});
 
@@ -19,6 +24,7 @@ allCells = p.Results.allCells;
 matchType = p.Results.matchType;
 tauType = p.Results.tauType;
 integrateFlag = p.Results.integrateCurrent;
+normalizeFlag = p.Results.normToOn1;
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -43,11 +49,7 @@ sortSweepsBy = {'frequency'};
 stimSortOrder = [1 2];
 
 for iCell = 1:length(allCells)
-    
-    allSquareSum = [];
-    allSineSum = [];
-    allLeakSub = cell(0);
-    
+      
     % Double check that the list of series given matches the indices of the
     % protocol names specified in the input.
     
@@ -60,6 +62,13 @@ for iCell = 1:length(allCells)
     if nSeries == 0 || isempty(pickedSeries)
         continue
     end
+    
+    % Initialize for allSeries
+    allLeakSub = cell(0);
+    allSweeps = cell(nSeries,2);
+    allSine = cell(0);
+    stimSquareSum = [];
+
     
     for iSeries = 1:nSeries
         thisSeries = allSeries(iSeries);
@@ -110,9 +119,9 @@ for iCell = 1:length(allCells)
         
         % Take the average current of the last steadyTime ms of the
         % sine trace, regardless of sine frequency.
-        steadyStateI = mean(sineTrace(end-steadyTime*sf:end));
+        steadyStateI = -mean(sineTrace(end-steadyTime*sf:end))*1e12;
         
-        
+        theseSines = [sineParams steadyStateI thisSeries];
         % Implement later: use fit to calculate time constant of decay from peak
         % response at beginning of sine. Use 5*tau or 3*tau timepoint as the
         % beginning of steady state for taking the mean. Will vary for
@@ -133,19 +142,28 @@ for iCell = 1:length(allCells)
             theseSquares(iStim,:) = findMRCs(squareParams(iStim,:), leakSubtract, sf, dataType, ...
                 'tauType', tauType, 'integrateCurrent',integrateFlag);
         end
-        theseSquares(:,9) = repmat(sineParams(4),iStim,1);
+        theseSquares = [theseSquares repmat(sineParams(4),iStim,1) repmat(thisSeries,iStim,1)];
 
+        
         %TODO: add to Sine output: peak at start, beginning average, tau of 
         % fit of smoothed trace
         %TODO: add to SquareSum output: interval between squares, and
         % between sweeps
         
         % Concatenate data for all series in this recording
-        allLeakSub = [allLeakSub; leakSubtractCell];
-        allSquareSum = [allSquareSum; theseSquares repmat(thisSeries,size(theseSquares,1),1)];
-        allSineSum = [allSineSum; sineParams steadyStateI];
+        allLeakSub{iSeries,1} = leakSubtractCell;
+        allSweeps{iSeries,1} = theseSines;
+        allSweeps{iSeries,2} = theseSquares;
     end
     
+    
+    % The following code is adapted from IdAnalysis(), and could probably
+    % be much more simplified for this purpose (the complexity would allow
+    % more combos of # of sine + # of squares, but that's not implemented
+    % yet).
+    
+    % Define how many sine stimuli there are per sweep based on either 
+    % unique timepoint or duration of the segment.
     switch sortStimBy
         case 'time'
             paramCol = 1; %set which column of allSineSum to look in
@@ -154,6 +172,16 @@ for iCell = 1:length(allCells)
             paramCol = 3;
             tol = 0;
     end
+    
+    % Combine sweep data across series for both squares and sines
+    allSineSum = vertcat(allSweeps{:,1});
+    allSquareSum = vertcat(allSweeps{:,2});
+    for iStim = 1:max(allSquareSum(:,7))
+        stimSquareSum(:,:,iStim) = allSquareSum(allSquareSum(:,7)==iStim,:);
+    end
+    
+    % Find how many unique timepoints/durations there are, within a given
+    % tolerance. Then 
     stimNums = uniquetol(allSineSum(:,paramCol),tol,'DataScale',1);
 
     stimByNum = cell(length(stimNums),1);
@@ -179,106 +207,106 @@ for iCell = 1:length(allCells)
     
     
     nStim = length(allSine);
-    % nStim=3;
-    % allSine = allSine(1:nStim);
-    sweepsByParams = NaN(size(allLeakSub,1),nStim);
+    sweepsByParams = NaN(size(allSine{iStim},1),nStim);
     sortedStim = cell(1,nStim);
-    
-    sinePeaks = stimSort();
-        
-    %NEXT: sort stim profiles based on freq/ampl/dur, and take averages per
-    %frequency.
-    %DECIDE: best way to combine square data so it aligns with sine data,
-    %and you only have to do one sort instead of using the nested fxn.
-    
-    %THEN: output freq dependence and adaptation like sinePeaks, with cell
-    %name, trace, cell array containing each recording's average output
-    %TODO: Call nested function here, then repeat for square analysis
-    
-%     squarePeaks{iCell,1} = cellName;
-%     squarePeaks{iCell,2} = allLeakSub;
-%     squarePeaks{iCell,3} = allSineSum;
-%     squarePeaks{iCell,4} = allSquareSum;
 
-end
-
-keyboard;
-
-% Nested function for sorting stim
-    function sinePeaks = stimSort()
-        for iStim = 1:nStim
-            
-            nTraces = size(allSine{iStim},1);
-            %LATER: don't need whichInt, just use interval previous to stim for iStim
-            
-            % For each parameter, go through all stimuli and round the relevant
-            % parameter to the nearest X so that sweeps can be grouped as being
-            % from the same stimulus profile.
-            switch sortSweepsBy{iStim}
-                case 'frequency'
-                    sweepsByParams(1:nTraces,iStim) = allSine{iStim}(:,4);
-                case 'amplitude'
-                    sweepsByParams(1:nTraces,iStim) = allSine{iStim}(:,5);
-            end
-        end
+    
+    % Sort stim profiles based on freq/ampl/dur, and take averages per
+    % sine frequency.
+    
+    for iStim = 1:nStim
         
-        % Sort rows by successively less variable parameters based on
-        % stimSortOrder. Use unique to find unique sets of rows/stimulus
-        % profiles and separate them into groups.
-        [sweepsByParams, sortIdx] = sortrows(sweepsByParams, stimSortOrder(1:size(sweepsByParams,2)));
-        sortedLeakSub = allLeakSub(sortIdx,:);
+        nTraces = size(allSine{iStim},1);
+        %LATER: don't need whichInt, just use interval previous to stim for iStim
         
-        for iStim = 1:nStim
-            sortedStim{iStim} = allSine{iStim}(sortIdx,:);
-        end
-        
-        % DECIDE: if unique(sweepsByParam) should only include columns from
-        % stimSortOrder or all stim columns.
-        
-        [eachStimProfile, profileStartIdx, ~] = unique(sweepsByParams,'rows','first');
-        [~, profileEndIdx, ~] = unique(sweepsByParams,'rows','last');
-        nStimProfiles = sum(sum(~isnan(eachStimProfile),2)>=nStim);
-        profileStartIdx = profileStartIdx(sum(~isnan(eachStimProfile),2)>=nStim);
-        profileEndIdx = profileEndIdx(sum(~isnan(eachStimProfile),2)>=nStim);
-        eachStimProfile = eachStimProfile(sum(~isnan(eachStimProfile),2)>=nStim,:);
-        nReps = profileEndIdx-profileStartIdx+1;
-        
-        % Take mean trace from all reps across all series for each stimulus
-        % profile. Find peaks in that mean trace.
-        
-        meansByStimProfile = NaN(nStimProfiles, length(sortedLeakSub));
-        
-        for iProfile = 1:nStimProfiles
-            groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
-            
-%             theseSweeps = sortedLeakSub(groupIdx{iProfile},:);
-            
-%             if length(groupIdx{iProfile})>1
-%                 meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
-%             else
-%                 meansByStimProfile(iProfile,:) = theseSweeps;
-%             end
-            
-            % Use the first sweep for a given size to pick the stimulus window
-            % Save into parameters to pass to findMRCs.
-            for iStim = 1:nStim
-                stimMetaData = NaN(nStimProfiles,4);
-                
-                stimMetaData(:,1:2) = sortedStim{1,iStim}(profileStartIdx,1:2);
-                stimMetaData(:,3) = eachStimProfile(:,iStim);
-                stimMetaData(:,4) = nReps;
-                
-                
-                % Find mechanoreceptor current peaks and append to seriesPeaks for
-                % that stimulus number.
-                sinePeaks{iCell,1} = cellName;
-                sinePeaks{iCell,2} = 1;
-                
-            end
-            
+        % For each parameter, go through all stimuli and round the relevant
+        % parameter to the nearest X so that sweeps can be grouped as being
+        % from the same stimulus profile.
+        switch sortSweepsBy{iStim}
+            case 'frequency'
+                sweepsByParams(1:nTraces,iStim) = allSine{iStim}(:,4);
+            case 'amplitude'
+                sweepsByParams(1:nTraces,iStim) = allSine{iStim}(:,5);
         end
     end
+    
+    % Sort rows by successively less variable parameters based on
+    % stimSortOrder. Use unique to find unique sets of rows/stimulus
+    % profiles and separate them into groups.
+    [sweepsByParams, sortIdx] = sortrows(sweepsByParams, stimSortOrder(1:size(sweepsByParams,2)));
+    sortedLeakSub = allLeakSub(sortIdx,:);
+    sortedSquares = stimSquareSum(sortIdx,:,:);
+    
+    for iStim = 1:nStim
+        sortedStim{iStim} = allSine{iStim}(sortIdx,:);
+    end
+    
+    % DECIDE: if unique(sweepsByParam) should only include columns from
+    % stimSortOrder or all stim columns.
+    
+    [eachStimProfile, profileStartIdx, ~] = unique(sweepsByParams,'rows','first');
+    [~, profileEndIdx, ~] = unique(sweepsByParams,'rows','last');
+    nStimProfiles = sum(sum(~isnan(eachStimProfile),2)>=nStim);
+    profileStartIdx = profileStartIdx(sum(~isnan(eachStimProfile),2)>=nStim);
+    profileEndIdx = profileEndIdx(sum(~isnan(eachStimProfile),2)>=nStim);
+    eachStimProfile = eachStimProfile(sum(~isnan(eachStimProfile),2)>=nStim,:);
+    nReps = profileEndIdx-profileStartIdx+1;
+    
+    % Take mean trace from all reps across all series for each stimulus
+    % profile. Find peaks in that mean trace.
+    
+    %     meansByStimProfile = NaN(nStimProfiles, length(sortedLeakSub));
+    steadyMeans = [];
+    groupIdx = cell(0);
+    
+    for iProfile = 1:nStimProfiles
+        groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
+        
+        %             theseSweeps = sortedLeakSub(groupIdx{iProfile},:);
+        
+        %             if length(groupIdx{iProfile})>1
+        %                 meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
+        %             else
+        %                 meansByStimProfile(iProfile,:) = theseSweeps;
+        %             end
+        
+        % Use the first sweep for a given size to pick the stimulus window
+        % Save into parameters to pass to findMRCs.
+        for iStim = 1:nStim
+            
+            steadyMeans(iProfile,iStim) = mean(sortedStim{iStim}(groupIdx{iProfile},6));
+            stimMetaData = NaN(nStimProfiles,4);
+            
+            stimMetaData(:,1:2) = sortedStim{1,iStim}(profileStartIdx,1:2);
+            stimMetaData(:,3) = eachStimProfile(:,iStim);
+            stimMetaData(:,4) = nReps;
+            
+            % Find mechanoreceptor current peaks and append to sinePeaks for
+            % that stimulus number.
+            
+        end
+        
+        nSqStim = size(sortedSquares,3);
+        
+        for iSqStim = 1:nSqStim
+            squareMeans(iProfile,iSqStim) = mean(sortedSquares(groupIdx{iProfile},3,iSqStim));
+        end             
+        
+        onRatio = sortedSquares(:,:,3)./sortedSquares(:,:,1);
+        offRatio = sortedSquares(:,:,4)./sortedSquares(:,:,1);
+        squareMeans(iProfile, nSqStim+1) = mean(onRatio(groupIdx{iProfile},3));        
+        squareMeans(iProfile, nSqStim+2) = mean(offRatio(groupIdx{iProfile},3));
+        
+    end
+    
+    if normalizeFlag
+        steadyMeans = steadyMeans./squareMeans(:,1);
+    end
 
+    sinePeaks{iCell,1} = cellName;
+    sinePeaks{iCell,2} = sortedLeakSub;
+    sinePeaks{iCell,3} = [stimMetaData steadyMeans squareMeans];        
+    
 end
 
 

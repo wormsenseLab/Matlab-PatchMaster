@@ -59,7 +59,7 @@ squareParams = arrayfun(@(x) [segStart(x), segStart(x)+segLength(x)-1], isSquare
 squareParams = repmat(squareParams,2,1);  
 squareParams = vertcat(squareParams{:});
 squareParams(:,3) = repmat(sqAmpl, size(squareParams,1),1);
-squareParams(:,4) = ones(size(squareParams,1),1);
+squareParams(:,4) = 1:size(squareParams,1); % stim number for the sweep
 
 % Separate on and off stimuli for use in findMRCs(). Assume because this is
 % a square pulse that step command is instantaneous (i.e.,

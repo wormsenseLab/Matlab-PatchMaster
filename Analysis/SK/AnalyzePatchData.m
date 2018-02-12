@@ -11,8 +11,8 @@
 
 % Don't forget to run sigTOOL first!
 % [ephysData,tree] = ImportPatchData();
-ephysData = ImportPatchData('incl',1);
-% ephysData = ImportPatchData(ephysData);
+% ephysData = ImportPatchData('incl',1);
+ephysData = ImportPatchData(ephysData, 'incl',1);
 
 
 % Keep only data with given project prefixes/names.
@@ -25,8 +25,8 @@ ephysData = FilterProjectData(ephysData, projects);
 clear projects;
 %% Analyze capacity transient for C, Rs, and tau
 
-% ephysData = CtAnalysis(ephysData);
-ephysData = CtAnalysis(ephysData,newCells);
+ephysData = CtAnalysis(ephysData);
+% ephysData = CtAnalysis(ephysData,newCells);
 
 clear lastfit;
 
@@ -42,7 +42,7 @@ ephysMetaDatabase = ImportMetaData();  %Recording Database
 % protList = 'DispRate';
 % protList = {'PrePulse'};
 % protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
-% protList ={'WC_Probe';'NoPre'};
+protList ={'WC_Probe';'NoPre'};
 % ExcludeSweeps(ephysData,allCells,1,protList,'first');
 
 
@@ -57,18 +57,20 @@ ephysMetaDatabase = ImportMetaData();  %Recording Database
 % cellTypeList = {'ALMR'};
 % stimPosition = {'anterior'};
 
-protList ={'_time'};
-matchType = 'last';
+% protList ={'_time'};
+matchType = 'first';
 strainList = {'TU2769'};
-internalList = {'IC2'};
-cellTypeList = {'ALMR'};
-stimPosition = {'anterior'};
+internalList = {'IC6'};
+% cellTypeList = {'ALMR'};
+stimPosition = {'posterior'};
 
-filteredCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
+newCells = allCells(155:158);
+
+posteriorCells = FilterRecordings(ephysData, ephysMetaDatabase, ...
     'strain', strainList, 'internal', internalList, ...
-    'cellType', cellTypeList, 'stimLocation', stimPosition);
+     'stimLocation', stimPosition);
 
-ExcludeSweeps(ephysData, protList, filteredCells, 'matchType', matchType);
+ExcludeSweeps(ephysData, protList, posteriorCells, 'matchType', matchType);
 
 clear protList strainList internalList cellTypeList stimPosition matchType ans;
 %% Generic IdAnalysis run
@@ -93,11 +95,12 @@ clear protList strainList internalList cellTypeList stimPosition matchType ans;
 %     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
 
-protList ={'WC_Probe8'};
+% protList ={'WC_Probe8'};
+protList = {'WC_Probe'};
 sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
-matchType = 'full';
-wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'time','matchType',matchType, ...
-    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+matchType = 'first';
+wtNoPreMRCs = IdAnalysis(ephysData,protList,posteriorCells,'time','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
 clear protList sortSweeps matchType
 
 %% NonStat Noise Analysis
@@ -105,30 +108,35 @@ clear protList sortSweeps matchType
 
 protList ={'WC_Probe8'};
 matchType = 'full';
-noiseAnalysisData_8 = NonStatNoiseAnalysis(ephysData,protList,filteredCells,'matchType',matchType);
+noiseAnalysisData_8 = NonStatNoiseAnalysis(ephysData,protList,posteriorCells,'matchType',matchType);
 clear protList matchType
 
 %% Frequency Dependence Analysis
 
 protList ={'_time'};
 matchType = 'last';
-test = FrequencyAnalysis(ephysData, ephysMetaDatabase, protList, 'matchType', matchType);
+sinePeaksNorm = FrequencyAnalysis(ephysData, ephysMetaDatabase, protList, 'matchType', matchType, 'norm', 1);
 clear protList matchType
+
+allSines = vertcat(sinePeaks{:,3});
+sortedSines = sortrows(allSines, 3);
 %% Print list of Rs
 
 recs = fieldnames(ephysData);
-resists = nan(length(recs),2);
+resists = nan(length(recs),3);
 
 for i=1:length(recs)
 try fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).Rs(ephysData.(recs{i}).protRs))))
 catch
     continue
 end
-
-resists(i,1) = ephysData.(recs{i}).C(ephysData.(recs{i}).protRs);
-resists(i,2) = ephysData.(recs{i}).Rs(ephysData.(recs{i}).protRs);
+resists(i,1) = str2double(recs{i}(end-2:end));
+resists(i,2) = ephysData.(recs{i}).C(ephysData.(recs{i}).protRs);
+resists(i,3) = ephysData.(recs{i}).Rs(ephysData.(recs{i}).protRs);
 
 end
+
+clear i 
 
 %% Print all Rs for making FAT_IV_Assignments spreadsheet
 recs = fieldnames(ephysData);

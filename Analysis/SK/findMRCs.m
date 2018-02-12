@@ -2,7 +2,7 @@
 %
 % OUTPUT:
 % cellPeaks: 
-% [stimSize/Vel/Interval pkLoc pkCurrent pkThresh tauAct tauDecay nReps]
+% [stimSize/Vel/Interval pkLoc pkCurrent pkThresh tauAct tauDecay nReps stimDistance]
 % 
 
 function [cellPeaks, cellFit] = findMRCs(stimParams, meanTraces, sf, dataType, varargin)
@@ -117,7 +117,10 @@ for iParam = 1:nParams
                 
                 decayHalfLocs = find(smooMean(iParam,pkLoc:pkLoc+(sf*100))<=halfpk);
                 % decayExpLocs = find(smooMean(iParam,pkLoc:pkLoc+(sf*100))<= pk*exp(1));
-                tauDecay = (decayHalfLocs(1)-1)/sf;
+                try tauDecay = (decayHalfLocs(1)-1)/sf;
+                catch
+                    tauDecay = NaN;
+                end
                 
                 % cellFit(iParam,1) = tau;
                 % cellFit(iParam,2) = tauDecay;                              
@@ -165,4 +168,5 @@ end
 cellPeaks(:,4) = pkThresh;
 cellPeaks(:,1) = stimParams(:,3); %stimSize
 cellPeaks(:,7) = stimParams(:,4); %nReps
+cellPeaks(:,8) = stimParams(:,5); %stim distance (0 if not entered)
 end
