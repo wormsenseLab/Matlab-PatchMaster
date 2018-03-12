@@ -52,7 +52,7 @@ posteriorCells = FilterRecordings(ephysData, ephysMetaDatabase,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep);
 
-% ExcludeSweeps(ephysData, protList, posteriorCells, 'matchType', matchType);
+ExcludeSweeps(ephysData, protList, antIC6Cells, 'matchType', matchType);
 
 internalList = {'IC2'};
 stimPosition = {'anterior'};
@@ -73,10 +73,51 @@ matchType = 'first';
 posteriorMRCs = IdAnalysis(ephysData,protList,posteriorCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
 
-anteriorMRCs = IdAnalysis(ephysData,protList,anteriorCells,'num','matchType',matchType, ...
+antIC6MRCs = IdAnalysis(ephysData,protList,antIC6Cells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
 
 clear protList sortSweeps matchType
+
+%%
+protList ={'WC_Probe8'};
+matchType = 'first';
+strainList = {'TU2769'};
+wormPrep = {'dissected'};
+internalList = {'IC6'};
+stimPosition = {'anterior'};
+
+anteriorCells = FilterRecordings(ephysData, ephysMetaDatabase,...
+    'strain', strainList, 'internal', internalList, ...
+     'stimLocation', stimPosition, 'wormPrep', wormPrep);
+
+ExcludeSweeps(ephysData, protList, anteriorCells, 'matchType', matchType);
+
+
+stimPosition = {'posterior'};
+
+posteriorCells = FilterRecordings(ephysData, ephysMetaDatabase,...
+    'strain', strainList, 'internal', internalList, ...
+     'stimLocation', stimPosition, 'wormPrep', wormPrep);
+
+ExcludeSweeps(ephysData, protList, posteriorCells, 'matchType', matchType);
+
+
+
+protList = {'WC_Probe8'};
+sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+matchType = 'first';
+posteriorMRCs = IdAnalysis(ephysData,protList,posteriorCells,'num','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
+
+anteriorMRCs = IdAnalysis(ephysData,protList,anteriorCells,'num','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
+
+
+clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
+
+clear protList sortSweeps matchType
+
+
 
 %%
 a = vertcat(anteriorMRCs{:,3});

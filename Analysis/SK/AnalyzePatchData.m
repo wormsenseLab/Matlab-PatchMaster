@@ -42,7 +42,7 @@ ephysMetaDatabase = ImportMetaData();  %Recording Database
 % protList = 'DispRate';
 % protList = {'PrePulse'};
 % protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
-protList ={'WC_Probe';'NoPre'};
+% protList ={'WC_Probe';'NoPre'};
 % ExcludeSweeps(ephysData,allCells,1,protList,'first');
 
 
@@ -50,26 +50,26 @@ protList ={'WC_Probe';'NoPre'};
 % protList = '_CC';
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
-% protList ={'WC_Probe3'};
-% matchType = 'full';
-% strainList = {'TU2769'};
-% internalList = {'IC6'};
-% cellTypeList = {'ALMR'};
-% stimPosition = {'anterior'};
-
-% protList ={'_time'};
-matchType = 'first';
+protList ={'WC_Probe8'};
+matchType = 'full';
 strainList = {'TU2769'};
-internalList = {'IC2'};
+internalList = {'IC6'};
 % cellTypeList = {'ALMR'};
 stimPosition = {'anterior'};
+
+% protList ={'_time'};
+% matchType = 'first';
+% strainList = {'TU2769'};
+% internalList = {'IC2'};
+% cellTypeList = {'ALMR'};
+% stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 
-posteriorCells = FilterRecordings(ephysData, ephysMetaDatabase, nearCells,...
+ant8Cells = FilterRecordings(ephysData, ephysMetaDatabase,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep);
 
-ExcludeSweeps(ephysData, protList, posteriorCells, 'matchType', matchType);
+% ExcludeSweeps(ephysData, protList, post8Cells, 'matchType', matchType);
 
 clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
 %% Generic IdAnalysis run
@@ -98,16 +98,16 @@ clear protList strainList internalList cellTypeList stimPosition matchType ans w
 protList = {'WC_Probe','NoPre'};
 sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
 matchType = 'first';
-posteriorMRCs = IdAnalysis(ephysData,protList,posteriorCells,'num','matchType',matchType, ...
+posteriorMRCs = IdAnalysis(ephysData,protList,ant8Cells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
 clear protList sortSweeps matchType
 
 %% NonStat Noise Analysis
 
 
-protList ={'WC_Probe8'};
+protList ={'WC_Probe3'};
 matchType = 'full';
-noiseAnalysisData_8 = NonStatNoiseAnalysis(ephysData,protList,posteriorCells,'matchType',matchType);
+noisePost_3 = NonStatNoiseAnalysis(ephysData,protList,post3Cells,'matchType',matchType);
 clear protList matchType
 
 %% Frequency Dependence Analysis
