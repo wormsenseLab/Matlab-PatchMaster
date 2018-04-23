@@ -14,3 +14,5 @@ wtTauMRCTrace = vertcat(wtTauMRCs{:,2});
 [wtTauSort, tauInd] = sortrows(wtTauStats,1);
 wtTauNameSort = wtTauNames(tauInd,:);
 wtTauTraceSort = wtTauMRCTrace(tauInd,:);
+
+%Testing
