@@ -86,7 +86,8 @@ p.addParameter('tauType','fit', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'})
 p.addParameter('sortSweepsBy',{'magnitude','magnitude','magnitude','magnitude'}, @(x) iscell(x));
 p.addParameter('integrateCurrent',0);
 p.addParameter('fillZero',1);
-p.addParameter('sepByStimDistance',0)
+p.addParameter('sepByStimDistance',0);
+p.addParameter('saveSweeps',0);
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -99,6 +100,7 @@ sortSweepsBy = p.Results.sortSweepsBy;
 integrateFlag = p.Results.integrateCurrent;
 fillZeroSteps = p.Results.fillZero;
 distFlag = p.Results.sepByStimDistance;
+sweepFlag = p.Results.saveSweeps;
 
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
@@ -169,7 +171,6 @@ for iCell = 1:length(allCells)
         nSweeps = size(stimComI,2);
         try thisDist = pickedSeries{[pickedSeries{:,1}]==thisSeries,3};
         catch 
-            keyboard;
         end
         
         %DECIDE: where use of photodiode signal should come in. Use the stimulus
@@ -422,6 +423,7 @@ for iCell = 1:length(allCells)
     % profile. Find peaks in that mean trace.
     
     meansByStimProfile = NaN(nStimProfiles, length(sortedLeakSub));
+    sweepsByStimProfile = cell(nStimProfiles,1);
     stimMetaData = NaN(nStimProfiles,4,nStim);
 
     for iProfile = 1:nStimProfiles
@@ -433,6 +435,10 @@ for iCell = 1:length(allCells)
             meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
         else
             meansByStimProfile(iProfile,:) = theseSweeps;
+        end
+        
+        if sweepFlag
+            sweepsByStimProfile{iProfile} = theseSweeps;
         end
         
         % Use the first sweep for a given size to pick the stimulus window
@@ -448,16 +454,28 @@ for iCell = 1:length(allCells)
         end
     end
     
-    mechPeaks{iCell,1} = cellName;
-    mechPeaks{iCell,2} = meansByStimProfile;
-
-    for iStim = 1:nStim
-        % Find mechanoreceptor current peaks and append to seriesPeaks for
-        % that stimulus number.
-        mechPeaks{iCell,2+iStim} = findMRCs(stimMetaData(:,:,iStim), meansByStimProfile, sf, dataType, ...
-            'tauType', tauType, 'integrateCurrent',integrateFlag);
+    if sweepFlag
+        mechPeaks{iCell,1} = cellName;
+        mechPeaks{iCell,2} = meansByStimProfile;
+        mechPeaks{iCell,3} = sweepsByStimProfile;
+        
+        for iStim = 1:nStim
+            % Find mechanoreceptor current peaks and append to seriesPeaks for
+            % that stimulus number.
+            mechPeaks{iCell,3+iStim} = findMRCs(stimMetaData(:,:,iStim), meansByStimProfile, sf, dataType, ...
+                'tauType', tauType, 'integrateCurrent',integrateFlag);
+        end
+    else
+        mechPeaks{iCell,1} = cellName;
+        mechPeaks{iCell,2} = meansByStimProfile;
+        
+        for iStim = 1:nStim
+            % Find mechanoreceptor current peaks and append to seriesPeaks for
+            % that stimulus number.
+            mechPeaks{iCell,2+iStim} = findMRCs(stimMetaData(:,:,iStim), meansByStimProfile, sf, dataType, ...
+                'tauType', tauType, 'integrateCurrent',integrateFlag);
+        end
     end
-    
     % TODO: have column 2  of sortedLeakSub be the stim trace used to find stim, for easy
     % plotting access, and col 3 = PD trace, once you have that set up.
     
