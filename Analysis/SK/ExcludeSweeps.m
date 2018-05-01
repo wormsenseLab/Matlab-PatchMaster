@@ -67,12 +67,12 @@ for iCell = 1:length(allCells)
         % useful for series with many reps). Can also adjust maximum
         % number of columns.
         keepSweeps = [];
-        for i = 1:maxPlots:nSweeps
+        for iPage = 1:maxPlots:nSweeps
             
-            if nSweeps >= i+maxPlots-1
-                pageSweeps = i:i+maxPlots-1;
+            if nSweeps >= iPage+maxPlots-1
+                pageSweeps = iPage:iPage+maxPlots-1;
             else
-                pageSweeps = i:nSweeps;
+                pageSweeps = iPage:nSweeps;
             end
             
             if nSweeps < maxCols
@@ -80,15 +80,17 @@ for iCell = 1:length(allCells)
             else
                 nCols = maxCols;
             end
+            
+            pageNo = [pageSweeps(1) pageSweeps(end) nSweeps];
+
             % Run the GUI for the current series
             %TODO: Get Esc key to pass out an error to catch (currently, error
             %seems to be passed to uiwait instead of out to ExcludeSweeps).
             %TODO: Get -1,0,+1 output for next/previous button and use to
             %modify iSeries. Okay to clear previous selection, or do we need
             %to replay excluded traces?
-           
             [keepPageSweeps, goBack] = selectSweepsGUI(...
-                data(:,pageSweeps,:),dataType,channel,leakSize,sf,thisCell,protName,nCols);
+                data(:,pageSweeps,:),dataType,channel,leakSize(pageSweeps),sf,thisCell,protName,nCols,pageNo);
             %         catch
             %             fprintf('Exited on %s series %d',cellName,protLoc{iCell});
             %             return;

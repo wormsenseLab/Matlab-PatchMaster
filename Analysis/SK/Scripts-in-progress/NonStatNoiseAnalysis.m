@@ -4,7 +4,7 @@
 % 
 % Created by Sammy Katta on 5th Jan 2018.
 
-function [nonStatOutput] = NonStatNoiseAnalysis(ephysData, protList, varargin)
+function nonStatOutput = NonStatNoiseAnalysis(ephysData, protList, varargin)
 
 p = inputParser;
 p.addRequired('ephysData', @(x) isstruct(x));
@@ -27,6 +27,8 @@ averagingWindow = p.Results.windowSize;
 responseTime = p.Results.responseTime;
 excludeStimVar = p.Results.excludeVariableStim;
 
+lengthTol = 5;
+
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
 mechTracePicks = ImportMetaData();
@@ -42,7 +44,6 @@ stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
-
 
 
 for iCell = 1:length(allCells)
@@ -77,6 +78,7 @@ for iCell = 1:length(allCells)
         
         probeI = ephysData.(cellName).data{1,thisSeries}(:,pickedTraces);
         stimComI = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces); %in V, not um
+        protName = ephysData.(cellName).protocols{thisSeries};
         
         %TODO: add exclusion criteria
         % if flag is set, use photodiode trace to exclude sweeps? (before
@@ -107,8 +109,8 @@ for iCell = 1:length(allCells)
         %be similar enough between sweeps that you're sure the stimuli are
         %as close to aligned as possible. (And then figure out how to pick
         %one stim for the whole averaging window).
-        if length(unique(seriesStimuli(:,1))) > max(seriesStimuli(:,7))
-            fprintf('Stimuli non-identical for %s, series %d. Skipped.\n', cellName, allSeries(iSeries));
+        if length(uniquetol(seriesStimuli(:,1),lengthTol)) > max(seriesStimuli(:,7))
+            fprintf('Stimuli start point non-identical for %s, series %d. Skipped.\n', cellName, allSeries(iSeries));
             continue
         end
 
@@ -154,6 +156,7 @@ for iCell = 1:length(allCells)
         totalVar = var(totalSubtract,0,2);
         
         % Save everything to output struct
+        nonStatOutput.(cellName)(iSeries).protocol = protName;
         nonStatOutput.(cellName)(iSeries).slidingMean = windowMeans;
         nonStatOutput.(cellName)(iSeries).slidingVar = windowVars;
         nonStatOutput.(cellName)(iSeries).sweepsPerWindow = averagingWindow;

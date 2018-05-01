@@ -100,7 +100,7 @@ sortSweepsBy = p.Results.sortSweepsBy;
 integrateFlag = p.Results.integrateCurrent;
 fillZeroSteps = p.Results.fillZero;
 distFlag = p.Results.sepByStimDistance;
-sweepFlag = p.Results.saveSweeps;
+sweepFlag = p.Results.saveSweeps; % if 1, save individual sweeps in addition to means
 
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline

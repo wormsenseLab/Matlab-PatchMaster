@@ -35,11 +35,11 @@ clear lastfit;
 ephysIVMetaData = ImportMetaData(); %FAT-IV Assignments
 
 %% Import Recording Database
-ephysMetaDatabase = ImportMetaData();  %Recording Database
+ephysMetaData = ImportMetaData();  %Recording Database
 
 %% Make list of approved traces (by selecting traces to exclude)
 
-protList = {'DispRate'};
+% protList = {'DispRate'};
 % protList = {'PrePulse'};
 % protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
 % protList ={'WC_Probe';'NoPre'};
@@ -50,12 +50,14 @@ protList = {'DispRate'};
 % protList = '_CC';
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
+protList ={'Noise_Trap'};
+
 % protList ={'WC_Probe8'};
 matchType = 'first';
 strainList = {'TU2769'};
-internalList = {'IC2'};
+internalList = {'IC6'};
 % cellTypeList = {'ALMR'};
-stimPosition = {'anterior'};
+stimPosition = {'posterior'};
 
 % protList ={'_time'};
 % matchType = 'first';
@@ -65,21 +67,21 @@ stimPosition = {'anterior'};
 % stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 
-rateCells = FilterRecordings(ephysData, ephysMetaDatabase,...
+trapCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep);
 
-ExcludeSweeps(ephysData, protList, rateCells, 'matchType', matchType);
+ExcludeSweeps(ephysData, protList, trapCells, 'matchType', matchType);
 
 clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
 %% Generic IdAnalysis run
 
-protList ={'DispRate'};
-sortSweeps = {'velocity','magnitude','magnitude','magnitude'};
-matchType = 'first';
-rateMRCs = IdAnalysis(ephysData,protList,rateCells,'num','matchType',matchType,...
-    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1, ...
-    'saveSweeps',1);
+% protList ={'DispRate'};
+% sortSweeps = {'velocity','magnitude','magnitude','magnitude'};
+% matchType = 'first';
+% rateMRCs = IdAnalysis(ephysData,protList,rateCells,'num','matchType',matchType,...
+%     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1, ...
+%     'saveSweeps',1);
 
 
 % protList = {'Pair8'};
@@ -94,6 +96,12 @@ rateMRCs = IdAnalysis(ephysData,protList,rateCells,'num','matchType',matchType,.
 % wtPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
 %     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
+protList ={'Noise_Trap'};
+sortSweeps = {'velocity','velocity','magnitude','magnitude'};
+matchType = 'first';
+rateMRCs = IdAnalysis(ephysData,protList,trapCells,'num','matchType',matchType,...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+
 
 % protList ={'WC_Probe8'};
 % protList = {'WC_Probe','NoPre'};
@@ -106,16 +114,16 @@ clear protList sortSweeps matchType
 %% NonStat Noise Analysis
 
 
-protList ={'WC_Probe3'};
-matchType = 'full';
-noisePost_3 = NonStatNoiseAnalysis(ephysData,protList,post3Cells,'matchType',matchType);
+protList ={'NoiseTrap'};
+matchType = 'first';
+noiseTraps = NonStatNoiseAnalysis(ephysData,protList,trapCells,'matchType',matchType);
 clear protList matchType
 
 %% Frequency Dependence Analysis
 
 protList ={'_time'};
 matchType = 'last';
-sinePeaksNorm = FrequencyAnalysis(ephysData, ephysMetaDatabase, protList, 'matchType', matchType, 'norm', 1);
+sinePeaksNorm = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 1);
 clear protList matchType
 
 allSines = vertcat(sinePeaks{:,3});
@@ -214,7 +222,7 @@ ivCells = allCells(whichCells);
 genotype = cell(length(ivCells),2);
 for i=1:length(ivCells)
 genotype(i,1) = ivCells(i);
-genotype(i,2) = ephysMetaDatabase(strcmp(ephysMetaDatabase(:,1),ivCells(i)),2);
+genotype(i,2) = ephysMetaData(strcmp(ephysMetaData(:,1),ivCells(i)),2);
 end
 wtCells = ivCells(strcmp(genotype(:,2),'TU2769'));
 fatCells = ivCells(strcmp(genotype(:,2),'GN381'));
@@ -307,7 +315,7 @@ allCells = fieldnames(ephysData);
 genotype = cell(length(allCells),2);
 for i=1:length(allCells)
 genotype(i,1) = allCells(i);
-try genotype(i,2) = ephysMetaDatabase(strcmp(ephysMetaDatabase(:,1),allCells(i)),2);
+try genotype(i,2) = ephysMetaData(strcmp(ephysMetaData(:,1),allCells(i)),2);
 catch
     continue
 end

@@ -30,12 +30,14 @@
 %                                       the series name matches protName
 %                                   'last' finds series where the end of
 %                                       the series name matches protName
+% 
+%   'IgnoreSpecial' logical     Ignore non-alphanumeric characters when
+%                               matching protocol names. If 0/false, names 
+%                               must match all special characters. Default
+%                               is 1/true.
 %
 % Created by Sammy Katta on 23 February 2016.
 
-% TODO: Add in optional fxnality for filtering series/protocols based on
-% recording genotype, internal/external solutions, cell type, and worm
-% prep.
 
 function protLoc = matchProts(ephysData, cellName, protName, varargin)
 
@@ -48,9 +50,15 @@ p.addRequired('protName');
 % consider whether you want to specify default filtering parameters or use zero-length cells
 % for no filtering
 p.addParameter('MatchType', 'full', @(x) validateattributes(x,{'char'},{'nonempty'}));
+p.addParameter('ignoreSpecial',true); % if 1/true, ignores anything other than alphanumeric characters
+
 p.parse(ephysData, cellName, protName, varargin{:});
 
 matchType = p.Results.MatchType;
+stripFlag = p.Results.ignoreSpecial;
+if ~islogical(stripFlag)
+    stripFlag = logical(stripFlag);
+end
 
 % If only one protocol name was given, make it a cell.
 if ischar(protName) && ~iscell(protName)
@@ -61,17 +69,21 @@ end
 % given recording, based on the user's specification.
 %NOTE: In Matlab R2016b+, see if this can be replaced by fxn contains().
 protLoc = cell(length(protName),1);
+prots = ephysData.(cellName).protocols;
+
+if stripFlag
+    protName = regexprep(protName,'[^a-zA-Z0-9]','');
+    prots = regexprep(prots,'[^a-zA-Z0-9]','');
+end
+
 for i = 1:length(protName)
     switch matchType
         case 'full' % match the string exactly
-            prots = ephysData.(cellName).protocols;
             protLoc{i} = find(strcmpi(protName{i},prots));
         case 'first' % match protName to the beginning of the series name
-            prots = ephysData.(cellName).protocols;
             protLoc{i} = find(strncmpi(protName{i},prots,length(protName{i})));
         case 'last' % match protName to the end of the series name
-            flippedProts = cellfun(@fliplr, ephysData.(cellName).protocols, ...
-                'UniformOutput', false);
+            flippedProts = cellfun(@fliplr, prots,'UniformOutput', false);
             protLoc{i} = find(strncmpi(fliplr(protName{i}),flippedProts,length(protName{i})));
     end
     
