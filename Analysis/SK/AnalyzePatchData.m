@@ -50,7 +50,7 @@ ephysMetaData = ImportMetaData();  %Recording Database
 % protList = '_CC';
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
-protList ={'Noise_Trap'};
+protList ={'Noise_Pre'};
 
 % protList ={'WC_Probe8'};
 matchType = 'first';
@@ -67,11 +67,11 @@ stimPosition = {'posterior'};
 % stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 
-trapCells = FilterRecordings(ephysData, ephysMetaData,...
+preCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep);
 
-ExcludeSweeps(ephysData, protList, trapCells, 'matchType', matchType);
+ExcludeSweeps(ephysData, protList, preCells, 'matchType', matchType);
 
 clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
 %% Generic IdAnalysis run
@@ -99,7 +99,7 @@ clear protList strainList internalList cellTypeList stimPosition matchType ans w
 protList ={'Noise_Trap'};
 sortSweeps = {'velocity','velocity','magnitude','magnitude'};
 matchType = 'first';
-rateMRCs = IdAnalysis(ephysData,protList,trapCells,'num','matchType',matchType,...
+rateMRCs = IdAnalysis(ephysData,protList,preCells,'num','matchType',matchType,...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
 
@@ -114,10 +114,11 @@ clear protList sortSweeps matchType
 %% NonStat Noise Analysis
 
 
-protList ={'NoiseTrap'};
+protList ={'NoisePre'};
 matchType = 'first';
-noiseTraps = NonStatNoiseAnalysis(ephysData,protList,trapCells,'matchType',matchType);
+noisePre = NonStatNoiseAnalysis(ephysData,protList,preCells,'matchType',matchType);
 clear protList matchType
+
 
 %% Frequency Dependence Analysis
 

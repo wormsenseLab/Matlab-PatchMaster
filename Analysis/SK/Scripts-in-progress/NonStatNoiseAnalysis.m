@@ -12,20 +12,23 @@ p.addRequired('protList', @(x) iscell(x));
 
 p.addOptional('allCells', cell(0));
 
+p.addParameter('sortStimBy', 'num', @(x) sum(strcmp(x,{'num','time'})));
 p.addParameter('matchType', 'full', @(x) sum(strcmp(x,{'first','last','full'})));
 %sliding window size (n sweeps) for averaging
 p.addParameter('windowSize', 8, @(x) isnumeric(x) && mod(x,2)==0);
 % length of time (ms) per stimulus over which the responses will be averaged
-p.addParameter('responseTime', 200, @(x) isnumeric(x) && x>0); 
+p.addParameter('responseTime', 200, @(x) isnumeric(x) && x>0); % length of time(ms) after stimulus to be included in the noise analysis for that stimulus (default 15ms before, 200ms after)
 p.addParameter('excludeVariableStim', 'false', @(x) islogical);
+p.addParameter('sortSweepsBy',{'magnitude','magnitude','magnitude','magnitude'}, @(x) iscell(x));
 
 p.parse(ephysData, protList, varargin{:});
 
 allCells = p.Results.allCells;
 matchType = p.Results.matchType;
 averagingWindow = p.Results.windowSize; 
-responseTime = p.Results.responseTime;
+postTime = p.Results.responseTime;
 excludeStimVar = p.Results.excludeVariableStim;
+sortStimBy = p.Results.sortStimBy;
 
 lengthTol = 5;
 
@@ -40,19 +43,15 @@ if isempty(allCells)
     allCells = unique(mechTracePicks(:,1));
 end
 
-stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
-smoothWindow = 5; % n timepoints for moving average window for findPeaks
+preTime = 15;
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
 
 
 for iCell = 1:length(allCells)
     cellName = allCells(iCell);
    
-    
-    allStim = cell(0);
-    allLeakSub = cell(0);
-    
+       
     % Double check that the list of series given matches the indices of the
     % protocol names specified in the input.
     
@@ -69,7 +68,8 @@ for iCell = 1:length(allCells)
     
     for iSeries = 1:nSeries
         thisSeries = allSeries(iSeries);
-        
+        allStim = cell(0);
+
         % Carry out analysis if this series is on the list
         try pickedTraces = pickedSeries{[pickedSeries{:,1}]==thisSeries,2};
         catch
@@ -96,75 +96,115 @@ for iCell = 1:length(allCells)
                 
         leakSubtract = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
-        leakSubtractCell = num2cell(leakSubtract',2);
         
         seriesStimuli = ...
             newStepFind(nSweeps, stimComI, sf, 'scaleFactor', stimConversionFactor);
         
+        
+        % add series number to seriesStimuli for referencing back from
+        % analyzed data to a particular trace
+        seriesStimuli (:,8) = repmat(thisSeries,size(seriesStimuli,1),1);
+        
         % quick check to make sure difference in newStepFind's ability to
         % get step/ramp timing across sweeps. For now, skip and notify.
-        %TODO: change this to uniquetol to set a tolerance, especially if
-        %this is to be used with slower ramps. Exact timing shouldn't
-        %matter since you're setting rough time boundaries, but it should
-        %be similar enough between sweeps that you're sure the stimuli are
-        %as close to aligned as possible. (And then figure out how to pick
-        %one stim for the whole averaging window).
-        if length(uniquetol(seriesStimuli(:,1),lengthTol)) > max(seriesStimuli(:,7))
+        if length(uniquetol(seriesStimuli(:,1),lengthTol,'DataScale', 1)) > max(seriesStimuli(:,7))
             fprintf('Stimuli start point non-identical for %s, series %d. Skipped.\n', cellName, allSeries(iSeries));
             continue
         end
 
-        stimLoc = unique(seriesStimuli(:,1:2),'rows');
-        nStim = size(stimLoc,1);
         
-        %TODO: add PD-variance-based exclusion filtering here
-        
-        %NEXT: use seriesStimuli location/sweep number to set time
-        %boundaries for where to look at the response
-        %NEXT: save variance (subtracted trace) and mean current for each
-        %window, plot vs. each other for all sweeps
-        
-        windowMeans = cell(0);
-        meanSubtract = cell(0);
-        
-        for iSweep = 1:averagingWindow/2:nSweeps-averagingWindow+1
-            try theseSweeps = probeI(:,iSweep:iSweep+averagingWindow-1);
-                windowMeans{iSweep} = mean(theseSweeps,2);
+        % depending on input param, use either stimulus number or stimulus
+        % timepoint to group stimuli across sweeps (e.g., on and off)
+
+        switch sortStimBy
+            case 'num'
+                paramCol = 7; %set which column of seriesStimuli to look in
+                tol = 0; %set tolerance for separating by parameter
+            case 'time'
+                paramCol = 1;
+                tol = 5;  
+        end
+        stimNums = uniquetol(seriesStimuli(:,paramCol),tol,'DataScale',1);
+        nStims = length(stimNums);
+              
+        % separate found stim parameters into groups and concatenate to
+        % previous stimuli from the same series
+        stimByNum = cell(nStims,1);
+        for iStim = 1:nStims
+            stimByNum{iStim} = ... % find param matches within tolerance and assign into stimByNum
+                seriesStimuli(ismembertol(seriesStimuli(:,paramCol),stimNums(iStim),tol,'DataScale',1),:);
+            try allStim{iStim,1}; %if allStim doesn't exist, initialize it
             catch
-                continue
+                allStim{iStim,1} = [];
             end
             
-            meanSubtract{iSweep} = theseSweeps-repmat(windowMeans{iSweep},1,averagingWindow);
+            if ~length(allStim{iStim})==0; %if values exist for that stimulus in allStim, 
+                           %match param w/ tolerance to the matching param
+                           %location in allStim
+                [~,whichStim]=ismembertol(stimNums,cellfun(@(x) x(1,paramCol), allStim),1,'DataScale',tol);
+                allStim{whichStim(iStim),1} = [allStim{whichStim(iStim),1};stimByNum{iStim}];
+                
+            else %if allStim exists but that stimulus is empty, start it up
+                allStim{iStim,1} = [allStim{iStim,1};stimByNum{iStim}];
+            end
             
         end
+       
         
-        
-        windowMeans = [windowMeans{~cellfun('isempty',windowMeans)}];       
-        
-        % Subtract the mean response within each window to leave only the 
-        % variation around the large current (ideally these represent 
-        % single-channel fluctuations from the channels of interest, which 
-        % have higher open probability during the evoked response).
-        meanSubtract = meanSubtract(~cellfun('isempty',meanSubtract));
-        windowVars = cellfun(@(x) var(x,0,2), meanSubtract, 'un', 0);
-        windowVars = [windowVars{:}]; % variance of mean-subtracted sweeps
+        % take the mean and variance of sliding windows of sweeps within
+        % the time period indicated by the start point for each stimulus up
+        % to the end time (based on the input response time, default 200ms)
+        for iStim = 1:nStims
+            
+            stimLoc = uniquetol(allStim{iStim}(:,1:2),lengthTol,'ByRows',true);
+            responseTime = [stimLoc(1)-preTime*sf:stimLoc(2)+postTime*sf];
+            %NEXT: use seriesStimuli location/sweep number to set time
+            %boundaries for where to look at the response
+            
+            windowMeans = cell(0);
+            meanSubtract = cell(0);
+            
+            for iSweep = 1:averagingWindow/2:nSweeps-averagingWindow+1
+                try theseSweeps = leakSubtract(responseTime,iSweep:iSweep+averagingWindow-1);
+                    windowMeans{iSweep} = mean(theseSweeps,2);
+                catch
+                    continue
+                end
                 
-        % Also calculate a non-sliding mean and variance over all sweeps
-        % for comparison.
-        totalMean = mean(probeI,2);
-        totalSubtract = probeI - repmat(totalMean,1,size(probeI,2));
-        totalVar = var(totalSubtract,0,2);
-        
-        % Save everything to output struct
-        nonStatOutput.(cellName)(iSeries).protocol = protName;
-        nonStatOutput.(cellName)(iSeries).slidingMean = windowMeans;
-        nonStatOutput.(cellName)(iSeries).slidingVar = windowVars;
-        nonStatOutput.(cellName)(iSeries).sweepsPerWindow = averagingWindow;
-        nonStatOutput.(cellName)(iSeries).totalMean = totalMean;
-        nonStatOutput.(cellName)(iSeries).totalVar = totalVar;
-        
+                meanSubtract{iSweep} = theseSweeps-repmat(windowMeans{iSweep},1,averagingWindow);
+                
+            end
+            
+            
+            windowMeans = [windowMeans{~cellfun('isempty',windowMeans)}];
+            
+            % Subtract the mean response within each window to leave only the
+            % variation around the large current (ideally these represent
+            % single-channel fluctuations from the channels of interest, which
+            % have higher open probability during the evoked response).
+            meanSubtract = meanSubtract(~cellfun('isempty',meanSubtract));
+            windowVars = cellfun(@(x) var(x,0,2), meanSubtract, 'un', 0);
+            windowVars = [windowVars{:}]; % variance of mean-subtracted sweeps
+            
+            % Also calculate a non-sliding mean and variance over all sweeps
+            % for comparison.
+            totalMean = mean(leakSubtract(responseTime,:),2);
+            totalSubtract = leakSubtract(responseTime,:) - repmat(totalMean,1,size(leakSubtract(responseTime,:),2));
+            totalVar = var(totalSubtract,0,2);
+            
+            whichRow = iSeries+((iStim-1)*nSeries);
+            
+            % Save everything to output struct
+            nonStatOutput.(cellName)(whichRow).protocol = protName;
+            nonStatOutput.(cellName)(whichRow).stimNum = iStim;
+            nonStatOutput.(cellName)(whichRow).slidingMean = windowMeans;
+            nonStatOutput.(cellName)(whichRow).slidingVar = windowVars;
+            nonStatOutput.(cellName)(whichRow).sweepsPerWindow = averagingWindow;
+            nonStatOutput.(cellName)(whichRow).totalMean = totalMean;
+            nonStatOutput.(cellName)(whichRow).totalVar = totalVar;
+            
+        end
     end
-    
     
     
 end
