@@ -28,27 +28,34 @@ clear protList matchType
 
 %% Turn data into tables for Igor
 
-%Get protocol names and means/variances for each recording
+%Get protocol name parts and means/variances for each recording
 trapRecs = fieldnames(noiseTrap);
-recNames = cell(0);
-protNames = cell(0);
+recNames = cell(0); % name of cell
+protNames = cell(0); % name of protocol
+stimNames = cell(0); % number of stim (e.g., 1=on, 2=off) as string
 totMeans = cell(0);
 totVars = cell(0);
+
 for iRec = 1:length(trapRecs);
+    %get rid of empty rows, which mess with sorting strings later
+    clearEmpty = arrayfun(@(s) isempty(s.protocol),noiseTrap.(trapRecs{iRec}));
+    noiseTrap.(trapRecs{iRec})(clearEmpty)=[];
+    
+    theseStim = cellfun(@(x) sprintf('stim%d',x),...
+        num2cell([noiseTrap.(trapRecs{iRec})(:).stimNum]),'un',0);
+
+    stimNames = [stimNames theseStim];
     protNames = [protNames vertcat({noiseTrap.(trapRecs{iRec})(:).protocol})];
     totMeans = [totMeans vertcat({noiseTrap.(trapRecs{iRec})(:).totalMean})];
     totVars = [totMeans vertcat({noiseTrap.(trapRecs{iRec})(:).totalVar})];
     recNames = [recNames repmat(trapRecs(iRec),1,length(noiseTrap.(trapRecs{iRec})))];
 end
 
-% Deal with empty cells so you can sort as an array of strings
-tf = cellfun('isempty',protNames);
-protNames(tf) = {''};
-
 [protNames, protIdx] = sort(protNames);
 totMeans = totMeans(protIdx);
 totVars = totVars(protIdx);
 recNames = recNames(protIdx);
+stimNames = stimNames(protIdx);
 
 % Pad with nans and turn means/vars into arrays
 meanLengths = cellfun('length',totMeans);
@@ -58,19 +65,16 @@ totMeans = cell2mat(totMeans);
 totVars = cellfun(@(x)cat(1,x,NaN(maxLength-length(x),1)),totVars,'UniformOutput',false);
 totVars = cell2mat(totVars);
 
-% Drop the empty columns
-totMeans = totMeans(~cellfun('isempty',protNames));
-totVars = totVars(~cellfun('isempty',protNames));
-recNames = recNames(~cellfun('isempty',protNames));
-protNames = protNames(~cellfun('isempty',protNames));
-
 protTimes = cellfun(@(x) sprintf('%sms',x(isstrprop(x,'digit'))), protNames,'un',0);
 
 % Create identifying wave names for Igor
-waveMeanNames = cellfun(@(x,y) sprintf('mean_%s_%s', x, y), protTimes, recNames, 'un',0);
-waveVarNames = cellfun(@(x,y) sprintf('var_%s_%s', x, y), protTimes, recNames, 'un',0);
+waveMeanNames = cellfun(@(x,y,z) sprintf('mean_%s_%s_%s', x, y,z), protTimes, stimNames, recNames, 'un',0);
+waveVarNames = cellfun(@(x,y,z) sprintf('var_%s_%s_%s', x, y,z), protTimes, stimNames, recNames, 'un',0);
 
 
-% TODO: figure out how to add header names for the waves
-fid = fopen('PatchData/testTrap.txt','w',
-dlmwrite('PatchData/testTrap.txt',waveMeanNames,'delimiter','\t'); 
+% write into Excel file for loading into Igor
+xlswrite('PatchData/testTrap.xls',waveMeanNames,'means');
+xlswrite('PatchData/testTrap.xls',totMeans,'means','A2');
+
+xlswrite('PatchData/testTrap.xls',waveVarNames,'vars');
+xlswrite('PatchData/testTrap.xls',totVars,'vars','A2');
