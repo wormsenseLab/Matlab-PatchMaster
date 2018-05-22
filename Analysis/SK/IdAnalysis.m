@@ -88,6 +88,7 @@ p.addParameter('integrateCurrent',0);
 p.addParameter('fillZero',1);
 p.addParameter('sepByStimDistance',0);
 p.addParameter('saveSweeps',0);
+p.addParameter('recParameters', cell(0), @(x) iscell(x)); % ephysMetaData cell array
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -101,6 +102,7 @@ integrateFlag = p.Results.integrateCurrent;
 fillZeroSteps = p.Results.fillZero;
 distFlag = p.Results.sepByStimDistance;
 sweepFlag = p.Results.saveSweeps; % if 1, save individual sweeps in addition to means
+ephysMetaData = p.Results.recParameters;
 
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
@@ -143,6 +145,10 @@ for iCell = 1:length(allCells)
     allSeries = matchProts(ephysData,cellName,protList,'MatchType',matchType);
     
     nSeries = length(allSeries);
+    
+    
+    %NEXT TODO: Read in distance and ext stim filter freq from ephysmetadata
+    %sheet after matching cellName.
     
     if distFlag
         pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3,4]);

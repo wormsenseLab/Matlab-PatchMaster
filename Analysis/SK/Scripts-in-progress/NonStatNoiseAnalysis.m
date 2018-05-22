@@ -20,6 +20,7 @@ p.addParameter('windowSize', 8, @(x) isnumeric(x) && mod(x,2)==0);
 p.addParameter('responseTime', 200, @(x) isnumeric(x) && x>0); % length of time(ms) after stimulus to be included in the noise analysis for that stimulus (default 15ms before, 200ms after)
 p.addParameter('excludeVariableStim', 'false', @(x) islogical);
 p.addParameter('sortSweepsBy',{'magnitude','magnitude','magnitude','magnitude'}, @(x) iscell(x));
+p.addParameter('recParameters',cell(0), @(x) iscell(x));
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -29,6 +30,7 @@ averagingWindow = p.Results.windowSize;
 postTime = p.Results.responseTime;
 excludeStimVar = p.Results.excludeVariableStim;
 sortStimBy = p.Results.sortStimBy;
+ephysMetaData = p.Results.recParameters; % Use this to get stim filt freq and distance
 
 lengthTol = 5;
 

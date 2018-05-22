@@ -47,7 +47,7 @@ for iRec = 1:length(trapRecs);
     stimNames = [stimNames theseStim];
     protNames = [protNames vertcat({noiseTrap.(trapRecs{iRec})(:).protocol})];
     totMeans = [totMeans vertcat({noiseTrap.(trapRecs{iRec})(:).totalMean})];
-    totVars = [totMeans vertcat({noiseTrap.(trapRecs{iRec})(:).totalVar})];
+    totVars = [totVars vertcat({noiseTrap.(trapRecs{iRec})(:).totalVar})];
     recNames = [recNames repmat(trapRecs(iRec),1,length(noiseTrap.(trapRecs{iRec})))];
 end
 

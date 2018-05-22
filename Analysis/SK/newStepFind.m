@@ -35,6 +35,7 @@ p.addParameter('endTime',0, @(x) isnumeric(x) && isscalar(x));
 p.addParameter('scaleFactor',1, @(x) isnumeric(x) && isscalar(x)); %in V/um
 p.addParameter('smoothWindow',0, @(x) isnumeric(x) && isscalar(x) && x>0);
 p.addParameter('threshFactor',5, @(x) isnumeric(x) && isscalar(x) && x>0);
+p.addParameter('stimFilterFreq',2.5,@(x) isnumeric(x) && isscalar(x)); % in kHz
 p.parse(nSweeps, stimData, sf, varargin{:});
 
 threshTime = p.Results.thresholdTime; %ms
@@ -45,6 +46,7 @@ roundedTo = p.Results.roundedTo;
 endTime = p.Results.endTime;
 scaleFactor = p.Results.scaleFactor;
 smoothWindow = p.Results.smoothWindow;
+extStimFilterFreq = p.Results.stimFilterFreq; %kHz
 if smoothWindow == 0
     smoothWindow = sf; %if smoothWindow is not set, set to 1ms worth of samples
 end
@@ -57,7 +59,6 @@ threshFactor = p.Results.threshFactor;
 nSweeps = size(stimData,2);
 % sf = ephysData.(cellName).samplingFreq{series}/1000; %kHz
 si = 1/sf; %ms
-extStimFilterFreq = 2.5; %kHz
 vToDispFactor = 1/scaleFactor;
 roundedTo = 1/roundedTo;
 

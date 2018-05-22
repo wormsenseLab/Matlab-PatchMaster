@@ -11,8 +11,8 @@
 
 % Don't forget to run sigTOOL first!
 % [ephysData,tree] = ImportPatchData();
-% ephysData = ImportPatchData('incl',1);
-ephysData = ImportPatchData(ephysData, 'incl',1);
+ephysData = ImportPatchData('incl',1);
+% ephysData = ImportPatchData(ephysData, 'incl',1);
 
 
 % Keep only data with given project prefixes/names.
@@ -50,14 +50,14 @@ ephysMetaData = ImportMetaData();  %Recording Database
 % protList = '_CC';
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
-protList ={'Noise_Pre'};
+protList ={'0_time'};
 
 % protList ={'WC_Probe8'};
-matchType = 'first';
+matchType = 'last';
 strainList = {'TU2769'};
-internalList = {'IC6'};
+internalList = {'IC2'};
 % cellTypeList = {'ALMR'};
-stimPosition = {'posterior'};
+stimPosition = {'anterior'};
 
 % protList ={'_time'};
 % matchType = 'first';
@@ -67,11 +67,11 @@ stimPosition = {'posterior'};
 % stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 
-preCells = FilterRecordings(ephysData, ephysMetaData,...
+sineCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep);
 
-ExcludeSweeps(ephysData, protList, preCells, 'matchType', matchType);
+ExcludeSweeps(ephysData, protList, sineCells, 'matchType', matchType);
 
 clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
 %% Generic IdAnalysis run
