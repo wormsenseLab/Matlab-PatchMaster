@@ -11,8 +11,8 @@
 
 % Don't forget to run sigTOOL first!
 % [ephysData,tree] = ImportPatchData();
-ephysData = ImportPatchData('incl',1);
-% ephysData = ImportPatchData(ephysData, 'incl',1);
+% ephysData = ImportPatchData('incl',1);
+ephysData = ImportPatchData(ephysData, 'incl',1);
 
 
 % Keep only data with given project prefixes/names.
@@ -42,7 +42,7 @@ ephysMetaData = ImportMetaData();  %Recording Database
 % protList = {'DispRate'};
 % protList = {'PrePulse'};
 % protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
-% protList ={'WC_Probe';'NoPre'};
+protList ={'WC_Probe';'NoPre'};
 % ExcludeSweeps(ephysData,allCells,1,protList,'first');
 
 
@@ -50,10 +50,10 @@ ephysMetaData = ImportMetaData();  %Recording Database
 % protList = '_CC';
 % ExcludeSweeps(ephysData,allCells,1,protList,'last');
 
-protList ={'0_time'};
+% protList ={'0_time'};
 
 % protList ={'WC_Probe8'};
-matchType = 'last';
+matchType = 'first';
 strainList = {'TU2769'};
 internalList = {'IC2'};
 % cellTypeList = {'ALMR'};
@@ -66,12 +66,15 @@ stimPosition = {'anterior'};
 % cellTypeList = {'ALMR'};
 % stimPosition = {'anterior'};
 wormPrep = {'dissected'};
+cellDist = [40 80];
+resistCutoff = '<210';
 
-sineCells = FilterRecordings(ephysData, ephysMetaData,...
+test = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
-     'stimLocation', stimPosition, 'wormPrep', wormPrep);
+     'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
+     'cellStimDistUm',cellDist, 'RsM', resistCutoff);
 
-ExcludeSweeps(ephysData, protList, sineCells, 'matchType', matchType);
+% ExcludeSweeps(ephysData, protList, posteriorCells, 'matchType', matchType);
 
 clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
 %% Generic IdAnalysis run
@@ -96,19 +99,19 @@ clear protList strainList internalList cellTypeList stimPosition matchType ans w
 % wtPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
 %     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
-protList ={'Noise_Trap'};
-sortSweeps = {'velocity','velocity','magnitude','magnitude'};
-matchType = 'first';
-rateMRCs = IdAnalysis(ephysData,protList,preCells,'num','matchType',matchType,...
-    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+% protList ={'Noise_Trap'};
+% sortSweeps = {'velocity','velocity','magnitude','magnitude'};
+% matchType = 'first';
+% rateMRCs = IdAnalysis(ephysData,protList,preCells,'num','matchType',matchType,...
+%     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
 
 
 % protList ={'WC_Probe8'};
-% protList = {'WC_Probe','NoPre'};
-% sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
-% matchType = 'first';
-% posteriorMRCs = IdAnalysis(ephysData,protList,ant8Cells,'num','matchType',matchType, ...
-%     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
+protList = {'WC_Probe','NoPre'};
+sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+matchType = 'first';
+posteriorMRCs = IdAnalysis(ephysData,protList,posteriorCells,'num','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
 clear protList sortSweeps matchType
 
 %% NonStat Noise Analysis
@@ -151,10 +154,11 @@ clear i
 recs = fieldnames(ephysData);
 
 for i=1:length(recs)
-try fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).Rs)))
+try fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).C * 1e12,2)))
 catch
     continue
 end
+fprintf('%s %s\n', '       ', sprintf('%6g',round(ephysData.(recs{i}).Rs)))
 end
 
 %% Assign numbers of IVq series to look at

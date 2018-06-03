@@ -62,6 +62,10 @@ for iCell = 1:length(allCells)
             continue
         end
         
+        if size(ctNeg,1) ~= size(ctPos,1)
+            continue
+        end
+        
         ctNeg = bsxfun(@minus, ctNeg, mean(ctNeg(1:20,:)));
         ctPos = bsxfun(@minus, ctPos, mean(ctPos(1:20,:)));
         
