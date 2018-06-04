@@ -57,7 +57,7 @@ matchType = 'first';
 strainList = {'TU2769'};
 internalList = {'IC2'};
 % cellTypeList = {'ALMR'};
-stimPosition = {'anterior'};
+stimPosition = {'posterior'};
 
 % protList ={'_time'};
 % matchType = 'first';
@@ -67,16 +67,23 @@ stimPosition = {'anterior'};
 % stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 cellDist = [40 80];
-resistCutoff = '<210';
+resistCutoff = '<250';
+extFilterFreq = 2.5;
 
-test = FilterRecordings(ephysData, ephysMetaData,...
+posteriorCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
-     'cellStimDistUm',cellDist, 'RsM', resistCutoff);
+     'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
+     'stimFilterFrequencykHz', extFilterFreq);
 
-% ExcludeSweeps(ephysData, protList, posteriorCells, 'matchType', matchType);
+clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep;
 
-clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
+%% Run sweep selection GUI
+
+ExcludeSweeps(ephysData, protList, posteriorCells, 'matchType', matchType);
+
+clear protList matchType;
+
 %% Generic IdAnalysis run
 
 % protList ={'DispRate'};
@@ -111,7 +118,7 @@ protList = {'WC_Probe','NoPre'};
 sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
 matchType = 'first';
 posteriorMRCs = IdAnalysis(ephysData,protList,posteriorCells,'num','matchType',matchType, ...
-    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',1);
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , 'sepByStimDistance',0);
 clear protList sortSweeps matchType
 
 %% NonStat Noise Analysis

@@ -59,9 +59,18 @@
 %                                   matching filter parameters to columns.
 % 
 % 
+% 
+% OUTPUTS:
+%   filteredCells       cell array  Cell array of strings with names of
+%                                   recordings that match all the given
+%                                   filter parameters.
+% 
+%   filteredMetadata    cell array  The subset of the metadata spreadsheet
+%                                   corresponding to filteredCells.
+% 
 % Created by Sammy Katta on 4 Jan 2018.
 
-function filteredCells = FilterRecordings(ephysData,ephysMetadata,varargin)
+function [filteredCells, filteredMetadata] = FilterRecordings(ephysData,ephysMetadata,varargin)
 
 % PARSE INPUTS
 p = inputParser;
@@ -153,7 +162,8 @@ for i = 1:length(filterHeaders)
             case 'double'
                 if size(thisParam,2) == 2
                     paramType = horzcat(paramType,'range');
-                elseif size(thisparam,1) == 1
+                elseif size(thisParam,1) == 1
+                    filterParams.(filterHeaders{i}) = {num2str(filterParams.(filterHeaders{i}))};
                     paramType = horzcat(paramType,'string');
                 else
                     fprintf('Skipped %s filter - please format numerical filters as specified in function help', filterHeaders(i));
@@ -247,11 +257,10 @@ end
 
 matchingRecs = sum(isParam,2)==length(useParams);
 
-%NEXT: if param is a num, == it. 
-%LATER: consider cases where you want to look at recordings within a range
-%for a given param, e.g., 50<Rs<200MOhm. Might be better off doing that in
-%Excel...or create a second filtering fxn.
-
 filteredCells=allCells(matchingRecs);
+
+% Optional output: the complete metadata subset for just those matching cells.
+filteredMetadata = ephysMetadata(allCellInd,:);
+filteredMetadata = filteredMetadata(matchingRecs,:);
 
 end

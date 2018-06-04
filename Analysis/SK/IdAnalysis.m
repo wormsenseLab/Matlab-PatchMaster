@@ -20,6 +20,13 @@
 %                                   xls file you are inputting. Default is
 %                                   to match the whole name.
 % 
+% OPTIONAL INPUTS:
+%   allCells        cell array      Names of recordings to look at (this
+%                                   can be used to narrow down analysis to
+%                                   a subset of recordings from the
+%                                   ExcludeSweeps metadata sheet).
+%   
+% 
 % OPTIONAL PARAMETER-VALUE INPUTS:
 % 
 %   matchType       char            Specifies whether to match names in
@@ -402,11 +409,14 @@ for iCell = 1:length(allCells)
     end
     
     if distFlag
-        sweepsByParams = [allStim{1}(:,9) sweepsByParams];
+        sweepsByParams = [sweepsByParams allStim{1}(:,9)];
+    else
+        sweepsByParams = [sweepsByParams zeros(size(sweepsByParams,1),1)];
     end
     % Sort rows by successively less variable parameters based on
     % stimSortOrder. Use unique to find unique sets of rows/stimulus
     % profiles and separate them into groups.
+
     [sweepsByParams, sortIdx] = sortrows(sweepsByParams, stimSortOrder);
     sortedLeakSub = allLeakSub(sortIdx,:);
     
@@ -453,9 +463,9 @@ for iCell = 1:length(allCells)
         for iStim = 1:nStim
             
             stimMetaData(:,1:2,iStim) = sortedStim{1,iStim}(profileStartIdx,1:2);
-            stimMetaData(:,3,iStim) = eachStimProfile(:,iStim+1);
-            stimMetaData(:,4,iStim) = nReps;        
-            stimMetaData(:,5,iStim) = eachStimProfile(:,1);
+            stimMetaData(:,3,iStim) = eachStimProfile(:,iStim);
+            stimMetaData(:,4,iStim) = nReps;    
+            stimMetaData(:,5,iStim) = eachStimProfile(:,end);
                        
         end
     end
@@ -528,6 +538,8 @@ for iCell = 1:length(allCells)
     mechStim (iCell,2:length(sortedStim)+1) = sortedStim;
 
 end
+
+mechPeaks = mechPeaks(~cellfun(@isempty, mechPeaks(:,1)),:);
 
 end
 
