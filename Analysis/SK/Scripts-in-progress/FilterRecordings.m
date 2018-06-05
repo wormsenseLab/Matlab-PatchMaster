@@ -79,7 +79,7 @@ p.addRequired('ephysData');
 p.addRequired('ephysMetadata'); 
 
 p.addOptional('allCells', cell(0));
-p.addParameter('ignoreSpecial', true);
+p.addParameter('ignoreSpecial', true); %if false, need to change parameter names to include necessary characters
 
 
 % If adding new filter parameters, beware the name must match the column

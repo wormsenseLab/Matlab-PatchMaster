@@ -137,6 +137,19 @@ mechPeaks = cell(length(allCells),1);
 % protList = {'WC_Probe','NoPrePulse','DispRate'};
 % protList = {'PrePulse'};
 
+allCellInd = cellfun(@(x) find(strcmp(ephysMetaData(:,1),x)),allCells,'un',0)';
+allCellInd = [allCellInd{:}];
+
+filterHeaders{1} = 'cellStimDistUm';
+filterHeaders{2} = 'stimFilterFrequencykHz';
+for i=1:length(filterHeaders)
+paramInd(i) = find(strncmpi(regexprep(ephysMetaData(1,:), '[^a-zA-Z0-9]', ''),...
+    regexprep(filterHeaders{i}, '[^a-zA-Z0-9]', ''),length(filterHeaders{i})));
+end
+cellDist = ephysMetaData(allCellInd,paramInd(1));
+extFilterFreq = ephysMetaData(allCellInd,paramInd(2));
+
+
 % Find applicable series and check against list of included series/traces
 % (this allows a cross-check on the protocol name) before analyzing. 
 % Values for traces not on the list will be stored as NaN.
@@ -153,15 +166,10 @@ for iCell = 1:length(allCells)
     
     nSeries = length(allSeries);
     
-    
-    %NEXT TODO: Read in distance and ext stim filter freq from ephysmetadata
+    %NEXT TODO: Read in ext stim filter freq from ephysmetadata
     %sheet after matching cellName.
-    
-    if distFlag
-        pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3,4]);
-    else
-        pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
-    end
+
+    pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
     
     if nSeries == 0 || isempty(pickedSeries)
         continue
@@ -182,7 +190,7 @@ for iCell = 1:length(allCells)
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
         dataType = ephysData.(cellName).dataunit{1,thisSeries};
         nSweeps = size(stimComI,2);
-        try thisDist = pickedSeries{[pickedSeries{:,1}]==thisSeries,3};
+        try thisDist = round(cellDist{iCell},1);
         catch 
         end
         
@@ -241,7 +249,7 @@ for iCell = 1:length(allCells)
         % analyzed data to a particular trace
         seriesStimuli (:,8) = repmat(thisSeries,size(seriesStimuli,1),1);
         
-        if exist('thisDist','var') && ~isnan(thisDist)
+        if exist('thisDist','var') && ~isempty(thisDist) && ~isnan(thisDist)
             seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1),1);
         else 
             % if no stim distance is included, must be zeros instead of

@@ -45,6 +45,22 @@ if isempty(allCells)
     allCells = unique(mechTracePicks(:,1));
 end
 
+% pull out stimulus distance and external filter frequency for the given
+% recordings
+allCellInd = cellfun(@(x) find(strcmp(ephysMetaData(:,1),x)),allCells,'un',0)';
+allCellInd = [allCellInd{:}];
+
+filterHeaders{1} = 'cellStimDistUm';
+filterHeaders{2} = 'stimFilterFrequencykHz';
+for i=1:length(filterHeaders)
+paramInd(i) = find(strncmpi(regexprep(ephysMetaData(1,:), '[^a-zA-Z0-9]', ''),...
+    regexprep(filterHeaders{i}, '[^a-zA-Z0-9]', ''),length(filterHeaders{i})));
+end
+cellDist = ephysMetaData(allCellInd,paramInd(1));
+extFilterFreq = ephysMetaData(allCellInd,paramInd(2));
+
+
+
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 preTime = 15;
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
@@ -93,8 +109,10 @@ for iCell = 1:length(allCells)
         
         % sampling frequency in kHz
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
-        nSweeps = size(stimComI,2);
-
+        nSweeps = size(stimComI,2);        
+        try thisDist = round(cellDist{iCell},1);
+        catch
+        end
                 
         leakSubtract = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
@@ -114,6 +132,16 @@ for iCell = 1:length(allCells)
             continue
         end
 
+        % write in stim distance
+        if exist('thisDist','var') && ~isempty(thisDist) && ~isnan(thisDist)
+            seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1),1);
+        else
+            % if no stim distance is included, must be zeros instead of
+            % NaNs because unique will consider every NaN unique when
+            % sorting by stim for zeroFill later.
+            seriesStimuli(:,9) = zeros(size(seriesStimuli,1),1);
+        end
+        
         
         % depending on input param, use either stimulus number or stimulus
         % timepoint to group stimuli across sweeps (e.g., on and off)
@@ -204,8 +232,12 @@ for iCell = 1:length(allCells)
             nonStatOutput.(cellName)(whichRow).sweepsPerWindow = averagingWindow;
             nonStatOutput.(cellName)(whichRow).totalMean = totalMean;
             nonStatOutput.(cellName)(whichRow).totalVar = totalVar;
+            nonStatOutput.(cellName)(whichRow).distance = thisDist;
+
             
         end
+        
+        clear thisDist;
     end
     
     

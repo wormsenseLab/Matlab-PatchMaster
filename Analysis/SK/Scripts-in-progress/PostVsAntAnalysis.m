@@ -1,4 +1,78 @@
-%% 
+
+%%
+% just make a copy and use cellfun to normalize
+
+antCopy = anteriorMRCs(:,3);
+postCopy = posteriorMRCs(:,3);
+
+fitMax = ...
+[144.69
+112.18
+72.3259
+41.4116
+42.7445
+102.499
+56.2217
+59.8849
+63.9671
+42.2127
+43.3809
+52.2286
+66.0584];
+
+fitxHalf = [3.6832
+4.6865
+4.0484
+7.00572
+6.26397
+7.09905
+5.93457
+7.70611
+11.895
+6.68137
+6.85844
+6.82341
+7.68478];
+
+fitRate = [1.6182
+1.9576
+1.89956
+1.89095
+1.65151
+1.97905
+1.77723
+2.09872
+1.40118
+1.5359
+1.83336
+1.56481
+0.93086];
+
+
+
+antMax = num2cell(fitMax(1:3));
+postMax = num2cell(fitMax(4:end));
+
+antNorm = cellfun(@(x,y) [x(:,1) x(:,3)/y],antCopy,antMax,'un',0);
+postNorm = cellfun(@(x,y) [x(:,1) x(:,3)/y],postCopy,postMax,'un',0);
+
+antRateMean = mean(fitRate(1:3));
+antRateSEM = std(fitRate(1:3))/sqrt(3);
+postRateMean = mean(fitRate(4:end));
+postRateSEM = std(fitRate(4:end))/sqrt(10);
+
+antxHalfMean = mean(fitxHalf(1:3));
+antxHalfSEM = std(fitxHalf(1:3))/sqrt(3);
+postxHalfMean = mean(fitxHalf(4:end));
+postxHalfSEM = std(fitxHalf(4:end))/sqrt(10);
+
+%% Distances
+
+antDist = cellfun(@(x) x(1,8),antCopy);
+postDist = cellfun(@(x) x(1,8),postCopy);
+
+
+%%  Old code follows
 % Define list of cells based on Excel sheet filtering for right protocols and 
 % stim-cell dist < 140um. For recordings up to FAT179. This was meant to
 % give a similar average cell-stim distance as the posterior cells. Actual
