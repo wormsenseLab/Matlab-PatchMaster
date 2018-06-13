@@ -254,6 +254,7 @@ end
 
 % Find which recordings have parameters matching all of the individual
 % specified parameters (case-insensitive for strings).
+%TODO: see if you can just use fxn all() with dim 2 for this
 
 matchingRecs = sum(isParam,2)==length(useParams);
 

@@ -2,8 +2,7 @@
 %
 % OUTPUT:
 % cellPeaks: 
-% [stimSize/Vel/Interval pkLoc pkCurrent pkThresh tauAct tauDecay nReps stimDistance]
-% 
+%[sortParam size vel pkLoc pk pkThresh tauAct tauDecay tPk distance nReps intPeak]%
 
 function [cellPeaks, cellFit] = findMRCs(stimParams, meanTraces, sf, dataType, varargin)
 p = inputParser;
@@ -146,27 +145,32 @@ for iParam = 1:nParams
             %intPeakArtifact = trapz(meanTraces(iParam,stimStart+artifactOffset:stimEnd+(sf*1E3/50))/sf);
             %intPeakHalf = trapz(meanTraces(iParam,halfLocs(1)-1:decayHalfLocs(1)-1)/sf);
             
-            cellPeaks(iParam,8) = intPeak;
+            cellPeaks(iParam,12) = intPeak;
         end
-        
+        tPk = (pkLoc - stimStart)/sf;
+ 
     else
         pk = 0;
         pkLoc = nan;
+        tPk = nan;
         
         tauAct = nan;
         tauDecay = nan;
         pkFit = 0;
+        
     end
     
-    cellPeaks(iParam,2) = pkLoc;
-    cellPeaks(iParam,3) = pk;
-    cellPeaks(iParam,5) = tauAct;
-    cellPeaks(iParam,6) = tauDecay;
-    
+    cellPeaks(iParam,4) = pkLoc;
+    cellPeaks(iParam,5) = pk;
+    cellPeaks(iParam,7) = tauAct;
+    cellPeaks(iParam,8) = tauDecay;
+    cellPeaks(iParam,9) = tPk;
+
 
 end
-cellPeaks(:,4) = pkThresh;
-cellPeaks(:,1) = stimParams(:,3); %stimSize
-cellPeaks(:,7) = stimParams(:,4); %nReps
-cellPeaks(:,8) = stimParams(:,5); %stim distance (0 if not entered)
+cellPeaks(:,6) = pkThresh;
+cellPeaks(:,1) = stimParams(:,3); % stim size, velocity, or interval - the sorting parameter
+cellPeaks(:,2:3) = stimParams(:,4:5); % stim size and velocity
+cellPeaks(:,11) = stimParams(:,7); %nReps
+cellPeaks(:,10) = stimParams(:,8); %stim distance (0 if not entered)
 end

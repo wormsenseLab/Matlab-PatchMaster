@@ -85,7 +85,7 @@ p.addRequired('ephysData', @(x) isstruct(x));
 p.addRequired('protList', @(x) iscell(x));
 
 p.addOptional('allCells', cell(0));
-p.addOptional('sortStimBy', 'num', @(x) sum(strcmp(x,{'num','time'})));
+p.addOptional('sortStimBy', 'num', @(x) sum(strcmp(x,{'num','time','endTime'})));
 
 p.addParameter('matchType', 'full', @(x) sum(strcmp(x,{'first','last','full'})));
 p.addParameter('calibFlag', 0); %0 for stim command, 1 for PD signal
@@ -96,6 +96,7 @@ p.addParameter('fillZero',1);
 p.addParameter('sepByStimDistance',0);
 p.addParameter('saveSweeps',0);
 p.addParameter('recParameters', cell(0), @(x) iscell(x)); % ephysMetaData cell array
+p.addParameter('limitStim',0, @(x) x>=0);
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -110,8 +111,8 @@ fillZeroSteps = p.Results.fillZero;
 distFlag = p.Results.sepByStimDistance;
 sweepFlag = p.Results.saveSweeps; % if 1, save individual sweeps in addition to means
 ephysMetaData = p.Results.recParameters;
+limitStim = p.Results.limitStim;
 
-stepThresh = 0.05; % step detection threshold in um, could be smaller
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
@@ -120,7 +121,6 @@ stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
 roundIntTo = 2;
 whichInt = 1;
 sortByStimNum = 1; %sort by which stim (here, first stim, which is on step)
-stimSortOrder = [1 2 3];
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -168,7 +168,7 @@ for iCell = 1:length(allCells)
     
     %NEXT TODO: Read in ext stim filter freq from ephysmetadata
     %sheet after matching cellName.
-
+    
     pickedSeries = mechTracePicks(find(strcmp(cellName,mechTracePicks(:,1))),[2,3]);
     
     if nSeries == 0 || isempty(pickedSeries)
@@ -191,7 +191,7 @@ for iCell = 1:length(allCells)
         dataType = ephysData.(cellName).dataunit{1,thisSeries};
         nSweeps = size(stimComI,2);
         try thisDist = round(cellDist{iCell},1);
-        catch 
+        catch
         end
         
         %DECIDE: where use of photodiode signal should come in. Use the stimulus
@@ -251,14 +251,14 @@ for iCell = 1:length(allCells)
         
         if exist('thisDist','var') && ~isempty(thisDist) && ~isnan(thisDist)
             seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1),1);
-        else 
+        else
             % if no stim distance is included, must be zeros instead of
             % NaNs because unique will consider every NaN unique when
             % sorting by stim for zeroFill later.
             seriesStimuli(:,9) = zeros(size(seriesStimuli,1),1);
         end
-%NEXT: where do I have to add in this parameter so I can use it when
-%sorting for unique stimProfiles? It has to get into sweepsByParams.
+        %NEXT: where do I have to add in this parameter so I can use it when
+        %sorting for unique stimProfiles? It has to get into sweepsByParams.
         
         % all on/off stimuli are still mixed together.
         % depending on input param, use either stimulus number or stimulus
@@ -269,17 +269,17 @@ for iCell = 1:length(allCells)
                 tol = 0; %set tolerance for separating by parameter
             case 'time'
                 paramCol = 1;
-                tol = 1;  
+                tol = 1;
             case 'endTime'
                 paramCol = 2;
                 tol = 0;
         end
         stimNums = uniquetol(seriesStimuli(:,paramCol),tol,'DataScale',1);
-
+        
         
         % separate found stim parameters into groups and concatenate to
         % previous stimuli from the same series
-
+        
         stimByNum = cell(length(stimNums),1);
         for iStim = 1:length(stimNums)
             stimByNum{iStim} = ... % find param matches within tolerance and assign into stimByNum
@@ -289,9 +289,9 @@ for iCell = 1:length(allCells)
                 allStim{iStim,1} = [];
             end
             
-            if ~length(allStim{iStim})==0; %if values exist for that stimulus in allStim, 
-                           %match param w/ tolerance to the matching param
-                           %location in allStim
+            if ~length(allStim{iStim})==0; %if values exist for that stimulus in allStim,
+                %match param w/ tolerance to the matching param
+                %location in allStim
                 [~,whichStim]=ismembertol(stimNums,cellfun(@(x) x(1,paramCol), allStim),1,'DataScale',tol);
                 allStim{whichStim(iStim),1} = [allStim{whichStim(iStim),1};stimByNum{iStim}];
                 
@@ -304,7 +304,7 @@ for iCell = 1:length(allCells)
         % Concatenate to the complete list of step sizes and
         % leak-subtracted traces across series for this recording
         allLeakSub=[allLeakSub; leakSubtractCell];
-       
+        
         clear thisDist;
     end
     
@@ -314,7 +314,7 @@ for iCell = 1:length(allCells)
     % step there is zero and it isn't detected. This section fills
     % in those timepoints with magnitude zero steps, if the fillZeroSteps
     % flag is set to 1.
-
+    
     if ~isempty(strfind(lower(sortStimBy),'time')) && fillZeroSteps
         seriesList = vertcat(allStim{:});
         seriesList = seriesList(:,[6 8 9]);
@@ -341,12 +341,12 @@ for iCell = 1:length(allCells)
         end
         
         allStim = filledStim;
-    
+        
     elseif ~isempty(strfind(lower(sortStimBy),'num')) && fillZeroSteps
         seriesList = vertcat(allStim{:});
         seriesList = seriesList(:,[6 8 9]);
         seriesList = sortrows(unique(seriesList,'rows','stable'),[2 1]); % find all unique series/sweep combos
-        blankStim = NaN(length(seriesList),9);
+        blankStim = NaN(size(seriesList,1),9);
         blankStim(:,[6,8 9]) = seriesList;
         filledStim = cell(length(allStim),1);
         [filledStim{1:length(allStim),1}] = deal(blankStim); %make a cell with nStim with the series/sweep list to be filled for each stim
@@ -362,8 +362,8 @@ for iCell = 1:length(allCells)
         
     end
     
-
-
+    
+    
     
     % Pad all traces with NaNs at the end so they're the same length, for
     % ease of manipulation as an array instead of a cell.
@@ -372,39 +372,42 @@ for iCell = 1:length(allCells)
     allLeakSub=cellfun(@(x)cat(2,x,NaN(1,maxLength-length(x))),allLeakSub,'UniformOutput',false);
     allLeakSub = cell2mat(allLeakSub);
     
-%FIX: nStim=4 for OnDt because of Patchmaster's 0 padding. Find a way to
-%exclude the last "step".
-    nStim = length(allStim);
-    % nStim=3;
-    % allStim = allStim(1:nStim);
-
+    %FIX: nStim=4 for OnDt because of Patchmaster's 0 padding. Find a way to
+    %exclude the last "step".
+    if limitStim == 0
+        nStim = length(allStim);
+    elseif limitStim > 0
+        nStim = min([length(allStim) limitStim]);
+    end
+    
+    stimSortOrder = 1:nStim;
+    stimTolVal = [];
+    
     sweepsByParams = NaN(size(allLeakSub,1),nStim);
-
     sortedStim = cell(1,nStim);
     
-% KEEP this section separate for each Analysis fxn, because what you sort
-% by will change. (e.g., not by size for OnDt analysis).
+    % KEEP this section separate for each Analysis fxn, because what you sort
+    % by will change. (e.g., not by size for OnDt analysis).
     
     for iStim = 1:nStim
-    
-    nTraces = size(allStim{iStim},1);
-    %LATER: don't need whichInt, just use interval previous to stim for iStim
-
+        
+        nTraces = size(allStim{iStim},1);
+        %TODO: don't need whichInt, just use interval previous to stim for iStim
+        
         % For each parameter, go through all stimuli and round the relevant
         % parameter to the nearest X so that sweeps can be grouped as being
         % from the same stimulus profile.
         switch sortSweepsBy{iStim}
             case 'magnitude'
                 sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,3),1);
+                stimTolVal(iStim) = 1;
             case 'position'
                 sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,4),1);
+                stimTolVal(iStim) = 1;
             case 'velocity'
-                trioRound = round(allStim{iStim}(:,5),0); %round small velocities to nearest 1
-                trioRound(abs(trioRound)<500) = round(trioRound(abs(trioRound)<500)/2)*2; %round large to nearest 10
-                trioRound(abs(trioRound)>500 & abs(trioRound)<1500) = ...
-                    round(trioRound(abs(trioRound)>500 & abs(trioRound)<1500)/5)*5; %round medium to nearest 5
-                trioRound(abs(trioRound)>1500) = round(trioRound(abs(trioRound)>1500),-1); %round large to nearest 10
+                trioRound = roundVel(allStim{iStim}(:,5)); %fxn found at end of file
                 sweepsByParams(1:nTraces,iStim) = trioRound;
+                stimTolVal(iStim) = 10;
             case 'interval' %time interval between previous stim and current stim
                 a = cellfun(@(x) x(:,1:2),allStim,'un',0);
                 stimInt = diff([a{:}],1,2)/sf; %calculate interval between stimuli in ms
@@ -413,30 +416,31 @@ for iCell = 1:length(allCells)
                 %             case 'none'
                 %             otherwise
                 %                 [sortedByParam, sortIdx] = sort(round(allStim{iStim}(:,3),1));
+                stimTolVal(iStim) = 1/sf;
         end
     end
     
+    
+    
     if distFlag
         sweepsByParams = [sweepsByParams allStim{1}(:,9)];
-    else
-        sweepsByParams = [sweepsByParams zeros(size(sweepsByParams,1),1)];
+        stimSortOrder = 1:nStim+1;
     end
+    
     % Sort rows by successively less variable parameters based on
     % stimSortOrder. Use unique to find unique sets of rows/stimulus
     % profiles and separate them into groups.
-
-    [sweepsByParams, sortIdx] = sortrows(sweepsByParams, stimSortOrder);
+    
+    [sweepsByParams, sortIdx, eachStimProfile, profileStartIdx, profileEndIdx] = ...
+        sortTol(sweepsByParams, stimTolVal, stimSortOrder);
     sortedLeakSub = allLeakSub(sortIdx,:);
     
     for iStim = 1:nStim
         sortedStim{iStim} = allStim{iStim}(sortIdx,:);
     end
-    
-    % DECIDE: if unique(sweepsByParam) should only include columns from
-    % stimSortOrder or all stim columns.
-    
-    [eachStimProfile, profileStartIdx, ~] = unique(sweepsByParams,'rows','first');
-    [~, profileEndIdx, ~] = unique(sweepsByParams,'rows','last');
+      
+%     [eachStimProfile, profileStartIdx, ~] = unique(sweepsByParams,'rows','first');
+%     [~, profileEndIdx, ~] = unique(sweepsByParams,'rows','last');
     nStimProfiles = sum(sum(~isnan(eachStimProfile),2)>=nStim);
     profileStartIdx = profileStartIdx(sum(~isnan(eachStimProfile),2)>=nStim);
     profileEndIdx = profileEndIdx(sum(~isnan(eachStimProfile),2)>=nStim);
@@ -449,7 +453,7 @@ for iCell = 1:length(allCells)
     meansByStimProfile = NaN(nStimProfiles, length(sortedLeakSub));
     sweepsByStimProfile = cell(nStimProfiles,1);
     stimMetaData = NaN(nStimProfiles,4,nStim);
-
+    
     for iProfile = 1:nStimProfiles
         groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
         
@@ -467,14 +471,16 @@ for iCell = 1:length(allCells)
         
         % Use the first sweep for a given size to pick the stimulus window
         % Save into parameters to pass to findMRCs.
-
+        
         for iStim = 1:nStim
             
             stimMetaData(:,1:2,iStim) = sortedStim{1,iStim}(profileStartIdx,1:2);
             stimMetaData(:,3,iStim) = eachStimProfile(:,iStim);
-            stimMetaData(:,4,iStim) = nReps;    
-            stimMetaData(:,5,iStim) = eachStimProfile(:,end);
-                       
+            stimMetaData(:,4:5,iStim) = round(sortedStim{1,iStim}(profileStartIdx,4:5),1);
+            stimMetaData(:,6,iStim) = roundVel(sortedStim{1,iStim}(profileStartIdx,6));
+            stimMetaData(:,7,iStim) = nReps;
+            stimMetaData(:,8,iStim) = eachStimProfile(:,end);
+            
         end
     end
     
@@ -542,12 +548,24 @@ for iCell = 1:length(allCells)
     %group and take means of stim traces and run series stim again on the
     %means and use those timepoints for peak finding so you'd also have a
     %less noisy stim/PD trace.
-
+    
     mechStim (iCell,2:length(sortedStim)+1) = sortedStim;
-
+    
 end
 
 mechPeaks = mechPeaks(~cellfun(@isempty, mechPeaks(:,1)),:);
 
+end
+
+function trioRound = roundVel(velParam) %local function for rounding velocities
+velSign = (velParam>0)*2-1;
+
+trioRound = round(abs(velParam),0); %round small velocities to nearest 1
+trioRound(trioRound<500) = round(trioRound(trioRound<500)/2)*2; %round large to nearest 10
+trioRound(trioRound>500 & trioRound<1500) = ...
+    round(trioRound(trioRound>500 & trioRound<1500)/5)*5; %round medium to nearest 5
+trioRound(trioRound>1500) = round(trioRound(trioRound>1500),-1); %round large to nearest 10
+
+trioRound = trioRound .* velSign;
 end
 

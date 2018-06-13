@@ -4,13 +4,13 @@ protList ={'WC_Probe1','WC_Probe4','wC_Probe3','WC_Probe8'};
 matchType = 'full';
 strainList = {'TU2769'};
 internalList = {'IC6'};
-stimPosition = {'posterior'};
+stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 cellDist = [40 250];
 resistCutoff = '<250';
 extFilterFreq = 2.5;
 
-posteriorNoiseCells = FilterRecordings(ephysData, ephysMetaData,...
+anteriorNoiseCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
      'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
@@ -32,7 +32,7 @@ clear protList matchType;
 %%
 protList ={'WC_Probe1','WC_Probe4','wC_Probe3','WC_Probe8'};
 matchType = 'full';
-noisePost = NonStatNoiseAnalysis(ephysData,protList,posteriorNoiseCells,'matchType',matchType,...
+noiseAnt = NonStatNoiseAnalysis(ephysData,protList,anteriorNoiseCells,'matchType',matchType,...
     'recParameters',ephysMetaData);
 clear protList matchType
 
@@ -75,7 +75,7 @@ totMeans = cell2mat(totMeans);
 totVars = cellfun(@(x)cat(1,x,NaN(maxLength-length(x),1)),totVars,'UniformOutput',false);
 totVars = cell2mat(totVars);
 
-protTimes = cellfun(@(x) sprintf('%sms',x(isstrprop(x,'digit'))), protNames,'un',0);
+protTimes = cellfun(@(x) sprintf('%sum',x(isstrprop(x,'digit'))), protNames,'un',0);
 
 % Create identifying wave names for Igor
 waveMeanNames = cellfun(@(x,y,z) sprintf('mean_%s_%s_%s', x, y,z), protTimes, stimNames, recNames, 'un',0);
