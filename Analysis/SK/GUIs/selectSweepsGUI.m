@@ -89,7 +89,7 @@ switch dataType
     % Plot the voltage traces for current clamp sweeps
     case 'V'
         
-        if isempty(strfind(protName,'Calib')) && channel == 1 % for non-PD calib traces
+        if isempty(strfind(protName,'Calib')) && channel == 1 % for non-PD calib traces, current clamp traces
             for iSweep = 1:nSweeps
                 % Plot the sweep in its proper subplot against time
                 tVec = 0:1/sf:length(data(:,iSweep,1))/sf-1/sf;
@@ -109,7 +109,27 @@ switch dataType
                 set(gca, 'YLim', [-90 40], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
                 
             end
-        else
+        elseif isempty(strfind(protName,'Calib')) && channel == 3 % for PD signal for non-calib traces
+            for iSweep = 1:nSweeps
+                % Plot the sweep in its proper subplot against time
+                tVec = 0:1/sf:length(data(:,iSweep,1))/sf-1/sf;
+                handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
+                    'Parent', handles.uip);
+                plot(tVec,data(:,iSweep,2)); %leak-subtracted trace
+                hold on;
+                
+                % Print baseline voltage on subplot
+                text(0.5,0.1, sprintf('%2.0f mV',leakSize(iSweep)*1E3), ...
+                    'VerticalAlignment','bottom', 'HorizontalAlignment','center', ...
+                    'Units','normalized', 'FontSize',10);
+                
+                % Number the axis for later use, set the button down function (must be
+                % done after plotting or at least after 'hold on', because plotting
+                % resets the axes properties otherwise).
+                set(gca, 'YLim', [-3 0.5], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+                
+            end
+        else % for PD calib traces
             for iSweep = 1:nSweeps
                 % Plot the sweep in its proper subplot against time
                 tVec = 0:1/sf:length(data(:,iSweep,1))/sf-1/sf;
@@ -126,6 +146,29 @@ switch dataType
             end
         end
         
+    case 'mV'
+        
+        if isempty(strfind(protName,'Calib')) && channel == 2 % for non-PD calib traces
+            for iSweep = 1:nSweeps
+                % Plot the sweep in its proper subplot against time
+                tVec = 0:1/sf:length(data(:,iSweep,1))/sf-1/sf;
+                handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
+                    'Parent', handles.uip);
+                plot(tVec,data(:,iSweep,1));
+                hold on;
+                
+                % Print baseline voltage on subplot
+                text(0.5,0.1, sprintf('%2.0f V',leakSize(iSweep)), ...
+                    'VerticalAlignment','bottom', 'HorizontalAlignment','center', ...
+                    'Units','normalized', 'FontSize',10);
+                
+                % Number the axis for later use, set the button down function (must be
+                % done after plotting or at least after 'hold on', because plotting
+                % resets the axes properties otherwise).
+                set(gca, 'YLim', [-1 5], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+                
+            end
+        end
 end
 
 

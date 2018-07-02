@@ -161,16 +161,16 @@ for iParam = 1:nParams
     end
     
     cellPeaks(iParam,4) = pkLoc;
-    cellPeaks(iParam,5) = pk;
-    cellPeaks(iParam,7) = tauAct;
-    cellPeaks(iParam,8) = tauDecay;
-    cellPeaks(iParam,9) = tPk;
+    cellPeaks(iParam,6) = pk;
+    cellPeaks(iParam,8) = tauAct;
+    cellPeaks(iParam,9) = tauDecay;
+    cellPeaks(iParam,10) = tPk;
 
 
 end
-cellPeaks(:,6) = pkThresh;
-cellPeaks(:,1) = stimParams(:,3); % stim size, velocity, or interval - the sorting parameter
-cellPeaks(:,2:3) = stimParams(:,4:5); % stim size and velocity
-cellPeaks(:,11) = stimParams(:,7); %nReps
-cellPeaks(:,10) = stimParams(:,8); %stim distance (0 if not entered)
+cellPeaks(:,7) = pkThresh;
+cellPeaks(:,1) = stimParams(:,3); % stim size, pos, velocity, or interval - the sorting parameter
+cellPeaks(:,2:4) = stimParams(:,4:6); % stim size, position and velocity
+cellPeaks(:,12) = stimParams(:,7); %nReps
+cellPeaks(:,11) = stimParams(:,8); %stim distance (0 if not entered)
 end

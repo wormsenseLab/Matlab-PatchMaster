@@ -250,7 +250,7 @@ for iCell = 1:length(allCells)
         seriesStimuli (:,8) = repmat(thisSeries,size(seriesStimuli,1),1);
         
         if exist('thisDist','var') && ~isempty(thisDist) && ~isnan(thisDist)
-            seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1),1);
+            seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1)/
         else
             % if no stim distance is included, must be zeros instead of
             % NaNs because unique will consider every NaN unique when
@@ -385,7 +385,7 @@ for iCell = 1:length(allCells)
     
     sweepsByParams = NaN(size(allLeakSub,1),nStim);
     sortedStim = cell(1,nStim);
-    
+        
     % KEEP this section separate for each Analysis fxn, because what you sort
     % by will change. (e.g., not by size for OnDt analysis).
     
@@ -400,14 +400,14 @@ for iCell = 1:length(allCells)
         switch sortSweepsBy{iStim}
             case 'magnitude'
                 sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,3),1);
-                stimTolVal(iStim) = 1;
+                stimTolVal(iStim) = 0.1;
             case 'position'
                 sweepsByParams(1:nTraces,iStim) = round(allStim{iStim}(:,4),1);
-                stimTolVal(iStim) = 1;
+                stimTolVal(iStim) = 0.1;
             case 'velocity'
                 trioRound = roundVel(allStim{iStim}(:,5)); %fxn found at end of file
                 sweepsByParams(1:nTraces,iStim) = trioRound;
-                stimTolVal(iStim) = 10;
+                stimTolVal(iStim) = 11;
             case 'interval' %time interval between previous stim and current stim
                 a = cellfun(@(x) x(:,1:2),allStim,'un',0);
                 stimInt = diff([a{:}],1,2)/sf; %calculate interval between stimuli in ms
@@ -420,10 +420,9 @@ for iCell = 1:length(allCells)
         end
     end
     
-    
-    
+    dists = allStim{1}(:,9);
     if distFlag
-        sweepsByParams = [sweepsByParams allStim{1}(:,9)];
+        sweepsByParams = [sweepsByParams dists];
         stimSortOrder = 1:nStim+1;
     end
     
@@ -431,20 +430,25 @@ for iCell = 1:length(allCells)
     % stimSortOrder. Use unique to find unique sets of rows/stimulus
     % profiles and separate them into groups.
     
-    [sweepsByParams, sortIdx, eachStimProfile, profileStartIdx, profileEndIdx] = ...
-        sortTol(sweepsByParams, stimTolVal, stimSortOrder);
+    [~, sortIdx, eachStimProfile, profileStartIdx, profileEndIdx] = ...
+        sortRowsTol(sweepsByParams, stimTolVal, stimSortOrder);
     sortedLeakSub = allLeakSub(sortIdx,:);
     
     for iStim = 1:nStim
         sortedStim{iStim} = allStim{iStim}(sortIdx,:);
     end
       
+    
+    %DECIDE: does sortRowsTol need to include a flag for excluding rows
+    %containing nans as stim parameters? Can't remember why that was
+    %necessary.
+    
 %     [eachStimProfile, profileStartIdx, ~] = unique(sweepsByParams,'rows','first');
 %     [~, profileEndIdx, ~] = unique(sweepsByParams,'rows','last');
     nStimProfiles = sum(sum(~isnan(eachStimProfile),2)>=nStim);
-    profileStartIdx = profileStartIdx(sum(~isnan(eachStimProfile),2)>=nStim);
-    profileEndIdx = profileEndIdx(sum(~isnan(eachStimProfile),2)>=nStim);
-    eachStimProfile = eachStimProfile(sum(~isnan(eachStimProfile),2)>=nStim,:);
+%     profileStartIdx = profileStartIdx(sum(~isnan(eachStimProfile),2)>=nStim);
+%     profileEndIdx = profileEndIdx(sum(~isnan(eachStimProfile),2)>=nStim);
+%     eachStimProfile = eachStimProfile(sum(~isnan(eachStimProfile),2)>=nStim,:);
     nReps = profileEndIdx-profileStartIdx+1;
     
     % Take mean trace from all reps across all series for each stimulus
@@ -453,6 +457,33 @@ for iCell = 1:length(allCells)
     meansByStimProfile = NaN(nStimProfiles, length(sortedLeakSub));
     sweepsByStimProfile = cell(nStimProfiles,1);
     stimMetaData = NaN(nStimProfiles,4,nStim);
+    
+    %PROBLEM: When using different protocols that have the same value for
+    %sortSweepsBy, e.g., same 20mm/s speed but one with sf 5 vs. 10 kHz,
+    %the protocols are grouped (can't sortStimBy time because we want to
+    %compare velocities). But then the sweeps are averaged before
+    %MRC-finding, which doesn't work because the timing is different, and
+    %the start time is off for at least one set. 
+    %
+    %Include sf in stim metadata.
+    %
+    %Try to separate? How? By checking sf? Not the only situation where
+    %this might happen, right? (e.g., protocol where times have been
+    %changed). So instead of taking the mean out here, maybe we want to pass all the
+    %sweeps of interest to findMRCs along with their individual metadata
+    %(because sortedStim at this point should have the correct start/end
+    %timepoints for each sweep). Then check if sf and stim start location
+    %are consistent within a grouping. If only loc is different, it's easy,
+    %just align based on stimStart, then take the mean and work as usual.
+    %
+    %For saving, if the sweeps have different timing or sf, you obviously
+    %can't take the mean, so drop zeroes in meansByStimProfile, and save
+    %sweepsByStimProfile (may require making includeSweeps default true). 
+    %
+    %If sf is different (may need to nest these two checks), take each set
+    %of sweeps and do the usual mean finding and peak finding, then use a
+    %new flag combineSweeps to either output those separately, or take a
+    %weighted mean based on nReps for each.
     
     for iProfile = 1:nStimProfiles
         groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
@@ -476,10 +507,19 @@ for iCell = 1:length(allCells)
             
             stimMetaData(:,1:2,iStim) = sortedStim{1,iStim}(profileStartIdx,1:2);
             stimMetaData(:,3,iStim) = eachStimProfile(:,iStim);
-            stimMetaData(:,4:5,iStim) = round(sortedStim{1,iStim}(profileStartIdx,4:5),1);
-            stimMetaData(:,6,iStim) = roundVel(sortedStim{1,iStim}(profileStartIdx,6));
-            stimMetaData(:,7,iStim) = nReps;
-            stimMetaData(:,8,iStim) = eachStimProfile(:,end);
+            stimMetaData(:,4:6,iStim) = round(sortedStim{1,iStim}(profileStartIdx,3:5),1);
+            stimMetaData(:,7,iStim) = roundVel(sortedStim{1,iStim}(profileStartIdx,6));
+            stimMetaData(:,8,iStim) = nReps;
+            if distFlag
+                stimMetaData(:,9,iStim) = eachStimProfile(:,end);
+            else
+                if sum(diff(dists))==0
+                    stimMetaData(:,9,iStim) = repmat(dists(1),size(eachStimProfile,1),1);
+                else
+                    stimMetaData(:,9,iStim) = zeros(size(eachStimProfile,1),1);
+                    fprintf('Multiple stim distances found for %s.\n Set distFlag to true to separate by stim distance.',cellName);
+                end
+            end
             
         end
     end
@@ -556,6 +596,12 @@ end
 mechPeaks = mechPeaks(~cellfun(@isempty, mechPeaks(:,1)),:);
 
 end
+
+
+
+% --------------------------------------------------------
+
+
 
 function trioRound = roundVel(velParam) %local function for rounding velocities
 velSign = (velParam>0)*2-1;

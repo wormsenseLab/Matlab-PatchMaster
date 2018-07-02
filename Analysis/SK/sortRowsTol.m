@@ -17,15 +17,16 @@ function [matA_sorted, sortIdx, matA_unique, startIdx, endIdx] = sortRowsTol(mat
 for iCol = 1:length(sortOrder)
     
     %pick out values which have a diff greater than tolerance from their
-    %neighbor after sorting.
-    isUnq(:,iCol) = [1; diff(abs(matA(sortIdx,iCol)))>tol(iCol)];
-    isUnqEnd(:,iCol) = [diff(abs(matA(sortIdx,iCol)))>tol(iCol)+1;1];
+    %neighbor after sorting. 
+    isUnq(:,iCol) = [1; diff(abs(matA_sorted(:,iCol)))>tol(iCol)];
+    isUnqEnd(:,iCol) = [diff(abs(matA_sorted(:,iCol)))>tol(iCol);1];
     
 end
 
-startIdx = sortIdx(logical(any(isUnq,2)));
-endIdx = sortIdx(logical(any(isUnqEnd,2)));
+% These need to be indices in the sorted matrix to be useful.
+startIdx = find(logical(any(isUnq,2)));
+endIdx = find(logical(any(isUnqEnd,2)));
 
-matA_unique = matA(sort(startIdx),:); % result
+matA_unique = matA_sorted(startIdx,:); % result
 
 end

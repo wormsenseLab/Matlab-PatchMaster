@@ -59,7 +59,7 @@ squareParams = arrayfun(@(x) [segStart(x), segStart(x)+segLength(x)-1], isSquare
 squareParams = repmat(squareParams,2,1);  
 squareParams = vertcat(squareParams{:});
 squareParams(:,3) = repmat(sqAmpl, size(squareParams,1),1);
-squareParams(:,4) = 1:size(squareParams,1); % stim number for the sweep
+squareParams(:,7) = 1:size(squareParams,1); % stim number for the sweep
 
 % Separate on and off stimuli for use in findMRCs(). Assume because this is
 % a square pulse that step command is instantaneous (i.e.,
@@ -72,6 +72,9 @@ for iSq = 2:2:size(squareParams,1)
     squareParams(iSq,2) = squareParams(iSq,1)+1;
     squareParams(iSq,3) = -squareParams(iSq,3);
 end
-
+%make output fit findMRCs input
+squareParams(:,4) = cumsum(squareParams(:,3)); % step position (based on assumption that sines go back to start position)
+squareParams(:,6) = ones(size(squareParams,1),1); %sweep num = 1 always for these
+% col 5 = velocity, but we're not calculating that, so leave it as 0.
 
 end

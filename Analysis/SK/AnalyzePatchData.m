@@ -159,7 +159,13 @@ end
 clear i 
 
 %% Print all Rs for making FAT_IV_Assignments spreadsheet
+
+%prints list with recording name and three rows: C, Rs, and series number
+%(use when deciding not only which recordings, but which protocols meet the
+%series resistance requirement)
+
 recs = fieldnames(ephysData);
+% recs = newCells;
 
 for i=1:length(recs)
 try fprintf('%s: %s\n', recs{i}, sprintf('%6g',round(ephysData.(recs{i}).C * 1e12,2)))
@@ -167,6 +173,7 @@ catch
     continue
 end
 fprintf('%s %s\n', '       ', sprintf('%6g',round(ephysData.(recs{i}).Rs)))
+fprintf('%s %s\n', '       ', sprintf('%6g',ephysData.(recs{i}).RsSeries));
 end
 
 %% Assign numbers of IVq series to look at

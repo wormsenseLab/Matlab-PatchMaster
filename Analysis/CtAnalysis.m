@@ -14,7 +14,8 @@
 %   ephysData       struct        Data is output as a nested struct. Each
 %                                 group/recording is a struct inside this.
 %                                 Ct, Rs, and tau fields are added to each
-%                                 group.
+%                                 group. RsSeries gives the series # at
+%                                 which each ct was taken.
 % 
 % Created by Sammy Katta, 15-May-2015.
 
@@ -44,9 +45,9 @@ for iCell = 1:length(allCells)
     protName = 'ct_neg';
     protLoc = matchProts(ephysData, cellName, protName, 'matchType', 'last');
     
-    C = zeros(1,length(protLoc));
-    tau = zeros(1,length(protLoc));
-    Rs = zeros(1,length(protLoc));
+    C = nan(1,length(protLoc));
+    tau = nan(1,length(protLoc));
+    Rs = nan(1,length(protLoc));
     
     for i = 1:length(protLoc)
         sf = ephysData.(cellName).samplingFreq{protLoc(i)}; %Hz, sampling freq
@@ -58,13 +59,11 @@ for iCell = 1:length(allCells)
         ctNeg = -1.*ephysData.(cellName).data{1,protLoc(i)};
         ctPos = ephysData.(cellName).data{1,protLoc(i)+1};
         
-        if size(ctNeg,2)<10 || size(ctPos,2)<10
+        if size(ctNeg,2)<10 || size(ctPos,2)<10 || size(ctNeg,1) ~= size(ctPos,1)
+            protLoc(i) = nan;
             continue
         end
         
-        if size(ctNeg,1) ~= size(ctPos,1)
-            continue
-        end
         
         ctNeg = bsxfun(@minus, ctNeg, mean(ctNeg(1:20,:)));
         ctPos = bsxfun(@minus, ctPos, mean(ctPos(1:20,:)));
@@ -143,9 +142,10 @@ for iCell = 1:length(allCells)
         %         ephysData.(cellName).fitStart(i) = fitStart;
     end
     
-    ephysData.(cellName).C = C;
-    ephysData.(cellName).tau = tau/1E-3; % record tau in milliseconds
-    ephysData.(cellName).Rs = Rs;
+    ephysData.(cellName).C = C(~isnan(C));
+    ephysData.(cellName).tau = tau(~isnan(tau))/1E-3; % record tau in milliseconds
+    ephysData.(cellName).Rs = Rs(~isnan(Rs));
+    ephysData.(cellName).RsSeries = protLoc(~isnan(protLoc));
     
 end
 

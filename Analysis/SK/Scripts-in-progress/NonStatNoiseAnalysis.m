@@ -14,9 +14,7 @@ p.addOptional('allCells', cell(0));
 
 p.addParameter('sortStimBy', 'num', @(x) sum(strcmp(x,{'num','time'})));
 p.addParameter('matchType', 'full', @(x) sum(strcmp(x,{'first','last','full'})));
-%sliding window size (n sweeps) for averaging
-p.addParameter('windowSize', 8, @(x) isnumeric(x) && mod(x,2)==0);
-% length of time (ms) per stimulus over which the responses will be averaged
+p.addParameter('windowSize', 8, @(x) isnumeric(x) && mod(x,2)==0); %sliding window size (n sweeps) for averaging
 p.addParameter('responseTime', 200, @(x) isnumeric(x) && x>0); % length of time(ms) after stimulus to be included in the noise analysis for that stimulus (default 15ms before, 200ms after)
 p.addParameter('excludeVariableStim', 'false', @(x) islogical);
 p.addParameter('sortSweepsBy',{'magnitude','magnitude','magnitude','magnitude'}, @(x) iscell(x));

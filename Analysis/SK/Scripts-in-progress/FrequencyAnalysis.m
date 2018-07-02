@@ -48,6 +48,20 @@ sortStimBy = 'time';
 sortSweepsBy = {'frequency'};
 stimSortOrder = [1 2];
 
+% pull cell distances and filter freqs
+allCellInd = cellfun(@(x) find(strcmp(ephysMetaData(:,1),x)),allCells,'un',0)';
+allCellInd = [allCellInd{:}];
+filterHeaders{1} = 'cellStimDistUm';
+filterHeaders{2} = 'stimFilterFrequencykHz';
+for i=1:length(filterHeaders)
+paramInd(i) = find(strncmpi(regexprep(ephysMetaData(1,:), '[^a-zA-Z0-9]', ''),...
+    regexprep(filterHeaders{i}, '[^a-zA-Z0-9]', ''),length(filterHeaders{i})));
+end
+cellDist = ephysMetaData(allCellInd,paramInd(1));
+extFilterFreq = ephysMetaData(allCellInd,paramInd(2));
+
+
+
 for iCell = 1:length(allCells)
       
     % Double check that the list of series given matches the indices of the
@@ -79,6 +93,11 @@ for iCell = 1:length(allCells)
             continue % if it's not on the list, go on to next series in for loop
         end
         
+        try thisDist = round(cellDist{iCell},1);
+        catch
+        end
+
+        
         probeI = ephysData.(cellName).data{1,thisSeries}(:,pickedTraces);
         stimComI = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces); %in V, not um
         % sampling frequency in kHz
@@ -100,6 +119,16 @@ for iCell = 1:length(allCells)
             retrieveSineFreq(ephysData, cellName, thisSeries, whichChan);
         % Add duration column
         sineParams = [sineParams(:,1:2) sineParams(:,2)-sineParams(:,1)+1 sineParams(:,3:end)];
+        
+        % Add distance column
+        if exist('thisDist','var') && ~isempty(thisDist) && ~isnan(thisDist)
+            squareParams(:,8) = repmat(thisDist, size(squareParams,1),1);
+        else
+            % if no stim distance is included, must be zeros instead of
+            % NaNs because unique will consider every NaN unique when
+            % sorting by stim for zeroFill later.
+            squareParams(:,8) = zeros(size(squareParams,1),1);
+        end
         
         % In case retrieveSineFreq returned without output because stimTree
         % didn't exist, alert the user and move on to the next group.
@@ -174,6 +203,10 @@ for iCell = 1:length(allCells)
     end
     
     % Combine sweep data across series for both squares and sines
+    
+    %TODO: Make sure the rest of this code matches with the changed order
+    %of square columns for sorting
+    
     allSineSum = vertcat(allSweeps{:,1});
     allSquareSum = vertcat(allSweeps{:,2});
     for iStim = 1:max(allSquareSum(:,7))

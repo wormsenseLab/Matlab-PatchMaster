@@ -10,7 +10,9 @@
 % that column as separate varargout (can't just feed as input bc it's not
 % clean enough for ramp detection, but once step is found, can use
 % timepoints to find calibrated actual displacement).
-
+% 
+% [startTimepoint  stopTimepoint  +/-stepSize  cumulativeStepSize  stimVelocity  sweep# stim#]
+% 
 % Set 'roundedTo' to 0 for no rounding.
 % Optional input: include baseline values or not
 

@@ -18,7 +18,7 @@ p.addRequired('protList', @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 
 p.addOptional('allCells', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}))
 
-p.addParameter('channel', 1, @(x) isnumeric(x)); %1 for stim command, 3 for PD signal
+p.addParameter('channel', 1, @(x) isnumeric(x)); %1 for current, 2 for stim command, 3 for PD signal
 p.addParameter('matchType', 'full', @(x) ischar(x));
 p.addParameter('maxCols',4,@(x) isnumeric(x));
 
@@ -60,7 +60,12 @@ for iCell = 1:length(allCells)
         
         % Subtract the leak, and add it as dim 3 behind the raw trace for
         % easy passing to the GUI
-        [leakSubtract, leakSize] = SubtractLeak(data,sf);
+        % use baseLength from first sweep of stimTree if available
+        try baseLength = ephysData.(allCells{iCell}).stimTree{protLoc{iCell}(wSeries)}{3,3}.seDuration * 1e3 -1;
+        catch
+            baseLength = 30;
+        end
+        [leakSubtract, leakSize] = SubtractLeak(data,sf, 'BaseLength', baseLength);
         data(:,:,2) = leakSubtract;
         
         % Run the GUI, with a maximum number of plots per page (especially
