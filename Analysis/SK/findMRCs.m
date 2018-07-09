@@ -14,11 +14,16 @@ p.addRequired('dataType', @(x) ischar(x));
 
 p.addParameter('tauType','fit', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'}));
 p.addParameter('integrateCurrent', 0); %1 to make column #8 with area under the curve
+p.addParameter('combineSweeps',0); %1 to combine sweeps with same sorting parameter but 
+%different stim timepoints or different sampling freqs (for the latter,
+%analysis will be done separately and then stats will be combined as a
+%weighted average based on number of sweeps of each condition
 
 p.parse(stimParams, meanTraces, sf, dataType, varargin{:});
 
 tauType = p.Results.tauType;
 integrateFlag = p.Results.integrateCurrent;
+combineFlag = p.Results.combineSweeps;
 
 smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling freq (kHz)
 threshTime = 100; % use first n ms of trace for setting noise threshold
