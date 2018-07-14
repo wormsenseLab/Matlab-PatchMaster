@@ -493,11 +493,6 @@ for iCell = 1:length(allCells)
         
         theseSweeps = sortedLeakSub(groupIdx{iProfile},:);
 %         
-%         if length(groupIdx{iProfile})>1
-%             meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
-%         else
-%             meansByStimProfile(iProfile,:) = theseSweeps;
-%         end
 %         
 %         if sweepFlag
 %             sweepsByStimProfile{iProfile} = theseSweeps;
@@ -529,6 +524,9 @@ for iCell = 1:length(allCells)
             %too. and dist? nice to have this error check, so might as
             %well.
             
+            %SEPARATE THIS LINE and run it on third continue
+            a = findMRCs_sweeps(theseStim, theseSweeps, dataType, 'tauType', tauType, 'integrateCurrent',integrateFlag);
+
             if distFlag
                 stimMetaData(:,9,iStim) = eachStimProfile(:,end);
             else
