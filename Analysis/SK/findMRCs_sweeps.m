@@ -2,7 +2,7 @@
 %
 % OUTPUT:
 % cellPeaks: 
-%[sortParam size vel pkLoc pk pkThresh tauAct tauDecay tPk distance nReps intPeak]%
+%[sortParam size pos vel pkLoc pk pkThresh tauAct tauDecay tPk distance nReps intPeak]%
 
 function [cellPeaks, cellFit] = findMRCs_sweeps(stimParams, paramTraces, dataType, varargin)
 p = inputParser;
@@ -27,6 +27,7 @@ tauType = p.Results.tauType;
 integrateFlag = p.Results.integrateCurrent;
 combineSFs = logical(p.Results.combineSFs);
 combineLocs = logical(p.Results.combineLocs);
+roundFlag = 0; % if 1, round size/pos/vel parameters for easy reading in output.
 
 % smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling freq (kHz)
 threshTime = 100; % use first n ms of trace for setting noise threshold
@@ -37,7 +38,7 @@ nParams = size(paramTraces,1);
 
 % Check if different sampling frequencies were used in protocols with the
 % same sorting parameter, and give separate 
-[stimParams, sfSortIdx, ~, sfStart, sfEnd] = sortRowsTol(stimParams,0,10);
+[stimParams, sfSortIdx, ~, sfStart, sfEnd] = sortRowsTol(stimParams,0,11);
 paramTraces = paramTraces(sfSortIdx,:);
 
 meansBySf = nan(length(sfStart),size(paramTraces,2));
@@ -47,7 +48,7 @@ for iSf = 1:length(sfStart)
     theseTraces = paramTraces(sfStart(iSf):sfEnd(iSf),:);
     
     
-    sf = theseStim(1,10);
+    sf = theseStim(1,11);
     smoothWindow = sf;
     % Number of timepoints to skip after stimulus onset to avoid the stimulus
     % artifact in peak-finding (dependent on sampling frequency in kHz).
@@ -217,36 +218,37 @@ for iSf = 1:length(sfStart)
             
         end
         
-        cellPeaks(iLoc,4) = pkLocActual;
+        cellPeaks(iLoc,5) = pkLocActual;
         cellPeaks(iLoc,6) = pk;
         cellPeaks(iLoc,8) = tauAct;
         cellPeaks(iLoc,9) = tauDecay;
         cellPeaks(iLoc,10) = tPk;
     end
-    
-    
-    %NEXT:
-    %  take the mean of the baseline window and the stim window instead
-    %  of the whole trace, smooth each separately and find the
-    %  threshold, then the peaks/stats.
-    %
-    %  outside of the iSf loop, check for combineSFs, and either take a
-    %  weighted mean of the stats, or output them as nested cells? or maybe
-    %  just add to dim 3 inside cellPeaks. alternatively, interleave them,
-    %  with the sf parameter obviously different.
-    %
-    %Use same baseMean for all responses in that trace? Nope, we're
-    %calculating the thresh twice, but it should be identical.
-    
+       
     cellPeaks(:,7) = pkThresh;
-    cellPeaks(:,1) = stimParams(:,3); % stim size, pos, velocity, or interval - the sorting parameter
-    cellPeaks(:,2:4) = stimParams(:,4:6); % stim size, position and velocity
-    cellPeaks(:,12) = stimParams(:,7); %nReps
-    cellPeaks(:,11) = stimParams(:,8); %stim distance (0 if not entered)
+    cellPeaks(:,1) = stimParams(locStart,3); % stim size, pos, velocity, or interval - the sorting parameter
+    cellPeaks(:,12) = locEnd-locStart+1; %nReps
+    cellPeaks(:,11) = stimParams(locStart,8); %stim distance (0 if not entered)
     
-    keyboard;
-    
-    
+    if roundFlag
+        cellPeaks(:,2:3) = round(stimParams(locStart,4:5),1); % stim size, position
+        cellPeaks(:,4) = roundVel(stimParams(locStart,6));
+    else
+        
+        cellPeaks(:,2:3) = stimParams(locStart,4:5); % stim size, position
+        cellPeaks(:,4) = stimParams(locStart,6);      
+    end
+
+        
+%     If combineSfs is set, combineLocs must also be true, because it's
+%     nested inside. If that's okay, then next: take weighted mean of locs,
+%     collapse into single vector, have dim 3 of cellPeaks for each sf,
+%     then take weighted mean across dim 3, based on nReps and update new
+%     nReps to be sum of previous ones.
+
+%     If not combining, interleave peaks and mean traces? Should handle
+%     trace sorting here, to match up to whatever the stats output looks
+%     like.
     
 
     

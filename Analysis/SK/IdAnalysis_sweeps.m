@@ -250,22 +250,17 @@ for iCell = 1:length(allCells)
         seriesStimuli (:,8) = repmat(thisSeries,size(seriesStimuli,1),1);
         
         if exist('thisDist','var') && ~isempty(thisDist) && ~isnan(thisDist)
-            seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1);
+            seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1),1);
         else
             % if no stim distance is included, must be zeros instead of
             % NaNs because unique will consider every NaN unique when
             % sorting by stim for zeroFill later.
             seriesStimuli(:,9) = zeros(size(seriesStimuli,1),1);
         end
-        %NEXT: where do I have to add in this parameter so I can use it when
-        %sorting for unique stimProfiles? It has to get into sweepsByParams.
         
-        
-        % add sampling freq because that might vary among series that might
-        % otherwise be grouped as well, and you should use it to check that
-        % they're actually all the same.
+        % add sampling freq because that can vary among series that might
+        % otherwise be grouped as well.
         seriesStimuli(:,10) = repmat(sf, size(seriesStimuli,1),1);
-        
         
         % all on/off stimuli are still mixed together.
         % depending on input param, use either stimulus number or stimulus
@@ -493,30 +488,51 @@ for iCell = 1:length(allCells)
     %weighted mean based on nReps for each.
     
     for iProfile = 1:nStimProfiles
+        
         groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
         
         theseSweeps = sortedLeakSub(groupIdx{iProfile},:);
-        
-        if length(groupIdx{iProfile})>1
-            meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
-        else
-            meansByStimProfile(iProfile,:) = theseSweeps;
-        end
-        
-        if sweepFlag
-            sweepsByStimProfile{iProfile} = theseSweeps;
-        end
-        
-        % Use the first sweep for a given size to pick the stimulus window
-        % Save into parameters to pass to findMRCs.
-        
+%         
+%         
+%         if sweepFlag
+%             sweepsByStimProfile{iProfile} = theseSweeps;
+%         end
+%         
+%         % Use the first sweep for a given size to pick the stimulus window
+%         % Save into parameters to pass to findMRCs.
+%         
         for iStim = 1:nStim
+            theseStim = sortedStim{1,iStim}(groupIdx{iProfile},:);
+
+%             stimMetaData(:,1:2,iStim) = sortedStim{1,iStim}(profileStartIdx,1:2);
+%             stimMetaData(:,3,iStim) = eachStimProfile(:,iStim);
+%             stimMetaData(:,4:6,iStim) = round(sortedStim{1,iStim}(profileStartIdx,3:5),1);
+%             stimMetaData(:,7,iStim) = roundVel(sortedStim{1,iStim}(profileStartIdx,6));
+%             stimMetaData(:,8,iStim) = nReps;
+%             stimMetaData(:,10,iStim) = sortedStim{1,iStim}(profileStartIdx,10));
+
+            %can't use this whole structure as is bc we need to be able to
+            %have separate sfs and locs.
+% NEXT:              
+            %so, maybe just pass the original sortedStim and sortedLeakSub
+            %and groupIdx to findMRCs_sweeps? or should that sorting just be done
+            %within findMRCs also? (decide on that later, just leave as is
+            %for now). 
+            %the main thing to pass is the sorting parameter, and the
+            %rounding can happen in findMRCs? though you may need to
+            %separate out the roundVel subfxn so it can be used in there
+            %too. and dist? nice to have this error check, so might as
+            %well.
             
-            stimMetaData(:,1:2,iStim) = sortedStim{1,iStim}(profileStartIdx,1:2);
-            stimMetaData(:,3,iStim) = eachStimProfile(:,iStim);
-            stimMetaData(:,4:6,iStim) = round(sortedStim{1,iStim}(profileStartIdx,3:5),1);
-            stimMetaData(:,7,iStim) = roundVel(sortedStim{1,iStim}(profileStartIdx,6));
-            stimMetaData(:,8,iStim) = nReps;
+            % Insert column 3 into theseStim so findMRCs_sweeps has access
+            % to the sorting parameter.
+            
+            theseStim = [theseStim(:,1:2) repmat(eachStimProfile(iProfile,iStim),size(theseStim,1),1) theseStim(:,3:end)];
+            
+            %SEPARATE THIS LINE and run it on third continue
+a = findMRCs_sweeps(theseStim, theseSweeps, dataType, 'tauType', tauType, 'integrateCurrent',integrateFlag);
+
+            
             if distFlag
                 stimMetaData(:,9,iStim) = eachStimProfile(:,end);
             else
@@ -603,3 +619,5 @@ end
 mechPeaks = mechPeaks(~cellfun(@isempty, mechPeaks(:,1)),:);
 
 end
+
+
