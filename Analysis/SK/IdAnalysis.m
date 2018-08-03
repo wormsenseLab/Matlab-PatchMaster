@@ -250,7 +250,7 @@ for iCell = 1:length(allCells)
         seriesStimuli (:,8) = repmat(thisSeries,size(seriesStimuli,1),1);
         
         if exist('thisDist','var') && ~isempty(thisDist) && ~isnan(thisDist)
-            seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1);
+            seriesStimuli(:,9) = repmat(thisDist, size(seriesStimuli,1), 1);;
         else
             % if no stim distance is included, must be zeros instead of
             % NaNs because unique will consider every NaN unique when
@@ -431,6 +431,7 @@ for iCell = 1:length(allCells)
     if distFlag
         sweepsByParams = [sweepsByParams dists];
         stimSortOrder = 1:nStim+1;
+        stimTolVal(nStim+1) = 0;
     end
     
     % Sort rows by successively less variable parameters based on

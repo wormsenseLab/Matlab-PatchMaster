@@ -2,7 +2,10 @@
 %
 % OUTPUT:
 % cellPeaks: 
-%[sortParam size vel pkLoc pk pkThresh tauAct tauDecay tPk distance nReps intPeak]%
+%[sortParam size pos vel pkLoc pk pkThresh tauAct tauDecay tPk distance nReps intPeak]%
+% 
+% TODO: consider when to use smooMean vs. meanTraces for actual peak
+% current values (also in finding the half-max tau?)
 
 function [cellPeaks, cellFit] = findMRCs(stimParams, meanTraces, sf, dataType, varargin)
 p = inputParser;
@@ -93,7 +96,7 @@ for iParam = 1:nParams
         peakLocs = peakLocs(peaks==pk);
         pkLoc = peakLocs(1) + stimParams(iParam,1)+artifactOffset; %account for start position
         
-        switch tauType
+        switch tauType %decay tau
             case 'fit'
                 
                 % Find time for current to decay to 2/e of the peak or 75ms
@@ -115,8 +118,8 @@ for iParam = 1:nParams
 
             case 'thalfmax' %use the timepoint of half-maximal current instead of exp fit
                 halfpk = pk/2;
-                halfLocs = find(smooMean(iParam,stimStart:stimEnd+(sf*200))>=halfpk);
-                
+                halfLocs = find(abs(smooMean(iParam,stimStart:stimEnd+(sf*200)))>=halfpk);
+
                 tauAct = (halfLocs(1)-1)/sf; %ms
                 
                 decayHalfLocs = find(smooMean(iParam,pkLoc:pkLoc+(sf*100))<=halfpk);
@@ -165,7 +168,7 @@ for iParam = 1:nParams
         
     end
     
-    cellPeaks(iParam,4) = pkLoc;
+    cellPeaks(iParam,5) = pkLoc;
     cellPeaks(iParam,6) = pk;
     cellPeaks(iParam,8) = tauAct;
     cellPeaks(iParam,9) = tauDecay;

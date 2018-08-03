@@ -66,7 +66,7 @@ stimPosition = {'posterior'};
 % cellTypeList = {'ALMR'};
 % stimPosition = {'anterior'};
 wormPrep = {'dissected'};
-cellDist = [40 150];
+cellDist = [40 200];
 resistCutoff = '<250';
 extFilterFreq = 2.5;
 
@@ -80,7 +80,7 @@ clear cellDist strainList internalList cellTypeList stimPosition resistCutoff an
 
 %% Run sweep selection GUI
 
-ExcludeSweeps(ephysData, protList, posteriorCells, 'matchType', matchType);
+ExcludeSweeps(ephysData, protList, anteriorDistCells, 'matchType', matchType);
 
 clear protList matchType;
 
@@ -117,7 +117,7 @@ clear protList matchType;
 protList = {'WC_Probe','NoPre'};
 sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
 matchType = 'first';
-anteriorMRCs = IdAnalysis(ephysData,protList,anteriorCells,'num','matchType',matchType, ...
+anteriorMRCs = IdAnalysis(ephysData,protList,anteriorDistCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
     'recParameters', ephysMetaData,'sepByStimDistance',1);
 clear protList sortSweeps matchType
