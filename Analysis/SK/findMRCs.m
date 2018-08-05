@@ -1,5 +1,9 @@
 % findMRCs.m
 %
+% INPUT:
+% stimParams
+% [stimStart stimEnd sortParam size pos vel nReps dist]
+% 
 % OUTPUT:
 % cellPeaks: 
 %[sortParam size pos vel pkLoc pk pkThresh tauAct tauDecay tPk distance nReps intPeak]%
@@ -179,6 +183,6 @@ end
 cellPeaks(:,7) = pkThresh;
 cellPeaks(:,1) = stimParams(:,3); % stim size, pos, velocity, or interval - the sorting parameter
 cellPeaks(:,2:4) = stimParams(:,4:6); % stim size, position and velocity
-cellPeaks(:,12) = stimParams(:,7); %nReps
-cellPeaks(:,11) = stimParams(:,8); %stim distance (0 if not entered)
+cellPeaks(:,12) = stimParams(:,8); %nReps
+cellPeaks(:,11) = stimParams(:,9); %stim distance (0 if not entered)
 end

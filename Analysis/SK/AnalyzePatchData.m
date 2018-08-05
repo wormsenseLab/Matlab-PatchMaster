@@ -43,34 +43,19 @@ ephysMetaData = ImportMetaData();  %Recording Database
 % protList = {'PrePulse'};
 % protList = {'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge'};
 protList ={'WC_Probe';'NoPre'};
-% ExcludeSweeps(ephysData,allCells,1,protList,'first');
 
-
-% protList = {'Pair8'};
-% protList = '_CC';
-% ExcludeSweeps(ephysData,allCells,1,protList,'last');
-
-% protList ={'0_time'};
-
-% protList ={'WC_Probe8'};
 matchType = 'first';
 strainList = {'TU2769'};
 internalList = {'IC2'};
 % cellTypeList = {'ALMR'};
-stimPosition = {'posterior'};
+stimPosition = {'anterior'};
 
-% protList ={'_time'};
-% matchType = 'first';
-% strainList = {'TU2769'};
-% internalList = {'IC2'};
-% cellTypeList = {'ALMR'};
-% stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 cellDist = [40 200];
 resistCutoff = '<250';
 extFilterFreq = 2.5;
 
-posteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
+anteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
      'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...

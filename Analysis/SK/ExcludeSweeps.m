@@ -21,6 +21,8 @@ p.addOptional('allCells', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1})
 p.addParameter('channel', 1, @(x) isnumeric(x)); %1 for current, 2 for stim command, 3 for PD signal
 p.addParameter('matchType', 'full', @(x) ischar(x));
 p.addParameter('maxCols',4,@(x) isnumeric(x));
+p.addParameter('addToList', cell(0), @(x) iscell(x));
+p.addParameter('overwriteExisting',0,@(x) islogical(x) || isnumeric(x) && ismember(x,[0 1]));
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -28,9 +30,15 @@ allCells = p.Results.allCells;
 channel = p.Results.channel;
 matchType = p.Results.matchType;
 maxCols = p.Results.maxCols;
+existingSweeps = p.Results.addToList;
+overwriteFlag = logical(p.Results.overwriteExisting);
 
 if isempty(allCells)
     allCells = fieldnames(ephysData);
+end
+
+if isempty(existingSweeps)
+    overwriteFlag = 1; %no reason to worry about overwriting prev. list if it's empty
 end
 
 maxPlots = 12;
@@ -57,7 +65,14 @@ for iCell = 1:length(allCells)
         nSweeps = size(data,2);
         sweeps = 1:nSweeps;
         
-        
+        if ~overwriteFlag 
+            %(if there were an existing list and overwriteFlag was true, it
+            % would only overwrite those sweeps that overlapped but not everything)
+           
+%TODO: check against oldSweeps list and increment wSeries? this has to work
+%properly with goBack (i.e., repeat whatever the last GUI instance asked
+%for, go one more previous or go one more next).
+        end
         % Subtract the leak, and add it as dim 3 behind the raw trace for
         % easy passing to the GUI
         % use baseLength from first sweep of stimTree if available

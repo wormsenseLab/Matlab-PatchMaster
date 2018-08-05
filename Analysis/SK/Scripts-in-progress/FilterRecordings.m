@@ -57,6 +57,7 @@
 %                                   ignore all non-alphanumeric characters
 %                                   (no symbols, Greek letters) when 
 %                                   matching filter parameters to columns.
+%                                   Defaults to true.
 % 
 % 
 % 

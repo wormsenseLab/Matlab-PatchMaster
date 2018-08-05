@@ -1,7 +1,34 @@
 %TrapNoiseAnalysis.m
 
+
+%%strainList = {'TU2769'};
+internalList = {'IC6'};
+% cellTypeList = {'ALMR'};
+stimPosition = {'posterior'};
+
+wormPrep = {'dissected'};
+cellDist = [40 100];
+resistCutoff = '<250';
+extFilterFreq = [2.5 5];
+
+noiseTrapCells = FilterRecordings(ephysData, ephysMetaData,...
+    'strain', strainList, 'internal', internalList, ...
+    'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
+    'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
+    'stimFilterFrequencykHz', extFilterFreq);
+
+protList ={'NoiseTrap','WCProbe8'};
+
+matchType = 'first';
+
+%TODO: Upgrade ExcludeSweeps to allow passing in an existing list, then
+%check recording name/series number against it and skip (if overWriteFlag)
+%if it's already been vetted. Add new recordings to the end of the list,
+%sortrows (and maybe check unique/warn which rows have multiple) and save
+%as new file.
+
 %% Approving Traces
-protList ={'Noise_Trap'};
+protList ={'Noise_Trap','WCProbe8'};
 matchType = 'first';
 strainList = {'TU2769'};
 internalList = {'IC6'};
