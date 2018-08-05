@@ -4,7 +4,7 @@
 %                     Enter = Done
 %
 
-function [keepSweep, goBack] = selectSweepsGUI(data,dataType,channel,leakSize,sf,cellName,protName,nCols,pageNo)
+function [keepSweep, goBack] = selectSweepsGUI(data,dataType,channel,leakSize,sf,cellName,protName,nCols,pageNo,keepSweep)
 
 goBack = 0; % pass this as 1 if user clicks "Previous" button
 %TODO: Set figure size so you can actually see the plots (maybe YLim on axes too)
@@ -78,7 +78,7 @@ switch dataType
             text(0.5,0.1, sprintf('%.1f pA',leakSize(iSweep)*1E12), ...
                 'VerticalAlignment','bottom', 'HorizontalAlignment','center', ...
                 'Units','normalized', 'FontSize',10);
-            
+            initializeBGColor();
             % Number the axis for later use, set the button down function (must be
             % done after plotting or at least after 'hold on', because plotting
             % resets the axes properties otherwise).
@@ -176,9 +176,18 @@ set(handles.f, 'Visible', 'on');
 
 % Boolean of which sweeps to keep, will be updated as user clicks on plots
 % to exclude those sweeps.
-keepSweep = true(1,nSweeps); 
+% keepSweep = true(1,nSweeps); 
 
 uiwait;
+
+    function initializeBGColor()
+        currentSweep = str2double(get(gca,'Tag'));
+        if ~keepSweep(iSweep)
+            set(gca,'Color','Red');
+        else
+            set(gca,'Color','White');
+        end
+    end
 
     function toggleBGColor(src,~)
         currentSweep = str2double(get(gca,'Tag'));

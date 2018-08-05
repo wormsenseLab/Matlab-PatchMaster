@@ -1,6 +1,6 @@
 % ExcludeSweeps.m
 %
-% selectedSweeps = ExcludeSweeps(ephysData, allCells, channel, protList, matchType)
+% selectedSweeps = ExcludeSweeps(ephysData, protList, varargin)
 % 
 % 
 %TODO: inputparser param for electrode data vs. calib (plotting properly,
@@ -50,17 +50,25 @@ if ~exist('matchType','var')
     matchType = 'full';
 end
 
-for iCell = 1:length(allCells)
+iCell = 1;
+goBack = 0;
+keepSweeps = cell(0);
+
+while iCell <= length(allCells)
     protLoc{iCell} = matchProts(ephysData, allCells{iCell}, protList, 'matchType', matchType);
     thisCell = allCells{iCell};
     
-    wSeries = 1;
-    while wSeries <= length(protLoc{iCell})
-        thisSeries = protLoc{iCell}(wSeries);
-        data = ephysData.(allCells{iCell}).data{channel,protLoc{iCell}(wSeries)};
-        dataType = ephysData.(allCells{iCell}).dataunit{channel,protLoc{iCell}(wSeries)};
-        sf = ephysData.(allCells{iCell}).samplingFreq{protLoc{iCell}(wSeries)}/1000;
-        protName = sprintf('%d: %s', wSeries,...
+    iSeries = 1;
+    while iSeries <= length(protLoc{iCell})
+        if goBack && lastSeries
+            iSeries = length(protLoc{iCell});
+        end
+        
+        thisSeries = protLoc{iCell}(iSeries);
+        data = ephysData.(allCells{iCell}).data{channel,protLoc{iCell}(iSeries)};
+        dataType = ephysData.(allCells{iCell}).dataunit{channel,protLoc{iCell}(iSeries)};
+        sf = ephysData.(allCells{iCell}).samplingFreq{protLoc{iCell}(iSeries)}/1000;
+        protName = sprintf('%d: %s', iSeries,...
             ephysData.(thisCell).protocols{thisSeries});
         nSweeps = size(data,2);
         sweeps = 1:nSweeps;
@@ -69,14 +77,19 @@ for iCell = 1:length(allCells)
             %(if there were an existing list and overwriteFlag was true, it
             % would only overwrite those sweeps that overlapped but not everything)
            
-%TODO: check against oldSweeps list and increment wSeries? this has to work
+%NEXT: check against oldSweeps list and increment iSeries? this has to work
 %properly with goBack (i.e., repeat whatever the last GUI instance asked
 %for, go one more previous or go one more next).
+%Do this by reading in keepSweeps(oldSweepNums)=true if cellID/series
+%matches and overwriteFlag=true. If not overwriteFlag, skip the series and
+%proceed in the same direction as user had indicated (just don't reset goBack),
+%and concatenate to selectedSweeps at the end, and sortrows there.
+
         end
         % Subtract the leak, and add it as dim 3 behind the raw trace for
         % easy passing to the GUI
         % use baseLength from first sweep of stimTree if available
-        try baseLength = ephysData.(allCells{iCell}).stimTree{protLoc{iCell}(wSeries)}{3,3}.seDuration * 1e3 -1;
+        try baseLength = ephysData.(allCells{iCell}).stimTree{protLoc{iCell}(iSeries)}{3,3}.seDuration * 1e3 -1;
         catch
             baseLength = 30;
         end
@@ -86,8 +99,13 @@ for iCell = 1:length(allCells)
         % Run the GUI, with a maximum number of plots per page (especially
         % useful for series with many reps). Can also adjust maximum
         % number of columns.
-        keepSweeps = [];
-        for iPage = 1:maxPlots:nSweeps
+
+        iPage = 1;
+        while iPage <= nSweeps
+            
+            if goBack == 1 && lastPage % if user hit previous on first page of new series, go to last page (of previous series)
+                iPage = (floor(nSweeps/maxPlots))*maxPlots+1;
+            end
             
             if nSweeps >= iPage+maxPlots-1
                 pageSweeps = iPage:iPage+maxPlots-1;
@@ -102,7 +120,12 @@ for iCell = 1:length(allCells)
             end
             
             pageNo = [pageSweeps(1) pageSweeps(end) nSweeps];
-
+            try keepPageSweeps = keepSweeps{iCell}{iSeries}(pageSweeps);  
+            catch % if keepSweeps hasn't been initialized here, initialize as true
+                keepSweeps{iCell}{iSeries} = true(size(sweeps)); % assume all sweeps are kept unless user excludes them
+                keepPageSweeps = keepSweeps{iCell}{iSeries}(pageSweeps);
+            end
+            
             % Run the GUI for the current series
             %TODO: Get Esc key to pass out an error to catch (currently, error
             %seems to be passed to uiwait instead of out to ExcludeSweeps).
@@ -110,58 +133,83 @@ for iCell = 1:length(allCells)
             %modify iSeries. Okay to clear previous selection, or do we need
             %to replay excluded traces?
             [keepPageSweeps, goBack] = selectSweepsGUI(...
-                data(:,pageSweeps,:),dataType,channel,leakSize(pageSweeps),sf,thisCell,protName,nCols,pageNo);
-            %         catch
-            %             fprintf('Exited on %s series %d',cellName,protLoc{iCell});
-            %             return;
-            %         end
+                data(:,pageSweeps,:),dataType,channel,leakSize(pageSweeps),sf,thisCell,protName,nCols,pageNo,keepPageSweeps);
             
-            keepSweeps = [keepSweeps keepPageSweeps];
+            % indexing sweeps allows GUI to remember which sweeps were
+            % selected between pages in a recording, but will reset across
+            % series.
+            keepSweeps{iCell}{iSeries}(pageSweeps) = keepPageSweeps; % 
+
+            if goBack && iPage == 1 % if user hit previous on first page of new series, go to previous series
+                lastPage = 1;
+                break
+            elseif goBack % if user hit previous any other time, go back a page
+                iPage = iPage - maxPlots;
+                lastPage = 0;
+            else % if user hit enter/next, continue onward and save the selected sweeps
+                iPage = iPage + maxPlots;
+                lastPage = 0;
+            end
         end
         
         % Format the list of sweeps into a text string for the Excel sheet
-        sweeps = sweeps(logical(keepSweeps));
-        
-        if ~isempty(sweeps)
-            
-            
-%TODO: find whether an entry exists for the current series. If so,
-%overwrite it. If not, make a new one (at the end?)
-            %
-%             if ~ismember([selectedSweeps{ismember(selectedSweeps(:,1),thisCell),2}],thisSeries)
-                totSeries = totSeries+1;
-%             else
-%                 totSeries = find(ismember(selectedSweeps(:,1),thisCell) && ismember([selectedSweeps{:,2}],thisSeries));
-%             end
-%             
-            sweepsTxt = num2str(sweeps,'%g,'); % add commas within string
-            sweepsTxt = sweepsTxt(1:end-1); % trim last comma
-            sweepsTxt = horzcat('''',sweepsTxt); % prepend ' to force xls text format
-            % (necessary when only 1 sweep left)
-            
-            % Set up the cell name, series number, and sweep numbers in the
-            % right format for outputting to the Excel sheet
-            selectedSweeps{totSeries,1}=thisCell;
-            selectedSweeps{totSeries,2}=thisSeries;
-            selectedSweeps{totSeries,3}=sweepsTxt;
-        end
-        
-        % If user has clicked previous button, display the previous series.
-%TODO: Fix this to jump back within wSeries and totSeries and iCell.
-%Luckily, you sillily used totSeries instead of just using end, so now you
-%can make use of that. Hurray!
-        if goBack && totSeries > 1
-            wSeries = wSeries-1;
-            
-        elseif goBack && wSeries <= 1
-            fprintf('On first series, can''t go back.');
+        keepSweepNums{iCell}{iSeries} = sweeps(keepSweeps{iCell}{iSeries});
+
+        if iSeries == 1 && goBack
+            iCell = iCell - 1;
+            lastSeries = 1;
+            break
+        elseif goBack
+            iSeries = iSeries - 1;
+            lastSeries = 0;
         else
-            wSeries = wSeries+1;
+            iSeries = iSeries+1;
+            lastSeries = 0;
         end
     end
     
     
+    if iCell == 1 && goBack
+        fprintf('First series, please select traces to exclude.');
+        continue
+    elseif goBack
+        iCell = iCell - 1;
+    else
+        iCell = iCell + 1;
+    end
+    
+    
 end
+
+keeps = ~cellfun(@isempty,keepSweepNums);
+
+keepCells = allCells(keeps);
+keepProts = protLoc(keeps);
+keepSweepNums = keepSweepNums(keeps);
+
+
+% Write out the kept sweep numbers into a single cell array for exporting
+% to Excel.
+totSeries = 0;
+for iCell = 1:length(keepCells)
+    for iSeries = 1:length(keepProts{iCell})
+        totSeries = totSeries + 1;
+        sweeps = keepSweepNums{iCell}{iSeries};
+        
+        if ~isempty(sweeps)
+            
+            sweepsTxt = num2str(sweeps,'%g,'); % add commas within string
+            sweepsTxt = sweepsTxt(1:end-1); % trim last comma
+            sweepsTxt = horzcat('''',sweepsTxt); % prepend ' to force xls text format
+            
+            selectedSweeps{totSeries,1}=keepCells(iCell);
+            selectedSweeps{totSeries,2}=keepProts{iCell}(iSeries);
+            selectedSweeps{totSeries,3}=sweepsTxt;
+
+        end
+    end
+end
+
 
 % Ask where to save and write out the .xls file)
 [filename, pathname] = uiputfile(...

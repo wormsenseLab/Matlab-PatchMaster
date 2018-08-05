@@ -165,7 +165,13 @@ distVPeak_Ant(:,4) = (Im * (Vc-Ena)) ./ (Vm-Ena);
 
 figure(); axh(1) = subplot(2,1,1);
 scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
+xlabel('Distance from cell body (um)');
+ylabel('Current @10um (pA)')
+text(100,200,'Anterior');
 axh(2) = subplot(2,1,2);
 scatter(distVPeak_Post(:,1),distVPeak_Post(:,2));
+xlabel('Distance from cell body (um)');
+ylabel('Current @10um (pA)')
+text(100,200,'Posterior');
 
 xlim(axh,[0 200]); ylim(axh,[0 200]);
