@@ -202,7 +202,7 @@ for iCell = 1:length(keepCells)
             sweepsTxt = sweepsTxt(1:end-1); % trim last comma
             sweepsTxt = horzcat('''',sweepsTxt); % prepend ' to force xls text format
             
-            selectedSweeps{totSeries,1}=keepCells(iCell);
+            selectedSweeps{totSeries,1}=keepCells{iCell};
             selectedSweeps{totSeries,2}=keepProts{iCell}(iSeries);
             selectedSweeps{totSeries,3}=sweepsTxt;
 
