@@ -210,6 +210,8 @@ for iCell = 1:length(keepCells)
     end
 end
 
+keepRows = cellfun(@(x) ~isempty(x), selectedSweeps(:,3));
+selectedSweeps = selectedSweeps(keepRows,:);
 
 % Ask where to save and write out the .xls file)
 [filename, pathname] = uiputfile(...

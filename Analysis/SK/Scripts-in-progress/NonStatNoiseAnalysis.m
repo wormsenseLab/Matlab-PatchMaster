@@ -185,6 +185,9 @@ for iCell = 1:length(allCells)
         for iStim = 1:nStims
             
             stimLoc = uniquetol(allStim{iStim}(:,1:2),lengthTol,'ByRows',true);
+            stimSize = round(mean(allStim{iStim}(:,3)));
+            stimPos = round(mean(allStim{iStim}(:,4)));
+            stimVel = roundVel(mean(allStim{iStim}(:,5)));
             responseTime = [stimLoc(1)-preTime*sf:stimLoc(2)+postTime*sf];
             %NEXT: use seriesStimuli location/sweep number to set time
             %boundaries for where to look at the response
@@ -225,6 +228,9 @@ for iCell = 1:length(allCells)
             % Save everything to output struct
             nonStatOutput.(cellName)(whichRow).protocol = protName;
             nonStatOutput.(cellName)(whichRow).stimNum = iStim;
+            nonStatOutput.(cellName)(whichRow).size = stimSize;
+            nonStatOutput.(cellName)(whichRow).position = stimPos;
+            nonStatOutput.(cellName)(whichRow).velocity = stimVel;
             nonStatOutput.(cellName)(whichRow).slidingMean = windowMeans;
             nonStatOutput.(cellName)(whichRow).slidingVar = windowVars;
             nonStatOutput.(cellName)(whichRow).sweepsPerWindow = averagingWindow;

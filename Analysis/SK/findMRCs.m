@@ -149,6 +149,7 @@ for iParam = 1:nParams
             % trapz uses the trapezoidal method to integrate & calculate area under
             % the curve. But it assumes unit spacing, so divide by the sampling
             % frequency to get units of seconds.            
+    %FIX: should I be dividing by sf in Hz and not kHz here? Check units.
             try intPeak = trapz(meanTraces(iParam,stimStart:stimEnd+(300*sf))/sf);
             catch
                 intPeak = trapz(meanTraces(iParam,stimStart:end)/sf);
@@ -183,6 +184,6 @@ end
 cellPeaks(:,7) = pkThresh;
 cellPeaks(:,1) = stimParams(:,3); % stim size, pos, velocity, or interval - the sorting parameter
 cellPeaks(:,2:4) = stimParams(:,4:6); % stim size, position and velocity
-cellPeaks(:,12) = stimParams(:,8); %nReps
-cellPeaks(:,11) = stimParams(:,9); %stim distance (0 if not entered)
+cellPeaks(:,12) = stimParams(:,7); %nReps
+cellPeaks(:,11) = stimParams(:,8); %stim distance (0 if not entered)
 end

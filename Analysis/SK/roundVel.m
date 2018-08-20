@@ -4,7 +4,7 @@
 % combining same condition)across multiple orders of magnitude.
 
 function trioRound = roundVel(velParam) %local function for rounding velocities
-velSign = (velParam>0)*2-1;
+velSign = sign(velParam);
 
 trioRound = round(abs(velParam),0); %round small velocities to nearest 1
 trioRound(trioRound<500) = round(trioRound(trioRound<500)/2)*2; %round large to nearest 10

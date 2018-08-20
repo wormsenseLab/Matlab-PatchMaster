@@ -56,13 +56,17 @@ clear cellDist strainList internalList cellTypeList stimPosition resistCutoff an
 % sweeps where the recording was lost partway through or some unexpected
 % source of noise was clearly at play.
 
-protList ={'WC_Probe';'NoPre'};
-matchType = 'first';
+protList ={'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge';'NoPrePulse'};
+matchType = 'full';
 
 ExcludeSweeps(ephysData, protList, anteriorDistCells, 'matchType', matchType);
 ExcludeSweeps(ephysData, protList, posteriorDistCells, 'matchType', matchType);
 
-%% Find MRCs
+%% Find MRCs 
+% antAllSteps.xlsx and postAllSteps.xlsx
+protList ={'WC_Probe';'NoPre'};
+matchType = 'first';
+
 sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
 
 anteriorMRCs = IdAnalysis(ephysData,protList,anteriorDistCells,'num','matchType',matchType, ...
@@ -87,7 +91,7 @@ clear protList sortSweeps matchType
 % the recording name against the voltage attenuation table to find the
 % attenuation factor for that recording.
 whichMRCs = anteriorMRCs;
-thisAtt = attenuationData(:,[2 10]);
+thisAtt = attenuationData(:,[2 8 10]);
 distVPeak = [];
 stepSize = 10;
 
@@ -98,8 +102,8 @@ for iCell = 1:size(whichMRCs,1)
         thisName = whichMRCs{iCell,1};
         hasAtt = strcmp(thisName,thisAtt(:,1));
         
-        if any(hasAtt)
-            distVPeak(iCell,:) = [thisCell(whichStep,[11 6]) thisAtt{hasAtt,2}];
+        if any(hasAtt) && thisAtt{hasAtt,2}
+            distVPeak(iCell,:) = [thisCell(whichStep,[11 6]) thisAtt{hasAtt,3}];
         else
             distVPeak(iCell,:) = [thisCell(whichStep,[11 6]) nan];
         end
@@ -166,12 +170,101 @@ distVPeak_Ant(:,4) = (Im * (Vc-Ena)) ./ (Vm-Ena);
 figure(); axh(1) = subplot(2,1,1);
 scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
 xlabel('Distance from cell body (um)');
-ylabel('Current @10um (pA)')
+ylabel(sprintf('Current @%dum (pA)',stepSize))
 text(100,200,'Anterior');
 axh(2) = subplot(2,1,2);
 scatter(distVPeak_Post(:,1),distVPeak_Post(:,2));
 xlabel('Distance from cell body (um)');
-ylabel('Current @10um (pA)')
+ylabel(sprintf('Current @%dum (pA)',stepSize))
 text(100,200,'Posterior');
 
-xlim(axh,[0 200]); ylim(axh,[0 200]);
+for i = 1:length(axh)
+    xlim(axh(i),[0 200]);
+    ylim(axh(i),[0 200]);
+end
+
+%% Plot on one plot
+
+figure();
+scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
+hold on;
+scatter(-distVPeak_Post(:,1),distVPeak_Post(:,2));
+xlabel('Distance from cell body (um)');
+ylabel(sprintf('Current @%dum (pA)',stepSize))
+xlim([-100 200]);ylim([0 200]);
+vline(0,'k:');
+
+%% Correct all sizes and export for Igor fitting of Boltzmann to each recording
+
+Vc = -0.06; %in V
+Ena = 0.094; % in V
+
+whichMRCs = anteriorMRCs;
+thisAtt = attenuationData(:,[2 8 10]);
+thisName = cell(0);
+ant_Out = cell(length(eachSize)+1,size(whichMRCs,1));
+
+for iCell = 1:size(whichMRCs,1)
+    thisCell = whichMRCs{iCell,3};
+    thisName{iCell,1} = whichMRCs{iCell,1}; %name
+    thisName{iCell,2} = mean(thisCell(:,11)); %distance
+    ant_Out{1,iCell} = thisName{iCell,1};
+    hasAtt = strcmp(thisName{iCell,1},thisAtt(:,1));
+    Iact = [];
+    
+    for iSize = 1:length(eachSize)
+        stepSize = eachSize(iSize);
+        whichStep = round(thisCell(:,1)*2)/2 == stepSize; %round to nearest 0.5
+        if any(whichStep)
+            
+            if any(hasAtt) && thisAtt{hasAtt,2} %if attenuation calc exists and not omitCell
+                Vm = Vc * thisAtt{hasAtt,3};
+                Im = thisCell(whichStep,6);
+                Iact(iSize,1) = (Im * (Vc-Ena)) ./ (Vm-Ena);
+            else
+                Iact(iSize,1) = nan;
+            end
+            
+        else
+            Iact(iSize,1) = nan;
+        end
+    end
+    ant_Out(2:length(eachSize)+1,iCell) = num2cell(Iact);
+
+end
+ant_Name = [{'Anterior', 'Ant_Dist'}; thisName];
+
+thisName = cell(0);
+whichMRCs = posteriorMRCs;
+post_Out = cell(length(eachSize)+1,size(whichMRCs,1));
+
+for iCell = 1:size(whichMRCs,1)
+    thisCell = whichMRCs{iCell,3};
+    thisName{iCell,1} = whichMRCs{iCell,1}; %name
+    thisName{iCell,2} = mean(thisCell(:,11)); %distance
+    post_Out{1,iCell} = thisName{iCell,1};
+    Iact = [];
+    
+    for iSize = 1:length(eachSize)
+        stepSize = eachSize(iSize);
+        whichStep = round(thisCell(:,1)*2)/2 == stepSize; %round to nearest 0.5
+        if any(whichStep)
+            Iact(iSize,1) = thisCell(whichStep,6);
+        else
+            Iact(iSize,1) = nan;
+        end
+    end
+    post_Out(2:length(eachSize)+1,iCell) = num2cell(Iact);
+
+end
+
+ant_Out = [[{'stepSize'};num2cell(eachSize)] ant_Out];
+post_Name = [{'Posterior', 'Post_Dist'}; thisName];
+
+xlswrite('PatchData/attCorrectedIdCurves(180819).xls',ant_Out,'ant');
+xlswrite('PatchData/attCorrectedIdCurves(180819).xls',post_Out,'post');
+xlswrite('PatchData/attCorrectedIdCurves(180819).xls',ant_Name,'antStats');
+xlswrite('PatchData/attCorrectedIdCurves(180819).xls',post_Name,'postStats');
+
+
+clear iCell thisCell Iact whichMRCs whichStep hasAtt thisAtt Vc Ena thisName

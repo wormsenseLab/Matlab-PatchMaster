@@ -5,7 +5,7 @@ internalList = {'IC2'};
 stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 cellDist = [40 150];
-extFilterFreq = 2.5;
+extFilterFreq = 5;
 
 antSineCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
@@ -16,7 +16,7 @@ antSineCells = FilterRecordings(ephysData, ephysMetaData,...
 clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep;
 
 %%
-ExcludeSweeps(ephysData, protList, antSineCells, 'matchType', matchType, 'channel', 3);
+ExcludeSweeps(ephysData, protList, antSineCells, 'matchType', matchType, 'channel', 1);
 
 clear protList matchType;
 

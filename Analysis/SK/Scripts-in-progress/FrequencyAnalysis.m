@@ -17,6 +17,7 @@ p.addParameter('matchType', 'full', @(x) sum(strcmp(x,{'first','last','full'})))
 p.addParameter('tauType','thalfmax', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'}));
 p.addParameter('integrateCurrent',1);
 p.addParameter('normToOn1',0);
+p.addParameter('matchPhase',0');
 
 p.parse(ephysData, ephysMetaData, protList, varargin{:});
 
@@ -25,6 +26,7 @@ matchType = p.Results.matchType;
 tauType = p.Results.tauType;
 integrateFlag = p.Results.integrateCurrent;
 normalizeFlag = p.Results.normToOn1;
+phaseFlag = p.Results.matchPhase;
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -180,7 +182,7 @@ for iCell = 1:length(allCells)
         % between sweeps
         
         % Concatenate data for all series in this recording
-        allLeakSub{iSeries,1} = leakSubtractCell;
+        allLeakSub(iSeries,1) = leakSubtractCell;
         allSweeps{iSeries,1} = theseSines;
         allSweeps{iSeries,2} = theseSquares;
     end
@@ -209,8 +211,8 @@ for iCell = 1:length(allCells)
     
     allSineSum = vertcat(allSweeps{:,1});
     allSquareSum = vertcat(allSweeps{:,2});
-    for iStim = 1:max(allSquareSum(:,7))
-        stimSquareSum(:,:,iStim) = allSquareSum(allSquareSum(:,7)==iStim,:);
+    for iStim = 1:max(allSquareSum(:,12))
+        stimSquareSum(:,:,iStim) = allSquareSum(allSquareSum(:,12)==iStim,:);
     end
     
     % Find how many unique timepoints/durations there are, within a given
@@ -290,12 +292,14 @@ for iCell = 1:length(allCells)
     
     %     meansByStimProfile = NaN(nStimProfiles, length(sortedLeakSub));
     steadyMeans = [];
+    squareMeans = [];
     groupIdx = cell(0);
+    theseSweeps = cell(0);
     
     for iProfile = 1:nStimProfiles
         groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
         
-        %             theseSweeps = sortedLeakSub(groupIdx{iProfile},:);
+        theseSweeps{iProfile} = sortedLeakSub(groupIdx{iProfile},:);
         
         %             if length(groupIdx{iProfile})>1
         %                 meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
@@ -322,7 +326,7 @@ for iCell = 1:length(allCells)
         nSqStim = size(sortedSquares,3);
         
         for iSqStim = 1:nSqStim
-            squareMeans(iProfile,iSqStim) = mean(sortedSquares(groupIdx{iProfile},3,iSqStim));
+            squareMeans(iProfile,iSqStim) = mean(sortedSquares(groupIdx{iProfile},6,iSqStim));
         end             
         
         onRatio = sortedSquares(:,:,3)./sortedSquares(:,:,1);
@@ -337,7 +341,7 @@ for iCell = 1:length(allCells)
     end
 
     sinePeaks{iCell,1} = cellName;
-    sinePeaks{iCell,2} = sortedLeakSub;
+    sinePeaks{iCell,2} = theseSweeps';
     sinePeaks{iCell,3} = [stimMetaData steadyMeans squareMeans];        
     
 end
