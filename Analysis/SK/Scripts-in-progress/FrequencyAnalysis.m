@@ -299,7 +299,10 @@ for iCell = 1:length(allCells)
     for iProfile = 1:nStimProfiles
         groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
         
-        theseSweeps{iProfile} = sortedLeakSub(groupIdx{iProfile},:);
+        try theseSweeps{iProfile} = vertcat(sortedLeakSub{groupIdx{iProfile},:})';
+        catch
+            theseSweeps{iProfile} = sortedLeakSub(groupIdx{iProfile},:)';
+        end
         
         %             if length(groupIdx{iProfile})>1
         %                 meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
