@@ -40,7 +40,11 @@ for iRec = 1:size(sinePeaksNorm,1)
     
     for iFreq = 1:length(theseRecs)
         try thisRec = theseRecs{iFreq}(theseSizes(iFreq,1):theseSizes(iFreq,2),:);
-        [pxx,f] = periodogram(thisRec,[],[],sf);
+        %use pwelch instead of periodogram to allow for use of Hamming
+        %window (reduces variance but decreases peak resolution/increases peak width)
+        %alternatively, periodogram with shorter window (or full-length
+        %hamming window to reduce edge effects?)
+        [pxx,f] = pwelch(thisRec,5000,[],[],sf);
         allF = [allF mean(f,2)];
         allPSD = [allPSD mean(pxx,2)];
         allSize = [allSize theseSizes(iFreq,3)];
@@ -64,12 +68,13 @@ for iProfile = 1:length(eachFreq)
     meansByFreq (:,iProfile) = mean(thesePSD,2);
 end
 
-plot(meanF,10*log10(meansByFreq));
+plot(meanF,meansByFreq);
+set(gca, 'YScale', 'log', 'XScale', 'log');
+
 xlabel('frequency (Hz)');
-ylabel('dB');
+ylabel('A^2');
 legend(num2str(eachFreq'));
 box off;
-% plotfixer;
-
 chH = get(gca,'children');
 set(gca,'children',flipud(chH));
+plotfixer;
