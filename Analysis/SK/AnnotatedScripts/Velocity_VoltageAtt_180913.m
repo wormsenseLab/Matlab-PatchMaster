@@ -1,5 +1,13 @@
-% I-d and Q-d curves for anterior (corrected for space clamp) vs. posterior
+% I-d and Q-d curves for velocity steps (corrected for space clamp)
 % Current or charge vs. displacement, and vs. distance 
+
+% This version uses TrapRate protocols, which have both the on and the off
+% at the same velocity (except for one particular velocity where
+% Patchmaster refused to do the off at the same velocity), in a trapezoid
+% shape.
+
+% At the moment, this is limited to anterior recordings, filtered at both
+% 2.5 or 5 kHz (because we can see the actual velocity).
 
 %%Import data and metadata
 ephysData = ImportPatchData('incl',1);
@@ -20,23 +28,16 @@ clear lastfit;
 
 strainList = {'TU2769'};
 internalList = {'IC2'};
-stimPosition = {'posterior'};
 
 wormPrep = {'dissected'};
-cellDist = [40 90]; % stimulus/cell distance in um
+cellDist = [40 200]; % stimulus/cell distance in um
 resistCutoff = '<250'; % Rs < 250 MOhm
-extFilterFreq = 2.5; % frequency of low-pass filter for stimulus command
+extFilterFreq = [2.5 5]; % frequency of low-pass filter for stimulus command
 includeFlag = 1; 
-
-posteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
-    'strain', strainList, 'internal', internalList, ...
-    'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
-    'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
-    'stimFilterFrequencykHz', extFilterFreq, 'included', includeFlag);
 
 stimPosition = {'anterior'};
 
-anteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
+velocityCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
     'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
     'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
@@ -53,24 +54,19 @@ clear cellDist strainList internalList cellTypeList stimPosition resistCutoff an
 % sweeps where the recording was lost partway through or some unexpected
 % source of noise was clearly at play.
 
-protList ={'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge';'NoPrePulse'};
-matchType = 'full';
+protList ={'TrapRate'};
+matchType = 'first';
 
-ExcludeSweeps(ephysData, protList, anteriorDistCells, 'matchType', matchType);
-ExcludeSweeps(ephysData, protList, posteriorDistCells, 'matchType', matchType);
+ExcludeSweeps(ephysData, protList, velocityCells, 'matchType', matchType);
 
 %% Find MRCs 
 % antAllSteps.xlsx and postAllSteps.xlsx from 180810
-protList ={'WC_Probe';'NoPre'};
+protList ={'TrapRate'};
 matchType = 'first';
 
-sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
+sortSweeps = {'velocity','velocity','magnitude','magnitude'};
 
-anteriorMRCs = IdAnalysis(ephysData,protList,anteriorDistCells,'num','matchType',matchType, ...
-    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1);
-
-posteriorMRCs = IdAnalysis(ephysData,protList,posteriorDistCells,'num','matchType',matchType, ...
+velocityMRCs = IdAnalysis(ephysData,protList,velocityCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
     'recParameters', ephysMetaData,'sepByStimDistance',1);
 
@@ -87,24 +83,24 @@ clear protList sortSweeps matchType
 % recording, grab the cell-stimulus distance for that recording, and match
 % the recording name against the voltage attenuation table to find the
 % attenuation factor for that recording.
-whichMRCs = anteriorMRCs;
+whichMRCs = velocityMRCs;
 thisAtt = attenuationData(:,[2 8 10]);
 distCol = 12;
-peakCol = 8; % 6 for peak current, 11 for integrated current/charge
+peakCol = 6; % 6 for peak current, 11 for integrated current/charge
 distVPeak = [];
-stepSize = 10;
+stepVel = 11360;
 
 for iCell = 1:size(whichMRCs,1)
     thisCell = whichMRCs{iCell,3};
-    whichStep = round(thisCell(:,1)) == stepSize;
-    if any(whichStep)
+    whichVel = round(thisCell(:,1)) == stepVel;
+    if any(whichVel)
         thisName = whichMRCs{iCell,1};
         hasAtt = strcmp(thisName,thisAtt(:,1));
         
         if any(hasAtt) && thisAtt{hasAtt,2}
-            distVPeak(iCell,:) = [thisCell(whichStep,[distCol peakCol]) thisAtt{hasAtt,3}];
+            distVPeak(iCell,:) = [thisCell(whichVel,[distCol peakCol]) thisAtt{hasAtt,3}];
         else
-            distVPeak(iCell,:) = [thisCell(whichStep,[distCol peakCol]) nan];
+            distVPeak(iCell,:) = [thisCell(whichVel,[distCol peakCol]) nan];
         end
         
     end
@@ -112,29 +108,6 @@ for iCell = 1:size(whichMRCs,1)
 end
 
 distVPeak_Ant = distVPeak;
-
-whichMRCs = posteriorMRCs;
-distVPeak = [];
-
-
-for iCell = 1:size(whichMRCs,1)
-    thisCell = whichMRCs{iCell,3};
-    whichStep = round(thisCell(:,1)) == stepSize;
-    if any(whichStep)
-        thisName = whichMRCs{iCell,1};
-        hasAtt = strcmp(thisName,thisAtt(:,1));
-        
-        if any(hasAtt)
-            distVPeak(iCell,:) = [thisCell(whichStep,[distCol peakCol]) thisAtt{hasAtt,2}];
-        else
-            distVPeak(iCell,:) = [thisCell(whichStep,[distCol peakCol]) nan];
-        end
-        
-    end
-    
-end
-
-distVPeak_Post = distVPeak;
 
 clear a iCell thisCell whichMRCs whichStep thisName hasAtt distVPeak
 
@@ -169,46 +142,35 @@ distVPeak_Ant(:,4) = (Im * (Vc-Ena)) ./ (Vm-Ena);
 figure(); axh(1) = subplot(2,1,1);
 scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
 xlabel('Distance from cell body (um)');
-ylabel(sprintf('Current @%dum (pA)',stepSize))
+ylabel(sprintf('Current @%dum (pA)',stepVel))
 text(100,200,'Anterior');
-axh(2) = subplot(2,1,2);
-scatter(distVPeak_Post(:,1),distVPeak_Post(:,2));
-xlabel('Distance from cell body (um)');
-ylabel(sprintf('Current @%dum (pA)',stepSize))
-text(100,200,'Posterior');
 
 for i = 1:length(axh)
     xlim(axh(i),[0 200]);
     ylim(axh(i),[0 200]);
 end
 
-%% Plot on one plot
-
-figure();
-scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
-hold on;
-scatter(-distVPeak_Post(:,1),distVPeak_Post(:,2));
-text(distVPeak_Ant(:,1)+1,distVPeak_Ant(:,4)+1,anteriorMRCs(:,1));
-text(-distVPeak_Post(:,1)+1,distVPeak_Post(:,2)+1,posteriorMRCs(:,1));
-xlabel('Distance from cell body (um)');
-ylabel(sprintf('Current @%dum (pA)',stepSize))
-xlim([-100 200]);ylim([0 200]);
-vline(0,'k:');
-
 %% Correct all sizes and export for Igor fitting of Boltzmann to each recording
 
-eachSize = [0.5 1 1.5 3 4 5 6 7 8 9 10 11 12]';
-distLimits = [40 90];
+% Set the filename
+fname = 'PatchData/attCorrectedVelCurves(180913).xls';
+
+allVel = vertcat(velocityMRCs{:,3});
+eachVel = uniquetol(allVel(:,1),12,'DataScale',1);
+% the value of 12 is empirically chosen as being larger than the largest
+% difference between velocities that could be binned (usually 10 after roundVel) and smaller than the
+% difference between velocities that shouldn't (i.e., 64 vs. 80).
+distLimits = [40 200];
 % limit to same average distance for anterior and posterior
 
 
 Vc = -0.06; %in V
 Ena = 0.094; % in V
 
-whichMRCs = anteriorMRCs;
+whichMRCs = velocityMRCs;
 thisAtt = attenuationData(:,[2 8 10]);
 thisName = cell(0);
-ant_Out = cell(length(eachSize)+1,size(whichMRCs,1));
+vel_Out = cell(length(eachVel)+1,size(whichMRCs,1));
 
 for iCell = 1:size(whichMRCs,1)
     thisCell = whichMRCs{iCell,3};
@@ -216,74 +178,69 @@ for iCell = 1:size(whichMRCs,1)
     if thisDist <= distLimits(2) && thisDist >= distLimits(1)
         thisName{iCell,1} = whichMRCs{iCell,1}; %name
         thisName{iCell,2} = thisDist;
-        ant_Out{1,iCell} = thisName{iCell,1};
+        vel_Out{1,iCell} = thisName{iCell,1};
         hasAtt = strcmp(thisName{iCell,1},thisAtt(:,1));
         Iact = [];
         
-        for iSize = 1:length(eachSize)
-            stepSize = eachSize(iSize);
-            whichStep = round(thisCell(:,1)*2)/2 == stepSize; %round to nearest 0.5
-            if any(whichStep)
+        for iVel = 1:length(eachVel)
+            stepVel = eachVel(iVel);
+            whichVel = abs(thisCell(:,1) - stepVel) < 12; %find closest velocity
+            if any(whichVel)
                 
                 if any(hasAtt) && thisAtt{hasAtt,2} %if attenuation calc exists and not omitCell
                     Vm = Vc * thisAtt{hasAtt,3};
-                    Im = thisCell(whichStep,peakCol);
-                    Iact(iSize,1) = (Im * (Vc-Ena)) ./ (Vm-Ena);
+                    Im = thisCell(whichVel,peakCol);
+                    Iact(iVel,1) = (Im * (Vc-Ena)) ./ (Vm-Ena);
                 else
-                    Iact(iSize,1) = nan;
+                    Iact(iVel,1) = nan;
                 end
                 
             else
-                Iact(iSize,1) = nan;
+                Iact(iVel,1) = nan;
             end
         end
-        ant_Out(2:length(eachSize)+1,iCell) = num2cell(Iact);
+        vel_Out(2:length(eachVel)+1,iCell) = num2cell(Iact);
     end
 end
-ant_Name = [{'Anterior', 'Ant_Dist'}; thisName];
-ant_Out = ant_Out(:,~cellfun(@isempty, ant_Out(1,:))); % clear out empty waves (where dist didn't match)
-ant_Name = ant_Name(~cellfun(@isempty, ant_Name(:,1)),:);
+vel_Name = [{'Anterior', 'Ant_Dist'}; thisName];
+vel_Out = vel_Out(:,~cellfun(@isempty, vel_Out(1,:))); % clear out empty waves (where dist didn't match)
+vel_Name = vel_Name(~cellfun(@isempty, vel_Name(:,1)),:);
 
-ant_Out = [[{'stepSize'};num2cell(eachSize)] ant_Out]; % append stepSize wave
+vel_Out = [[{'velocity'};num2cell(eachVel)] vel_Out]; % append stepSize wave
 
-thisName = cell(0);
-whichMRCs = posteriorMRCs;
-post_Out = cell(length(eachSize)+1,size(whichMRCs,1));
+% thisName = cell(0);
+% whichMRCs = posteriorMRCs;
+% post_Out = cell(length(eachSize)+1,size(whichMRCs,1));
+% 
+% for iCell = 1:size(whichMRCs,1)
+%     thisCell = whichMRCs{iCell,3};
+%     thisDist = mean(thisCell(:,distCol)); % check if cell distance is in range
+%     if thisDist <= distLimits(2) && thisDist >= distLimits(1)
+%         thisName{iCell,1} = whichMRCs{iCell,1}; %name
+%         thisName{iCell,2} = thisDist; %distance
+%         post_Out{1,iCell} = thisName{iCell,1};
+%         Iact = [];
+%         
+%         for iSize = 1:length(eachSize)
+%             stepVel = eachSize(iSize);
+%             whichStep = round(thisCell(:,1)*2)/2 == stepVel; %round to nearest 0.5
+%             if any(whichStep)
+%                 Iact(iSize,1) = thisCell(whichStep,peakCol);
+%             else
+%                 Iact(iSize,1) = nan;
+%             end
+%         end
+%         post_Out(2:length(eachSize)+1,iCell) = num2cell(Iact);
+%     end
+% end
+% 
+% post_Name = [{'Posterior', 'Post_Dist'}; thisName];
+% post_Out = post_Out(:,~cellfun(@isempty, post_Out(1,:)));
+% post_Name = post_Name(~cellfun(@isempty, post_Name(:,1)),:);
 
-for iCell = 1:size(whichMRCs,1)
-    thisCell = whichMRCs{iCell,3};
-    thisDist = mean(thisCell(:,distCol)); % check if cell distance is in range
-    if thisDist <= distLimits(2) && thisDist >= distLimits(1)
-        thisName{iCell,1} = whichMRCs{iCell,1}; %name
-        thisName{iCell,2} = thisDist; %distance
-        post_Out{1,iCell} = thisName{iCell,1};
-        Iact = [];
-        
-        for iSize = 1:length(eachSize)
-            stepSize = eachSize(iSize);
-            whichStep = round(thisCell(:,1)*2)/2 == stepSize; %round to nearest 0.5
-            if any(whichStep)
-                Iact(iSize,1) = thisCell(whichStep,peakCol);
-            else
-                Iact(iSize,1) = nan;
-            end
-        end
-        post_Out(2:length(eachSize)+1,iCell) = num2cell(Iact);
-    end
-end
 
-post_Name = [{'Posterior', 'Post_Dist'}; thisName];
-post_Out = post_Out(:,~cellfun(@isempty, post_Out(1,:)));
-post_Name = post_Name(~cellfun(@isempty, post_Name(:,1)),:);
-
-% Set the filename
-fname = 'PatchData/attCorrectedQdCurves_distLim(180911).xls';
-
-xlswrite(fname,ant_Out,'ant');
-xlswrite(fname,post_Out,'post');
-xlswrite(fname,ant_Name,'antStats');
-xlswrite(fname,post_Name,'postStats');
-
+xlswrite(fname,vel_Out,'vel');
+xlswrite(fname,vel_Name,'velStats');
 
 clear iCell thisCell Iact whichMRCs whichStep hasAtt thisAtt Vc Ena thisName
 
@@ -324,8 +281,8 @@ postStats = postStats(cellfun(@(x) ~isnumeric(x), postStats(:,1)),:);
 % back to Igor, where I can average them like the other I-dCellFits
 
 %%
-eachSize = fitStats(:,cell2mat(cellfun(@(x) ~isempty(regexp(x,'stepSize')), fitHeaders,'un',0)));
-eachSize = eachSize(cellfun(@(x) isnumeric(x) && ~isnan(x),eachSize));
+eachVel = fitStats(:,cell2mat(cellfun(@(x) ~isempty(regexp(x,'stepSize')), fitHeaders,'un',0)));
+eachVel = eachVel(cellfun(@(x) isnumeric(x) && ~isnan(x),eachVel));
 
 whichSide = antStats;
 thisCell = whichSide(:,1);
@@ -334,7 +291,7 @@ thisDataNorm = cell(0);
 for i = 1:size(whichSide,1)
    thisMax = whichSide{i,antMaxIdx};
    whichData = cell2mat(cellfun(@(x) ~isempty(regexp(x,sprintf('^(?!fit).*%s',thisCell{i}))),fitHeaders,'un',0));
-   thisData = fitStats(1:length(eachSize),whichData);
+   thisData = fitStats(1:length(eachVel),whichData);
    thisData(cellfun(@isempty,thisData))={nan};
    thisDataNorm(:,i) = cellfun(@(x) x./thisMax, thisData,'un',0);
 end
@@ -351,7 +308,7 @@ thisDataNorm = cell(0);
 for i = 1:size(whichSide,1)
    thisMax = whichSide{i,postMaxIdx};
    whichData = cell2mat(cellfun(@(x) ~isempty(regexp(x,sprintf('^(?!fit).*%s',thisCell{i}))),fitHeaders,'un',0));
-   thisData = fitStats(1:length(eachSize),whichData);
+   thisData = fitStats(1:length(eachVel),whichData);
    thisData(cellfun(@isempty,thisData))={nan};
    thisDataNorm(:,i) = cellfun(@(x) x./thisMax, thisData,'un',0);
 end

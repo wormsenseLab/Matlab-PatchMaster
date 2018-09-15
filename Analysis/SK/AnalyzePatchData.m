@@ -60,12 +60,13 @@ wormPrep = {'dissected'};
 cellDist = [40 200];
 resistCutoff = '<250';
 extFilterFreq = 2.5;
+includeFlag = 1;
 
 anteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
      'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
-     'stimFilterFrequencykHz', extFilterFreq);
+     'stimFilterFrequencykHz', extFilterFreq, 'included', 1);
 
 clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep;
 

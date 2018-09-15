@@ -1,5 +1,12 @@
-% I-d and Q-d curves for anterior (corrected for space clamp) vs. posterior
-% Current or charge vs. displacement, and vs. distance 
+% Tau vs distance curves for anterior vs. posterior
+
+% Running all the way through allows user to pull out tau data from steps, 
+% export to Igor, fit a Boltzmann there, re-import and normalize and export
+% back to Igor for final plotting and fitting. 
+
+% Unlike AntVsPost_VoltageAttenuation, this does not correct the current or
+% charge for voltage errors based on distance, and was used for non-current
+% data.
 
 %%Import data and metadata
 ephysData = ImportPatchData('incl',1);
@@ -40,7 +47,7 @@ anteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
     'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
     'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
-    'stimFilterFrequencykHz', extFilterFreq, 'included', includeFlag);
+    'stimFilterFrequencykHz', extFilterFreq, 'included',includeFlag);
 
 
 clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep excludeCells;
@@ -90,7 +97,7 @@ clear protList sortSweeps matchType
 whichMRCs = anteriorMRCs;
 thisAtt = attenuationData(:,[2 8 10]);
 distCol = 12;
-peakCol = 8; % 6 for peak current, 11 for integrated current/charge
+peakCol = 8;     % 8 for tau act, 9 for tau decay
 distVPeak = [];
 stepSize = 10;
 
@@ -138,72 +145,14 @@ distVPeak_Post = distVPeak;
 
 clear a iCell thisCell whichMRCs whichStep thisName hasAtt distVPeak
 
-%% Make correction to I for space clamp error
-% (Note: this is an approximation, assuming that the majority of the
-% current is happening at the stimulus site, which we know is not entirely
-% true, and channels at different points along the neurite will experience
-% different voltages.
+%% Export for Igor fitting of Boltzmann to each recording
 
-% Now calculate what the actual voltage was at the stimulus site based on
-% the voltage attenuation factor. In this case, command voltage was -60mV
-% for all steps. 
-
-% attenuation factor = Vm'/Vc so Vm' = Vc * attenuation factor
- 
-% Then calculate what current would've been based on sodium reversal
-% potential. 
-% For IC2 solution used here, Ena = +94mV.
- 
-% Im' = Im * ((Vc-Ena)/(Vm'-Ena))
- 
-Vc = -0.06; %in V
-Ena = 0.094; % in V
-Im = distVPeak_Ant(:,2);
-Vatt = distVPeak_Ant(:,3);
-
-Vm = Vc * Vatt;
-distVPeak_Ant(:,4) = (Im * (Vc-Ena)) ./ (Vm-Ena);
-
-%% Plot anterior and posterior on separate plots
-
-figure(); axh(1) = subplot(2,1,1);
-scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
-xlabel('Distance from cell body (um)');
-ylabel(sprintf('Current @%dum (pA)',stepSize))
-text(100,200,'Anterior');
-axh(2) = subplot(2,1,2);
-scatter(distVPeak_Post(:,1),distVPeak_Post(:,2));
-xlabel('Distance from cell body (um)');
-ylabel(sprintf('Current @%dum (pA)',stepSize))
-text(100,200,'Posterior');
-
-for i = 1:length(axh)
-    xlim(axh(i),[0 200]);
-    ylim(axh(i),[0 200]);
-end
-
-%% Plot on one plot
-
-figure();
-scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
-hold on;
-scatter(-distVPeak_Post(:,1),distVPeak_Post(:,2));
-text(distVPeak_Ant(:,1)+1,distVPeak_Ant(:,4)+1,anteriorMRCs(:,1));
-text(-distVPeak_Post(:,1)+1,distVPeak_Post(:,2)+1,posteriorMRCs(:,1));
-xlabel('Distance from cell body (um)');
-ylabel(sprintf('Current @%dum (pA)',stepSize))
-xlim([-100 200]);ylim([0 200]);
-vline(0,'k:');
-
-%% Correct all sizes and export for Igor fitting of Boltzmann to each recording
+% This is the same as in AntVPost_VoltageAttenuation_180803 except it
+% doesn't apply any attenuation correction. Useful for pulling out the taus
 
 eachSize = [0.5 1 1.5 3 4 5 6 7 8 9 10 11 12]';
 distLimits = [40 90];
 % limit to same average distance for anterior and posterior
-
-
-Vc = -0.06; %in V
-Ena = 0.094; % in V
 
 whichMRCs = anteriorMRCs;
 thisAtt = attenuationData(:,[2 8 10]);
@@ -217,7 +166,6 @@ for iCell = 1:size(whichMRCs,1)
         thisName{iCell,1} = whichMRCs{iCell,1}; %name
         thisName{iCell,2} = thisDist;
         ant_Out{1,iCell} = thisName{iCell,1};
-        hasAtt = strcmp(thisName{iCell,1},thisAtt(:,1));
         Iact = [];
         
         for iSize = 1:length(eachSize)
@@ -225,14 +173,7 @@ for iCell = 1:size(whichMRCs,1)
             whichStep = round(thisCell(:,1)*2)/2 == stepSize; %round to nearest 0.5
             if any(whichStep)
                 
-                if any(hasAtt) && thisAtt{hasAtt,2} %if attenuation calc exists and not omitCell
-                    Vm = Vc * thisAtt{hasAtt,3};
-                    Im = thisCell(whichStep,peakCol);
-                    Iact(iSize,1) = (Im * (Vc-Ena)) ./ (Vm-Ena);
-                else
-                    Iact(iSize,1) = nan;
-                end
-                
+                Iact(iSize,1) = thisCell(whichStep,peakCol);
             else
                 Iact(iSize,1) = nan;
             end
@@ -277,12 +218,12 @@ post_Out = post_Out(:,~cellfun(@isempty, post_Out(1,:)));
 post_Name = post_Name(~cellfun(@isempty, post_Name(:,1)),:);
 
 % Set the filename
-fname = 'PatchData/attCorrectedQdCurves_distLim(180911).xls';
+fname = 'PatchData/taus_antVpost_distLim(180911).xls';
 
-xlswrite(fname,ant_Out,'ant');
-xlswrite(fname,post_Out,'post');
-xlswrite(fname,ant_Name,'antStats');
-xlswrite(fname,post_Name,'postStats');
+xlswrite(fname,ant_Out,'antAct');
+xlswrite(fname,post_Out,'postAct');
+xlswrite(fname,ant_Name,'antActStats');
+xlswrite(fname,post_Name,'postActStats');
 
 
 clear iCell thisCell Iact whichMRCs whichStep hasAtt thisAtt Vc Ena thisName
@@ -323,7 +264,7 @@ postStats = postStats(cellfun(@(x) ~isnumeric(x), postStats(:,1)),:);
 % instead, I'm just going to do the normalization here and send the waves
 % back to Igor, where I can average them like the other I-dCellFits
 
-%%
+%% 
 eachSize = fitStats(:,cell2mat(cellfun(@(x) ~isempty(regexp(x,'stepSize')), fitHeaders,'un',0)));
 eachSize = eachSize(cellfun(@(x) isnumeric(x) && ~isnan(x),eachSize));
 

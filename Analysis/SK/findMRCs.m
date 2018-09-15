@@ -6,7 +6,7 @@
 % 
 % OUTPUT:
 % cellPeaks: 
-%[sortParam size pos vel pkLoc pk pkThresh tauAct tauDecay tPk distance nReps intPeak]%
+%[sortParam size pos vel pkLoc pk pkThresh tauAct tauDecay tPk intPeak distance nReps]%
 % 
 % TODO: consider when to use smooMean vs. meanTraces for actual peak
 % current values (also in finding the half-max tau?)
@@ -149,16 +149,15 @@ for iParam = 1:nParams
             % trapz uses the trapezoidal method to integrate & calculate area under
             % the curve. But it assumes unit spacing, so divide by the sampling
             % frequency to get units of seconds.            
-    %FIX: should I be dividing by sf in Hz and not kHz here? Check units.
-            try intPeak = trapz(meanTraces(iParam,stimStart:stimEnd+(300*sf))/sf);
+            try intPeak = trapz(meanTraces(iParam,stimStart:stimEnd+(150*sf))/(sf*1000));
             catch
-                intPeak = trapz(meanTraces(iParam,stimStart:end)/sf);
+                intPeak = trapz(meanTraces(iParam,stimStart:end)/(sf*1000));
             end
                 
             %intPeakArtifact = trapz(meanTraces(iParam,stimStart+artifactOffset:stimEnd+(sf*1E3/50))/sf);
             %intPeakHalf = trapz(meanTraces(iParam,halfLocs(1)-1:decayHalfLocs(1)-1)/sf);
             
-            cellPeaks(iParam,12) = intPeak;
+            cellPeaks(iParam,11) = intPeak;
         end
         tPk = (pkLoc - stimStart)/sf;
  
@@ -184,6 +183,6 @@ end
 cellPeaks(:,7) = pkThresh;
 cellPeaks(:,1) = stimParams(:,3); % stim size, pos, velocity, or interval - the sorting parameter
 cellPeaks(:,2:4) = stimParams(:,4:6); % stim size, position and velocity
-cellPeaks(:,12) = stimParams(:,7); %nReps
-cellPeaks(:,11) = stimParams(:,8); %stim distance (0 if not entered)
+cellPeaks(:,13) = stimParams(:,end-1); %nReps
+cellPeaks(:,12) = stimParams(:,end); %stim distance (0 if not entered)
 end

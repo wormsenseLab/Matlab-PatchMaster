@@ -211,8 +211,8 @@ for iCell = 1:length(allCells)
     
     allSineSum = vertcat(allSweeps{:,1});
     allSquareSum = vertcat(allSweeps{:,2});
-    for iStim = 1:max(allSquareSum(:,12))
-        stimSquareSum(:,:,iStim) = allSquareSum(allSquareSum(:,12)==iStim,:);
+    for iStim = 1:max(allSquareSum(:,13))
+        stimSquareSum(:,:,iStim) = allSquareSum(allSquareSum(:,13)==iStim,:);
     end
     
     % Find how many unique timepoints/durations there are, within a given

@@ -100,7 +100,7 @@ p.addParameter('stimFilterFrequencykHz',cell(0)); % external stimulus filter fre
 p.addParameter('roomTempC',cell(0)); % room temperature, degC
 p.addParameter('TCultC',cell(0)); % cultivation temperature, degC
 p.addParameter('RsM',cell(0)); % series resistance, in MOhms
-
+p.addParameter('included',cell(0)); % marked in included column (some excluded (0) based on recording notes)
 
 p.parse(ephysData, ephysMetadata, varargin{:});
 

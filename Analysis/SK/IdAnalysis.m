@@ -516,7 +516,7 @@ for iCell = 1:length(allCells)
             stimMetaData(:,1:2,iStim) = sortedStim{1,iStim}(profileStartIdx,1:2);
             stimMetaData(:,3,iStim) = eachStimProfile(:,iStim);
             stimMetaData(:,4:6,iStim) = round(sortedStim{1,iStim}(profileStartIdx,3:5),1);
-            stimMetaData(:,7,iStim) = roundVel(sortedStim{1,iStim}(profileStartIdx,6));
+            stimMetaData(:,7,iStim) = roundVel(sortedStim{1,iStim}(profileStartIdx,5));
             stimMetaData(:,8,iStim) = nReps;
             if distFlag
                 stimMetaData(:,9,iStim) = eachStimProfile(:,end);
@@ -532,7 +532,7 @@ for iCell = 1:length(allCells)
         end
     end
     
-    if sweepFlag
+    if sweepFlag % if saving sweeps separate from means, scoot everything over 1
         mechPeaks{iCell,1} = cellName;
         mechPeaks{iCell,2} = meansByStimProfile;
         mechPeaks{iCell,3} = sweepsByStimProfile;
@@ -543,7 +543,7 @@ for iCell = 1:length(allCells)
             mechPeaks{iCell,3+iStim} = findMRCs(stimMetaData(:,:,iStim), meansByStimProfile, sf, dataType, ...
                 'tauType', tauType, 'integrateCurrent',integrateFlag);
         end
-    else
+    else 
         mechPeaks{iCell,1} = cellName;
         mechPeaks{iCell,2} = meansByStimProfile;
         
