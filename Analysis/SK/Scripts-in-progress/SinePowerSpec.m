@@ -79,13 +79,14 @@ sinePeaksPD = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType',
 % is in matlab or if my data can be one, or what a linear time-invariant
 % system is or why a Bode plot is useful
 %%
+figure();
 eachFreq = [0 10 30 100 200 500 1000];
 sf = 10000; %Hz
 allPSD = [];
 allF = [];
 allSize = [];
 
-whichPeaks = sinePeaks;
+whichPeaks = sinePeaksPD;
 % ally = []; %for plotting fft magnitude and phase
 % allf_fft = [];
 
@@ -146,6 +147,26 @@ box off;
 chH = get(gca,'children');
 set(gca,'children',flipud(chH));
 plotfixer;
+
+% meansByFreqPD = meansByFreq;
+% meansByFreqI = meansByFreq;
+
+%% Plot stacked power spectra
+figure();
+yyh = cell(0);
+
+for i = 1:size(meansByFreq,2)
+    axh(i) = subtightplot(size(meansByFreq,2),1,i,0.02,0.05,0.1);
+    yyh{i} = plotyy(meanF,meansByFreqI(:,i),meanF,meansByFreqPD(:,i));
+    set(yyh{i}, 'YScale', 'log', 'XScale', 'log','box','off');
+    set(yyh{i}(1),'YLim',[1e-30 1e-20])
+    set(yyh{i}(2),'YLim',[1e-10 1e0])
+end
+
+for i = 1:size(meansByFreq,2)-1
+    set(yyh{i},'XTickLabel',[]);
+end
+    
 
 %% Plot steady state sine comparison
 
