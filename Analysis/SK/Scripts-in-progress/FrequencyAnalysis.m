@@ -20,7 +20,8 @@ p.addParameter('matchType', 'full', @(x) sum(strcmp(x,{'first','last','full'})))
 p.addParameter('tauType','thalfmax', @(x) ischar(x) && ismember(x,{'fit' 'thalfmax'}));
 p.addParameter('integrateCurrent',1);
 p.addParameter('normToOn1',0);
-p.addParameter('matchPhase',0');
+p.addParameter('matchPhase',0);
+p.addParameter('channel',1, @(x) isnumeric(x) && ismember(x,1:6));
 
 p.parse(ephysData, ephysMetaData, protList, varargin{:});
 
@@ -30,6 +31,7 @@ tauType = p.Results.tauType;
 integrateFlag = p.Results.integrateCurrent;
 normalizeFlag = p.Results.normToOn1;
 phaseFlag = p.Results.matchPhase;
+channel = p.Results.channel;
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -52,6 +54,7 @@ whichChan = 2; %channel number for stimulus command
 sortStimBy = 'time';
 sortSweepsBy = {'frequency'};
 stimSortOrder = [1 2];
+sqWindow = 5;
 
 % pull cell distances and filter freqs
 allCellInd = cellfun(@(x) find(strcmp(ephysMetaData(:,1),x)),allCells,'un',0)';
@@ -83,7 +86,7 @@ for iCell = 1:length(allCells)
     end
     
     % Initialize for allSeries
-    allLeakSub = cell(0);
+    allLeakSub = cell(nSeries,1);
     allSweeps = cell(nSeries,2);
     allSine = cell(0);
     stimSquareSum = [];
@@ -102,8 +105,9 @@ for iCell = 1:length(allCells)
         catch
         end
 
+        probeI = ephysData.(cellName).data{channel,thisSeries}(:,pickedTraces);
+
         
-        probeI = ephysData.(cellName).data{1,thisSeries}(:,pickedTraces);
         stimComI = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces); %in V, not um
         % sampling frequency in kHz
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
@@ -151,9 +155,14 @@ for iCell = 1:length(allCells)
         
         sineTrace = leakSubtract(sineParams(1):sineParams(2));
         
-        % Take the average current of the last steadyTime ms of the
-        % sine trace, regardless of sine frequency.
-        steadyStateI = -mean(sineTrace(end-steadyTime*sf:end))*1e12;
+        if channel == 1 % to units of pA
+            % Take the average current of the last steadyTime ms of the
+            % sine trace, regardless of sine frequency.
+            steadyStateI = -mean(sineTrace(end-steadyTime*sf:end))*1e12;
+            
+        else % original units
+            steadyStateI = mean(sineTrace(end-steadyTime*sf:end));
+        end
         
         theseSines = [sineParams steadyStateI thisSeries];
         % Implement later: use fit to calculate time constant of decay from peak
@@ -171,14 +180,30 @@ for iCell = 1:length(allCells)
         
        
         % Find MRC peaks at the on and off of square stimuli.
-        theseSquares = [];
-        for iStim = 1:size(squareParams,1)
-            theseSquares(iStim,:) = findMRCs(squareParams(iStim,:), leakSubtract, sf, dataType, ...
-                'tauType', tauType, 'integrateCurrent',integrateFlag);
+        theseSquares = nan(4,13); %adjust this if you change findMRCs output
+        
+        if channel == 1
+            for iStim = 1:size(squareParams,1)
+                theseSquares(iStim,:) = findMRCs(squareParams(iStim,:), leakSubtract, sf, dataType, ...
+                    'tauType', tauType, 'integrateCurrent',integrateFlag);
+            end
+            
+        else % just find the actual voltage at the start and end of each step
+            theseSquareAmps = nan(4,1);
+            for iStim = 1:size(squareParams,1)
+                if squareParams(iStim, 3) >= 0
+                    theseSquareAmps(iStim) = mean(leakSubtract(squareParams(iStim,1)+sf:squareParams(iStim,1)+sqWindow*sf*2));
+                else
+                    theseSquareAmps(iStim) = mean(leakSubtract(squareParams(iStim,1)-sqWindow*sf:squareParams(iStim,1)));
+                end
+            end
+                theseSquares(:,1:4) = squareParams(:,3:6);
+                theseSquares(:,5:6) = [squareParams(:,1) theseSquareAmps];
+                theseSquares(:,13:14) = squareParams(:,7:8);
         end
+        
         theseSquares = [theseSquares repmat(sineParams(4),iStim,1) repmat(thisSeries,iStim,1)];
 
-        
         %TODO: add to Sine output: peak at start, beginning average, tau of 
         % fit of smoothed trace
         %TODO: add to SquareSum output: interval between squares, and
@@ -214,6 +239,7 @@ for iCell = 1:length(allCells)
     
     allSineSum = vertcat(allSweeps{:,1});
     allSquareSum = vertcat(allSweeps{:,2});
+    allLeakSub = allLeakSub(~cellfun(@isempty,allLeakSub));
     for iStim = 1:max(allSquareSum(:,13))
         stimSquareSum(:,:,iStim) = allSquareSum(allSquareSum(:,13)==iStim,:);
     end
@@ -272,7 +298,7 @@ for iCell = 1:length(allCells)
     % stimSortOrder. Use unique to find unique sets of rows/stimulus
     % profiles and separate them into groups.
     [sweepsByParams, sortIdx] = sortrows(sweepsByParams, stimSortOrder(1:size(sweepsByParams,2)));
-    sortedLeakSub = allLeakSub(sortIdx,:);
+    sortedLeakSub = allLeakSub(sortIdx);
     sortedSquares = stimSquareSum(sortIdx,:,:);
     
     for iStim = 1:nStim
@@ -345,7 +371,11 @@ for iCell = 1:length(allCells)
     
     if normalizeFlag
         steadyMeans = steadyMeans./squareMeans(:,1);
-        normMeans = num2cell(squareMeans(:,1)*1e-12);
+        if channel == 1
+            normMeans = num2cell(squareMeans(:,1)*1e-12);
+        else
+            normMeans = num2cell(squareMeans(:,1));
+        end
         theseSweeps = cellfun(@(x,y) x/y, theseSweeps,normMeans','un',0);
     end
 

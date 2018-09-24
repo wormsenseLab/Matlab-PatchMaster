@@ -71,6 +71,9 @@ clear fName filename pathname a b selectedSweeps_I selectedSweeps_PD selectedSwe
 sinePeaksNorm = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 1);
 
 sinePeaks = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0);
+
+sinePeaksPD = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0, 'channel',3);
+
 % okay we're just going to plot the power spectrum in the morning and
 % ignore the bode plot because I don't know what a "system" object really
 % is in matlab or if my data can be one, or what a linear time-invariant
@@ -81,13 +84,15 @@ sf = 10000; %Hz
 allPSD = [];
 allF = [];
 allSize = [];
+
+whichPeaks = sinePeaks;
 % ally = []; %for plotting fft magnitude and phase
 % allf_fft = [];
 
 
-for iRec = 1:size(sinePeaksNorm,1)
-    theseRecs = sinePeaksNorm{iRec,2};
-    theseSizes = sinePeaksNorm{iRec,3}(:,1:3);
+for iRec = 1:size(whichPeaks,1)
+    theseRecs = whichPeaks{iRec,2};
+    theseSizes = whichPeaks{iRec,3}(:,1:3);
     
     for iFreq = 1:length(theseRecs)
         try thisRec = theseRecs{iFreq}(theseSizes(iFreq,1):theseSizes(iFreq,2),:);
