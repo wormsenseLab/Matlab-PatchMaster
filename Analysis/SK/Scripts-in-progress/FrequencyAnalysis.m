@@ -3,6 +3,9 @@
 % 
 % parameters in SinePeaks{:,3}:
 % [sineStart sineEnd sineFreq nReps steadyI sqOn1 sqOff1 sqOn2 sqOff2 sqOnRatio sqOffRatio]
+% 
+% normalize flag also normalizes the individual saved sweeps
+
 
 function sinePeaks = FrequencyAnalysis(ephysData, ephysMetaData, protList, varargin)
 
@@ -319,7 +322,8 @@ for iCell = 1:length(allCells)
             
             stimMetaData(:,1:2) = sortedStim{1,iStim}(profileStartIdx,1:2);
             stimMetaData(:,3) = eachStimProfile(:,iStim);
-            stimMetaData(:,4) = nReps;
+            stimMetaData(:,4) = repmat(extFilterFreq{iCell},size(stimMetaData,1),1);
+            stimMetaData(:,5) = nReps;
             
             % Find mechanoreceptor current peaks and append to sinePeaks for
             % that stimulus number.
@@ -341,6 +345,8 @@ for iCell = 1:length(allCells)
     
     if normalizeFlag
         steadyMeans = steadyMeans./squareMeans(:,1);
+        normMeans = num2cell(squareMeans(:,1)*1e-12);
+        theseSweeps = cellfun(@(x,y) x/y, theseSweeps,normMeans','un',0);
     end
 
     sinePeaks{iCell,1} = cellName;

@@ -5,7 +5,7 @@ internalList = {'IC2'};
 stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 cellDist = [40 150];
-extFilterFreq = 5;
+extFilterFreq = [2.5 5];
 includeFlag = 1;
 
 antSineCells = FilterRecordings(ephysData, ephysMetaData,...
@@ -16,14 +16,61 @@ antSineCells = FilterRecordings(ephysData, ephysMetaData,...
 
 clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep;
 
+%NEXT: check to see if there's a difference in the power spectrum (and
+%amplitude attenuation where applicable) for 2.5 vs. 5kHz photodiode
+%signals. If they look the same, combine the data.
+
 %%
+
 ExcludeSweeps(ephysData, protList, antSineCells, 'matchType', matchType, 'channel', 1);
 
 clear protList matchType;
 
+%% Check if the PD signal is useful/shows abnormalities
+% Make list of only sweeps with stable current AND good PD signal (lower
+% noise, high enough voltage for SNR, no weird movements during sine)
+
+% selectedSweeps_I = ExcludeSweeps(ephysData, protList, antSineCells, 'matchType', matchType, 'channel', 1);
+% selectedSweeps_PD = ExcludeSweeps(ephysData, protList, antSineCells, 'matchType', matchType, 'channel', 3);
+
+selectedSweeps_I = ImportMetaData();
+selectedSweeps_PD = ImportMetaData();
+
+
+% This method of comparing the two lists only works if there's only one
+% series/sweep per row. It simply concatenates cell ID, series, and sweep
+% number into a char row. For more sweeps per series, you will need to loop
+% (find matching cell/series combo, then check which sweeps are matching).
+a = selectedSweeps_I;
+b = selectedSweeps_PD;
+a(:,2) = cellfun(@num2str, a(:,2),'un',0);
+b(:,2) = cellfun(@num2str, b(:,2),'un',0);
+
+a = cellfun(@(x,y,z) [x y z], a(:,1),a(:,2),a(:,3),'un',0);
+b = cellfun(@(x,y,z) [x y z], b(:,1),b(:,2),b(:,3),'un',0);
+a = vertcat(a{:});
+b = vertcat(b{:});
+
+selectIdx = ismember(a,b,'rows');
+
+selectedSweeps = selectedSweeps_I(selectIdx,:);
+selectedSweeps(:,3) = cellfun(@(x) ['' x],selectedSweeps(:,3));
+
+% save the new selectedSweeps list to file
+[filename, pathname] = uiputfile(...
+    {'*.xls;*.xlsx', 'Excel files';
+    '*.*', 'All files'}, ...
+    'Save sweep list to .xls file:');
+fName = fullfile(pathname,filename);
+xlswrite(fName, selectedSweeps);
+
+clear fName filename pathname a b selectedSweeps_I selectedSweeps_PD selectedSweeps selectIdx
+
+
 %%
 sinePeaksNorm = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 1);
 
+sinePeaks = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0);
 % okay we're just going to plot the power spectrum in the morning and
 % ignore the bode plot because I don't know what a "system" object really
 % is in matlab or if my data can be one, or what a linear time-invariant
@@ -97,13 +144,15 @@ plotfixer;
 
 %% Plot steady state sine comparison
 
+whichPeaks = sinePeaksNorm;
+
 eachFreq = [0 10 30 100 200 500 1000];
 sf = 10000; %Hz
 allSteady = [];
 allSize = [];
 
-for iRec = 1:size(sinePeaksNorm,1)
-    theseSizes = sinePeaksNorm{iRec,3}(:,[1:3,5]);
+for iRec = 1:size(whichPeaks,1)
+    theseSizes = whichPeaks{iRec,3}(:,[1:3,6]);
     
     for iFreq = 1:size(theseSizes,1)
         allSteady = [allSteady; theseSizes(iFreq,4)];

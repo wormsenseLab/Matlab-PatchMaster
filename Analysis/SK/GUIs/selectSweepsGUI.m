@@ -64,7 +64,7 @@ switch dataType
     case 'A'
         for iSweep = 1:nSweeps
             % Plot the sweep in its proper subplot against time
-            tVec = 0:1/sf:length(data(:,iSweep,1))/sf-(1/sf);
+            tVec = (0:length(data(:,iSweep,1))-1)/sf;
             handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
                 'Parent', handles.uip);
             plot(tVec,data(:,iSweep,1)*1E12);
@@ -92,7 +92,7 @@ switch dataType
         if isempty(strfind(protName,'Calib')) && channel == 1 % for non-PD calib traces, current clamp traces
             for iSweep = 1:nSweeps
                 % Plot the sweep in its proper subplot against time
-                tVec = 0:1/sf:length(data(:,iSweep,1))/sf-1/sf;
+                tVec = (0:length(data(:,iSweep,1))-1)/sf;
                 handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
                     'Parent', handles.uip);
                 plot(tVec,data(:,iSweep,1)*1E3);
@@ -112,7 +112,7 @@ switch dataType
         elseif isempty(strfind(protName,'Calib')) && channel == 3 % for PD signal for non-calib traces
             for iSweep = 1:nSweeps
                 % Plot the sweep in its proper subplot against time
-                tVec = 0:1/sf:length(data(:,iSweep,1))/sf-1/sf;
+                tVec = (0:length(data(:,iSweep,1))-1)/sf;
                 handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
                     'Parent', handles.uip);
                 plot(tVec,data(:,iSweep,2)); %leak-subtracted trace
@@ -132,7 +132,7 @@ switch dataType
         else % for PD calib traces
             for iSweep = 1:nSweeps
                 % Plot the sweep in its proper subplot against time
-                tVec = 0:1/sf:length(data(:,iSweep,1))/sf-1/sf;
+                tVec = (0:length(data(:,iSweep,1))-1)/sf;
                 handles.plt(iSweep) = subplot(nRows,nCols,iSweep,...
                     'Parent', handles.uip);
                 plot(tVec,data(:,iSweep,1));
