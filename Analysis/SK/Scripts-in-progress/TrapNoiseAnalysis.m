@@ -3,7 +3,7 @@
 
 strainList = {'TU2769'};
 internalList = {'IC6'};
-stimPosition = {'posterior'};
+stimPosition = {'anterior'};
 
 wormPrep = {'dissected'};
 cellDist = [40 100];
@@ -29,37 +29,40 @@ ExcludeSweeps(ephysData, protList, noiseTrapCells,'matchType',matchType);
 %as new file.
 
 %% Approving Traces (old version)
-protList ={'Noise_Trap','WCProbe8'};
-matchType = 'first';
-strainList = {'TU2769'};
-internalList = {'IC6'};
-stimPosition = {'posterior'};
-wormPrep = {'dissected'};
-
-% define newCells when importing additional data so you can just add to the
-% list of approved sweeps
-
-trapCells = FilterRecordings(ephysData, ephysMetaData, newCells, ...
-    'strain', strainList, 'internal', internalList, ...
-     'stimLocation', stimPosition, 'wormPrep', wormPrep);
-
-ExcludeSweeps(ephysData, protList, trapCells, 'matchType', matchType);
-
-clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
+% protList ={'Noise_Trap','WCProbe8'};
+% matchType = 'first';
+% strainList = {'TU2769'};
+% internalList = {'IC6'};
+% stimPosition = {'posterior'};
+% wormPrep = {'dissected'};
+% 
+% % define newCells when importing additional data so you can just add to the
+% % list of approved sweeps
+% 
+% trapCells = FilterRecordings(ephysData, ephysMetaData, newCells, ...
+%     'strain', strainList, 'internal', internalList, ...
+%      'stimLocation', stimPosition, 'wormPrep', wormPrep);
+% 
+% ExcludeSweeps(ephysData, protList, trapCells, 'matchType', matchType);
+% 
+% clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
 
 %% Running analysis
 
-protList ={'NoiseTrap'};
+protList ={'NoiseTrap','WC_Probe8'};
 matchType = 'first';
-noiseTrap = NonStatNoiseAnalysis(ephysData,protList,trapCells,'matchType',matchType);
+noiseTrap = NonStatNoiseAnalysis(ephysData,protList,noiseTrapCells,'matchType',matchType,...
+    'recParameters',ephysMetaData);
 clear protList matchType
 
 %% Turn data into tables for Igor
 
+fname = 'PatchData/noiseTrapAnt(181001).xls';
+
 %Get protocol name parts and means/variances for each recording
 trapRecs = fieldnames(noiseTrap);
 recNames = cell(0); % name of cell
-protNames = cell(0); % name of protocol
+protVel = []; % name of protocol
 stimNames = cell(0); % number of stim (e.g., 1=on, 2=off) as string
 totMeans = cell(0);
 totVars = cell(0);
@@ -73,13 +76,13 @@ for iRec = 1:length(trapRecs);
         num2cell([noiseTrap.(trapRecs{iRec})(:).stimNum]),'un',0);
 
     stimNames = [stimNames theseStim];
-    protNames = [protNames vertcat({noiseTrap.(trapRecs{iRec})(:).protocol})];
+    protVel = [protVel; vertcat(noiseTrap.(trapRecs{iRec})(:).velocity)];
     totMeans = [totMeans vertcat({noiseTrap.(trapRecs{iRec})(:).totalMean})];
     totVars = [totVars vertcat({noiseTrap.(trapRecs{iRec})(:).totalVar})];
     recNames = [recNames repmat(trapRecs(iRec),1,length(noiseTrap.(trapRecs{iRec})))];
 end
 
-[protNames, protIdx] = sort(protNames);
+[protVel, protIdx] = sort(protVel);
 totMeans = totMeans(protIdx);
 totVars = totVars(protIdx);
 recNames = recNames(protIdx);
@@ -92,17 +95,16 @@ totMeans = cellfun(@(x)cat(1,x,NaN(maxLength-length(x),1)),totMeans,'UniformOutp
 totMeans = cell2mat(totMeans);
 totVars = cellfun(@(x)cat(1,x,NaN(maxLength-length(x),1)),totVars,'UniformOutput',false);
 totVars = cell2mat(totVars);
-
-protTimes = cellfun(@(x) sprintf('%sms',x(isstrprop(x,'digit'))), protNames,'un',0);
+protVel = num2cell(abs(protVel))';
 
 % Create identifying wave names for Igor
-waveMeanNames = cellfun(@(x,y,z) sprintf('mean_%s_%s_%s', x, y,z), protTimes, stimNames, recNames, 'un',0);
-waveVarNames = cellfun(@(x,y,z) sprintf('var_%s_%s_%s', x, y,z), protTimes, stimNames, recNames, 'un',0);
+waveMeanNames = cellfun(@(x,y,z) sprintf('mean_%s_%s_%dums', x, y,z), recNames, stimNames, protVel, 'un',0);
+waveVarNames = cellfun(@(x,y,z) sprintf('var_%s_%s_%dums', x, y,z), recNames, stimNames, protVel, 'un',0);
 
 
 % write into Excel file for loading into Igor
-xlswrite('PatchData/testTrap.xls',waveMeanNames,'means');
-xlswrite('PatchData/testTrap.xls',totMeans,'means','A2');
+xlswrite(fname,waveMeanNames,'means');
+xlswrite(fname,totMeans,'means','A2');
 
-xlswrite('PatchData/testTrap.xls',waveVarNames,'vars');
-xlswrite('PatchData/testTrap.xls',totVars,'vars','A2');
+xlswrite(fname,waveVarNames,'vars');
+xlswrite(fname,totVars,'vars','A2');

@@ -56,11 +56,12 @@
 %   mechPeaks       cell array      Nested cell array with a row for each
 %                                   recording. CellName, Average Trace, 
 %                                   then for each stimulus, MRC stats on
-%                                   [size/velocity (um or um/s); location 
-%                                   (datapoint); peak current (pA); 
-%                                   direction (+/-); threshold used (pA);
-%                                   decay tau from exp1 fit (ms);
-%                                   number of sweeps averaged].
+%                                   [1-sortingParam, 2-size (um), 3-position (um), 
+%                                   4-velocity (um/s), 5-pkLoc (datapoint), 
+%                                   6-peak (pA), 7-threshold used (pA), 
+%                                   8-activation time (ms), 9-decay time (ms) *either t1/2 max or tau
+%                                   10-time to peak (ms), 11-charge (C), 
+%                                   12-stim distance (um), 13-number of sweeps averaged.
 %
 %
 % Created by Sammy Katta on 20-May-2015.
@@ -68,17 +69,18 @@
 % Documentation not updated yet, but fxn now allows output to be used for
 % many more types of analyses. Will soon rename.
 
-% TODO: Add flag for using stim com signal vs. PD signal (chan 2 vs chan 3)
-%   Done, but still uses stim com to group step sizes, and includes PD
-%   trace and calculated sizes (based on calibration if available) in
-%   output
+% TODO: Allow output of mean PD or stimcom signal as traces in mechStim
+% (either include as output from newStepFind, or just section it with
+% profileIndex and use series/sweep numbers from stimMetaData to pull it 
+% out for each group).
+% 
 % NEXT: test with stimInterval, break down into intermediate fxns if still
 % necessary.
 % LATER: add in PD step analysis (will need findMRCs modified), output
 % sorted stim command and PD traces with sortedLeakSub
 % LATER: add GUI for selecting sortSweepsBy for each stim segment
 
-function [mechPeaks, mechStim, mechTraces] = IdAnalysis(ephysData, protList, varargin)
+function [mechPeaks, mechStim] = IdAnalysis(ephysData, protList, varargin)
 
 p = inputParser;
 p.addRequired('ephysData', @(x) isstruct(x));
@@ -134,6 +136,8 @@ if isempty(allCells)
 end
 
 mechPeaks = cell(length(allCells),1);
+mechStim = cell(length(allCells),1);
+
 % protList = {'WC_Probe','NoPrePulse','DispRate'};
 % protList = {'PrePulse'};
 
@@ -545,6 +549,7 @@ for iCell = 1:length(allCells)
         end
     else 
         mechPeaks{iCell,1} = cellName;
+        
         mechPeaks{iCell,2} = meansByStimProfile;
         
         for iStim = 1:nStim
@@ -597,10 +602,9 @@ for iCell = 1:length(allCells)
     %means and use those timepoints for peak finding so you'd also have a
     %less noisy stim/PD trace.
     
-    mechStim (iCell,2:length(sortedStim)+1) = sortedStim;
-    
+    mechStim(iCell,2:length(sortedStim)+1) = sortedStim;
 end
-
+mechStim = mechStim(~cellfun(@isempty, mechPeaks(:,1)),:);
 mechPeaks = mechPeaks(~cellfun(@isempty, mechPeaks(:,1)),:);
 
 end

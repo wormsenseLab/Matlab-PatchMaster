@@ -60,17 +60,68 @@ matchType = 'first';
 ExcludeSweeps(ephysData, protList, velocityCells, 'matchType', matchType);
 
 %% Find MRCs 
-% antAllSteps.xlsx and postAllSteps.xlsx from 180810
+% antTraps_allFreq(180913).xls
 protList ={'TrapRate'};
 matchType = 'first';
 
 sortSweeps = {'velocity','velocity','magnitude','magnitude'};
 
-velocityMRCs = IdAnalysis(ephysData,protList,velocityCells,'num','matchType',matchType, ...
+[velocityMRCs velocityStim] = IdAnalysis(ephysData,protList,velocityCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
     'recParameters', ephysMetaData,'sepByStimDistance',1);
 
 clear protList sortSweeps matchType
+
+%% Quick plot for looking at asymmetry in slow velocities
+figure();
+for i = 1:8
+axh(i) = subtightplot(2,4,i);
+plot(velocityMRCs{i,2}([5 4 3 2 1],:)');
+cmapline('ax',gca,'colormap','parula');
+end
+linkaxes(axh,'xy');
+plotfixer;
+
+%% Get normalized mean traces (normalized to highest velocity)
+% Can then use normVelocityMRCs as input for the final
+normVelocitySweeps = cellfun(@(x,y) x./y(end,6),velocityMRCs(:,2),velocityMRCs(:,3),'un',0);
+normVelocityMRCs = velocityMRCs;
+normVelocityMRCs(:,2) = normVelocitySweeps;
+%% Quick plot for selecting representative traces
+figure();
+for i = 1:8
+axh(i) = subtightplot(2,4,i);
+plot(velocityMRCs{i,2}');
+cmapline('ax',gca,'colormap','parula');
+end
+linkaxes(axh,'xy');
+
+%% Plot selected representative traces and stimuli
+% FAT214 with on ramps for 106, 785, 1560, 7230, 39740 um/s
+
+% Grab stimuli based on velocityStim (second output from IdAnalysis)
+% Just example stim from one trace
+% Should this be photodiode trace? (if so don't forget to zero it)
+stimTrace{1} = ephysData.FAT214.data{3,18}(:,2);
+stimTrace{2} = ephysData.FAT214.data{3,11}(:,2);
+stimTrace{3} = ephysData.FAT214.data{3,12}(:,3);
+stimTrace{4} = ephysData.FAT214.data{3,12}(:,4);
+stimTrace{5} = ephysData.FAT214.data{3,11}(:,3);
+
+
+
+figure();
+axh(1)=subplot(2,1,1);
+for i = 1:5
+    plot(stimTrace{i})
+    hold on
+end
+tVec = (1:length(velocityMRCs{1,2}))/10; % time in ms
+plot(tVec,velocityMRCs{1,2}([2 5 6 10 12],:)');
+cmapline('ax',gca,'colormap','copper');
+chH = get(gca,'children');
+set(gca,'children',flipud(chH));
+plotfixer();
 
 %% Pull out and combine relevant data for plot
 
@@ -107,7 +158,37 @@ for iCell = 1:size(whichMRCs,1)
     
 end
 
-distVPeak_Ant = distVPeak;
+distVPeak_On = distVPeak;
+
+
+% Off ramps
+
+distVPeak = [];
+
+for iCell = 1:size(whichMRCs,1)
+    thisCell = whichMRCs{iCell,4};
+    whichVel = round(thisCell(:,1)) == -stepVel;
+    if any(whichVel)
+        thisName = whichMRCs{iCell,1};
+        hasAtt = strcmp(thisName,thisAtt(:,1));
+        
+        if any(hasAtt) && thisAtt{hasAtt,2}
+            try distVPeak(iCell,:) = [thisCell(whichVel,[distCol peakCol]) thisAtt{hasAtt,3}];
+            catch
+                distVPeak(iCell,:) = [mean(thisCell(whichVel,[distCol peakCol]),1) thisAtt{hasAtt,3}];
+            end
+        else
+            try distVPeak(iCell,:) = [thisCell(whichVel,[distCol peakCol]) nan];
+            catch
+                distVPeak(iCell,:) = [mean(thisCell(whichVel,[distCol peakCol]),1) nan];
+            end
+        end
+        
+    end
+    
+end
+
+distVPeak_Off = distVPeak;
 
 clear a iCell thisCell whichMRCs whichStep thisName hasAtt distVPeak
 
@@ -131,31 +212,57 @@ clear a iCell thisCell whichMRCs whichStep thisName hasAtt distVPeak
  
 Vc = -0.06; %in V
 Ena = 0.094; % in V
-Im = distVPeak_Ant(:,2);
-Vatt = distVPeak_Ant(:,3);
+Im = distVPeak_On(:,2);
+Vatt = distVPeak_On(:,3);
 
 Vm = Vc * Vatt;
-distVPeak_Ant(:,4) = (Im * (Vc-Ena)) ./ (Vm-Ena);
+distVPeak_On(:,4) = (Im * (Vc-Ena)) ./ (Vm-Ena);
 
-%% Plot anterior and posterior on separate plots
 
-figure(); axh(1) = subplot(2,1,1);
-scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
+Im = distVPeak_Off(:,2);
+Vatt = distVPeak_Off(:,3);
+
+Vm = Vc * Vatt;
+distVPeak_Off(:,4) = (Im * (Vc-Ena)) ./ (Vm-Ena);
+
+
+%% Plot on and off currents vs distance
+
+figure();
+scatter(distVPeak_On(:,1),distVPeak_On(:,4),'b');
+hold on;
+scatter(distVPeak_Off(:,1),distVPeak_Off(:,4),'r');
 xlabel('Distance from cell body (um)');
 ylabel(sprintf('Current @%dum (pA)',stepVel))
-text(100,200,'Anterior');
+xlim(gca,[0 200]);
+ylim(gca,[0 200]);
+legend({'On current','Off current'});
 
-for i = 1:length(axh)
-    xlim(axh(i),[0 200]);
-    ylim(axh(i),[0 200]);
-end
 
 %% Correct all sizes and export for Igor fitting of Boltzmann to each recording
 
 % Set the filename
-fname = 'PatchData/attCorrectedVelCurves(180913).xls';
+fname = 'PatchData/attCorrectedVel_times(181002).xls';
+noCorr = 0;
 
-allVel = vertcat(velocityMRCs{:,3});
+for i = 1:2
+whichRamp = i; % 1 for on currents, 2 for off currents
+normFlag = 0; %normalize to 40mm/s ramp (highest velocity "step")
+peakCol = 9; % 6 for peak current, 11 for integrated current/charge
+             % 8 for tauAct, 9 for tauDecay
+switch peakCol
+    case 6
+        dType = 'peak';
+    case 11
+        dType = 'charge';
+    case 8
+        dType = 'act';
+    case 9
+        dType = 'decay';
+end
+distCol = 12;
+
+allVel = vertcat(velocityMRCs{:,whichRamp+2});
 eachVel = uniquetol(allVel(:,1),12,'DataScale',1);
 % the value of 12 is empirically chosen as being larger than the largest
 % difference between velocities that could be binned (usually 10 after roundVel) and smaller than the
@@ -173,12 +280,12 @@ thisName = cell(0);
 vel_Out = cell(length(eachVel)+1,size(whichMRCs,1));
 
 for iCell = 1:size(whichMRCs,1)
-    thisCell = whichMRCs{iCell,3};
+    thisCell = whichMRCs{iCell,whichRamp+2};
     thisDist = mean(thisCell(:,distCol)); % check if cell distance is in range
     if thisDist <= distLimits(2) && thisDist >= distLimits(1)
         thisName{iCell,1} = whichMRCs{iCell,1}; %name
         thisName{iCell,2} = thisDist;
-        vel_Out{1,iCell} = thisName{iCell,1};
+        vel_Out{1,iCell} = sprintf('%s_%s_stim%d',thisName{iCell,1},dType,whichRamp);
         hasAtt = strcmp(thisName{iCell,1},thisAtt(:,1));
         Iact = [];
         
@@ -186,63 +293,85 @@ for iCell = 1:size(whichMRCs,1)
             stepVel = eachVel(iVel);
             whichVel = abs(thisCell(:,1) - stepVel) < 12; %find closest velocity
             if any(whichVel)
-                
                 if any(hasAtt) && thisAtt{hasAtt,2} %if attenuation calc exists and not omitCell
-                    Vm = Vc * thisAtt{hasAtt,3};
-                    Im = thisCell(whichVel,peakCol);
-                    Iact(iVel,1) = (Im * (Vc-Ena)) ./ (Vm-Ena);
+                    if noCorr == 1 || strcmp(dType,'peak') || strcmp(dType,'charge') %attenuation correction for current/charge but not taus
+                        Vm = Vc * thisAtt{hasAtt,3};
+                        Im = thisCell(whichVel,peakCol);
+                        if length(Im) > 1
+                            %multiple profiles containing this velocity, take mean weighted by nReps
+                            Im = sum((thisCell(whichVel,peakCol).*thisCell(whichVel,end)))/sum(thisCell(whichVel,end));
+                        end
+                        
+                        Iact(iVel,1) = (Im * (Vc-Ena)) ./ (Vm-Ena);
+                    else
+                        Im = thisCell(whichVel,peakCol);
+                        if length(Im) > 1
+                            %multiple profiles containing this velocity, take mean weighted by nReps
+                            Im = sum((thisCell(whichVel,peakCol).*thisCell(whichVel,end)))/sum(thisCell(whichVel,end));
+                        end
+                        Iact(iVel,1) = Im;
+                    end
                 else
                     Iact(iVel,1) = nan;
                 end
+
                 
             else
                 Iact(iVel,1) = nan;
             end
         end
+        
+        if whichRamp == 2
+            Iact = flipud(Iact);
+        end
+        if normFlag
+            Iact = Iact./Iact(end);
+        end
         vel_Out(2:length(eachVel)+1,iCell) = num2cell(Iact);
+            
     end
 end
-vel_Name = [{'Anterior', 'Ant_Dist'}; thisName];
+
+if whichRamp == 2
+    eachVel = flipud(eachVel);
+end
+
+thisName(:,1) = cellfun(@(x) sprintf('%s',x),thisName(:,1),'un',0);
+vel_Name = [{sprintf('Anterior_stim%d',whichRamp), sprintf('Ant_Dist_stim%d',whichRamp)}; thisName];
 vel_Out = vel_Out(:,~cellfun(@isempty, vel_Out(1,:))); % clear out empty waves (where dist didn't match)
 vel_Name = vel_Name(~cellfun(@isempty, vel_Name(:,1)),:);
 
-vel_Out = [[{'velocity'};num2cell(eachVel)] vel_Out]; % append stepSize wave
-
-% thisName = cell(0);
-% whichMRCs = posteriorMRCs;
-% post_Out = cell(length(eachSize)+1,size(whichMRCs,1));
-% 
-% for iCell = 1:size(whichMRCs,1)
-%     thisCell = whichMRCs{iCell,3};
-%     thisDist = mean(thisCell(:,distCol)); % check if cell distance is in range
-%     if thisDist <= distLimits(2) && thisDist >= distLimits(1)
-%         thisName{iCell,1} = whichMRCs{iCell,1}; %name
-%         thisName{iCell,2} = thisDist; %distance
-%         post_Out{1,iCell} = thisName{iCell,1};
-%         Iact = [];
-%         
-%         for iSize = 1:length(eachSize)
-%             stepVel = eachSize(iSize);
-%             whichStep = round(thisCell(:,1)*2)/2 == stepVel; %round to nearest 0.5
-%             if any(whichStep)
-%                 Iact(iSize,1) = thisCell(whichStep,peakCol);
-%             else
-%                 Iact(iSize,1) = nan;
-%             end
-%         end
-%         post_Out(2:length(eachSize)+1,iCell) = num2cell(Iact);
-%     end
-% end
-% 
-% post_Name = [{'Posterior', 'Post_Dist'}; thisName];
-% post_Out = post_Out(:,~cellfun(@isempty, post_Out(1,:)));
-% post_Name = post_Name(~cellfun(@isempty, post_Name(:,1)),:);
+vel_Out = [[{sprintf('vel_stim%d',whichRamp)};num2cell(eachVel)] vel_Out]; % append stepSize wave
 
 
-xlswrite(fname,vel_Out,'vel');
-xlswrite(fname,vel_Name,'velStats');
+xlswrite(fname,vel_Out,sprintf('%s_stim%d',dType,whichRamp));
+xlswrite(fname,vel_Name,sprintf('%sStats_stim%d',dType,whichRamp));
 
 clear iCell thisCell Iact whichMRCs whichStep hasAtt thisAtt Vc Ena thisName
+end
+
+%% Calculate ratios
+% re-save vel_Out as on/offVelChrg and on/offVelPeak for the corresponding
+% cases
+on = onVelPeak;
+off = offVelPeak;
+out = on(1,:);
+
+onVel = [on{2:end,1}];
+offVel = -[off{2:end,1}];
+
+
+for i = 1:length(onVel)
+   whichVel = abs(onVel(i)-offVel)<12;
+   if any(whichVel)
+       thisVel = find(whichVel);
+       out{i+1,1} = offVel(thisVel);
+       out(i+1,2:end) = cellfun(@(x,y) x./y, off(thisVel+1,2:end), on(i+1,2:end),'un',0);
+   end
+end
+
+out = out(~cellfun(@isempty,out(:,1)),:);
+xlswrite(fname,out,sprintf('velPeak_ratio'));
 
 
 %% Renormalize
