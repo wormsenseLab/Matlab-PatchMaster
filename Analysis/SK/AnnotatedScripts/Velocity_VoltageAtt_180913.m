@@ -102,28 +102,43 @@ linkaxes(axh,'xy');
 % Grab stimuli based on velocityStim (second output from IdAnalysis)
 % Just example stim from one trace
 % Should this be photodiode trace? (if so don't forget to zero it)
-stimTrace{1} = ephysData.FAT214.data{3,18}(:,2);
-stimTrace{2} = ephysData.FAT214.data{3,11}(:,2);
-stimTrace{3} = ephysData.FAT214.data{3,12}(:,3);
-stimTrace{4} = ephysData.FAT214.data{3,12}(:,4);
-stimTrace{5} = ephysData.FAT214.data{3,11}(:,3);
+stimTrace = cell(0);
+stimTrace{1} = ephysData.FAT214.data{2,18}(:,2);
+stimTrace{2} = ephysData.FAT214.data{2,11}(:,2);
+stimTrace{3} = ephysData.FAT214.data{2,12}(:,3);
+stimTrace{4} = ephysData.FAT214.data{2,12}(:,4);
+stimTrace{5} = ephysData.FAT214.data{2,17}(:,5);
 
+%pad to same length
+sweepLengths = cellfun('length',stimTrace);
+maxLength = max(sweepLengths);
+stimTrace = cellfun(@(x)cat(1,x,NaN(maxLength-length(x),1)),stimTrace,'UniformOutput',false);
+stimTrace = cell2mat(stimTrace);
+stimZero = mean(stimTrace(1:100,:),1);
+stimTrace = stimTrace - repmat(stimZero,[10000 1]);
+stimTrace = stimTrace/0.408;
+tVec = (1:length(velocityMRCs{1,2}))/10; % time in ms
 
 
 figure();
 axh(1)=subplot(2,1,1);
 for i = 1:5
-    plot(stimTrace{i})
-    hold on
+plot(tVec,stimTrace);
 end
-tVec = (1:length(velocityMRCs{1,2}))/10; % time in ms
-plot(tVec,velocityMRCs{1,2}([2 5 6 10 12],:)');
 cmapline('ax',gca,'colormap','copper');
 chH = get(gca,'children');
 set(gca,'children',flipud(chH));
+
+axh(2)=subplot(2,1,2);
+plot(tVec,velocityMRCs{1,2}([2 5 6 10 12],:)');
+linkaxes(axh,'x');
+cmapline('ax',gca,'colormap','copper');
+chH = get(gca,'children');
+set(gca,'children',flipud(chH));
+ylim([-10e-11 1e-11]);
 plotfixer();
 
-%% Pull out and combine relevant data for plot
+%% Pull out and combine data to plot one particular velocity vs. distance
 
 % Voltage attenuation data comes from the length constant fitting done in
 % Igor, which gives a voltage attenuation factor at the location of the
@@ -192,7 +207,7 @@ distVPeak_Off = distVPeak;
 
 clear a iCell thisCell whichMRCs whichStep thisName hasAtt distVPeak
 
-%% Make correction to I for space clamp error
+%% Make correction to I for space clamp error for one particular velocity
 % (Note: this is an approximation, assuming that the majority of the
 % current is happening at the stimulus site, which we know is not entirely
 % true, and channels at different points along the neurite will experience
@@ -226,7 +241,7 @@ Vm = Vc * Vatt;
 distVPeak_Off(:,4) = (Im * (Vc-Ena)) ./ (Vm-Ena);
 
 
-%% Plot on and off currents vs distance
+%% Plot on and off currents vs distance for one velocity
 
 figure();
 scatter(distVPeak_On(:,1),distVPeak_On(:,4),'b');
@@ -239,16 +254,16 @@ ylim(gca,[0 200]);
 legend({'On current','Off current'});
 
 
-%% Correct all sizes and export for Igor fitting of Boltzmann to each recording
+%% Correct all velocities and export for Igor fitting of Boltzmann to each recording
 
 % Set the filename
-fname = 'PatchData/attCorrectedVel_times(181002).xls';
+fname = 'PatchData/attCorrectedVel(181004).xls';
 noCorr = 0;
 
 for i = 1:2
 whichRamp = i; % 1 for on currents, 2 for off currents
 normFlag = 0; %normalize to 40mm/s ramp (highest velocity "step")
-peakCol = 9; % 6 for peak current, 11 for integrated current/charge
+peakCol = 6; % 6 for peak current, 11 for integrated current/charge
              % 8 for tauAct, 9 for tauDecay
 switch peakCol
     case 6
@@ -371,6 +386,8 @@ for i = 1:length(onVel)
 end
 
 out = out(~cellfun(@isempty,out(:,1)),:);
+out(1,:) = cellfun(@(x) regexprep(x,'stim1','ratio'),out(1,:),'un',0);
+
 xlswrite(fname,out,sprintf('velPeak_ratio'));
 
 

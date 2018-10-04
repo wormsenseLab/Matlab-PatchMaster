@@ -562,29 +562,6 @@ for iCell = 1:length(allCells)
     % TODO: have column 2  of sortedLeakSub be the stim trace used to find stim, for easy
     % plotting access, and col 3 = PD trace, once you have that set up.
     
-    % keyboard;
-    
-    %
-    %
-    %     if calibFlag==1
-    %         mechPeaks{iCell,1} = [eachSize(~isnan(eachSize)) meanPDSize(~isnan(eachSize)) ...
-    %             pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc nReps];
-    %         mechPeaks{iCell,2} = meansByParam;
-    %         mechPeaks{iCell,3} = meanPDTrace;
-    %         mechPeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
-    %         mechPeaks{iCell,5} = theseIDs;
-    %     else
-    %         mechPeaks{iCell,1} = ...
-    %             [eachSize(~isnan(eachSize)) nan(size(eachSize(~isnan(eachSize))))...
-    %             pkOn pkOff onsetTau offsetTau pkOnLoc pkOffLoc nReps];
-    %         mechPeaks{iCell,2} = meansByParam;
-    %         mechPeaks{iCell,4} = repmat(cellName,[size(pkOn),1]);
-    %         mechPeaks{iCell,5} = theseIDs;
-    %     end
-    %     % TODO: Figure out how to fit this to the four-parameter sigmoidal
-    %     % function used in O'Hagan: @(X,a,b,c,d) ((a-d)/(1+((X/c)^b)))+d
-    %     % Using optimtool? fmincon? nlinfit if you add the statistics toolbox.
-    
     % reset calibFlag to true if it was unset for a particular cell
     if calibFlag == 2
         calibFlag = 1;
