@@ -46,8 +46,6 @@ velocityCells = FilterRecordings(ephysData, ephysMetaData,...
 
 clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep excludeCells;
 
-% This results in a file with three columns: cell ID, series, and sweeps 
-% that have been approved for analysis use.
 
 %% Visual/manual exclusion of bad sweeps 
 % This is mainly based on excluding sweeps with leak > 10pA, but also
@@ -59,6 +57,9 @@ matchType = 'first';
 
 ExcludeSweeps(ephysData, protList, velocityCells, 'matchType', matchType);
 
+% This results in a file with three columns: cell ID, series, and sweeps 
+% that have been approved for analysis use.
+
 %% Find MRCs 
 % antTraps_allFreq(180913).xls
 protList ={'TrapRate'};
@@ -66,7 +67,7 @@ matchType = 'first';
 
 sortSweeps = {'velocity','velocity','magnitude','magnitude'};
 
-[velocityMRCs velocityStim] = IdAnalysis(ephysData,protList,velocityCells,'num','matchType',matchType, ...
+[velocityMRCs, velocityStim] = IdAnalysis(ephysData,protList,velocityCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
     'recParameters', ephysMetaData,'sepByStimDistance',1);
 
@@ -152,7 +153,7 @@ plotfixer();
 whichMRCs = velocityMRCs;
 thisAtt = attenuationData(:,[2 8 10]);
 distCol = 12;
-peakCol = 6; % 6 for peak current, 11 for integrated current/charge
+peakCol = 11; % 6 for peak current, 11 for integrated current/charge
 distVPeak = [];
 stepVel = 11360;
 
@@ -257,14 +258,14 @@ legend({'On current','Off current'});
 %% Correct all velocities and export for Igor fitting of Boltzmann to each recording
 
 % Set the filename
-fname = 'PatchData/attCorrectedVel(181004).xls';
+fname = 'PatchData/attCorrectedVel(181022).xls';
 noCorr = 0;
+normFlag = 0; %normalize to 40mm/s ramp (highest velocity "step")
+peakCol = 11; % 6 for peak current, 11 for integrated current/charge
+             % 8 for tauAct, 9 for tauDecay
 
 for i = 1:2
 whichRamp = i; % 1 for on currents, 2 for off currents
-normFlag = 0; %normalize to 40mm/s ramp (highest velocity "step")
-peakCol = 6; % 6 for peak current, 11 for integrated current/charge
-             % 8 for tauAct, 9 for tauDecay
 switch peakCol
     case 6
         dType = 'peak';
@@ -368,8 +369,8 @@ end
 %% Calculate ratios
 % re-save vel_Out as on/offVelChrg and on/offVelPeak for the corresponding
 % cases
-on = onVelPeak;
-off = offVelPeak;
+on = antOnCurr;
+off = antOff_Curr;
 out = on(1,:);
 
 onVel = [on{2:end,1}];
@@ -388,7 +389,7 @@ end
 out = out(~cellfun(@isempty,out(:,1)),:);
 out(1,:) = cellfun(@(x) regexprep(x,'stim1','ratio'),out(1,:),'un',0);
 
-xlswrite(fname,out,sprintf('velPeak_ratio'));
+xlswrite(fname,out,sprintf('velChrg_ratio'));
 
 
 %% Renormalize

@@ -57,12 +57,12 @@ internalList = {'IC2'};
 stimPosition = {'anterior'};
 
 wormPrep = {'dissected'};
-cellDist = [40 200];
+cellDist = [40 100];
 resistCutoff = '<250';
-extFilterFreq = 2.5;
+extFilterFreq = [2.5 5];
 includeFlag = 1;
 
-anteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
+anteriorStepCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
      'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
@@ -72,7 +72,7 @@ clear cellDist strainList internalList cellTypeList stimPosition resistCutoff an
 
 %% Run sweep selection GUI
 
-ExcludeSweeps(ephysData, protList, anteriorDistCells, 'matchType', matchType);
+ExcludeSweeps(ephysData, protList, anteriorStepCells, 'matchType', matchType);
 
 clear protList matchType;
 
@@ -109,7 +109,7 @@ clear protList matchType;
 protList = {'WC_Probe','NoPre'};
 sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
 matchType = 'first';
-anteriorMRCs = IdAnalysis(ephysData,protList,anteriorDistCells,'num','matchType',matchType, ...
+anteriorMRCs = IdAnalysis(ephysData,protList,anteriorStepCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
     'recParameters', ephysMetaData,'sepByStimDistance',1);
 clear protList sortSweeps matchType

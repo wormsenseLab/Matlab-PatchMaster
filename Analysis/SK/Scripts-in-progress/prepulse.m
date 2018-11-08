@@ -6,10 +6,21 @@
 protList ={'NoPrePulse'};
 sortSweeps = {'position','position','position','position'};
 matchType = 'full';
-fatNoPreMRCs = IdAnalysis(ephysData,protList,fatCells,'num','matchType',matchType, ...
-    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1);
+wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1,...
+    'sortStimBy','time','recParameters',ephysMetaData);
 
 clear protList sortSweeps matchType
+
+protList ={'PrePulse'};
+sortSweeps = {'position','position','position','position'};
+matchType = 'full';
+wtPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1,...
+    'sortStimBy','time','recParameters',ephysMetaData);
+
+clear protList sortSweeps matchType
+
 
 %% load prepulseFatData/get rid of empty cells
 wtPreMRCs = wtPreMRCs(~cellfun('isempty',wtPreMRCs(:,1)),:);

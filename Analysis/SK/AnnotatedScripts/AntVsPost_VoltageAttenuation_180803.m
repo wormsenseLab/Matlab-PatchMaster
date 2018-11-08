@@ -90,7 +90,7 @@ clear protList sortSweeps matchType
 whichMRCs = anteriorMRCs;
 thisAtt = attenuationData(:,[2 8 10]);
 distCol = 12;
-peakCol = 8; % 6 for peak current, 11 for integrated current/charge
+peakCol = 6; % 6 for peak current, 11 for integrated current/charge
 distVPeak = [];
 stepSize = 10;
 
@@ -195,6 +195,9 @@ ylabel(sprintf('Current @%dum (pA)',stepSize))
 xlim([-100 200]);ylim([0 200]);
 vline(0,'k:');
 
+
+
+
 %% Correct all sizes and export for Igor fitting of Boltzmann to each recording
 
 eachSize = [0.5 1 1.5 3 4 5 6 7 8 9 10 11 12]';
@@ -287,6 +290,23 @@ xlswrite(fname,post_Name,'postStats');
 
 clear iCell thisCell Iact whichMRCs whichStep hasAtt thisAtt Vc Ena thisName
 
+%% Calculate ratios
+% re-save ant_Out as antOff/antOnCurr for the corresponding cases
+on = antOnCurr;
+off = antOffCurr;
+out = on(1,:);
+
+onVel = [on{2:end,1}];
+offVel = -[off{2:end,1}];
+
+
+for i = 1:length(onVel)
+    out{i+1,1} = onVel(i);
+    out(i+1,2:end) = cellfun(@(x,y) x./y, off(i+1,2:end), on(i+1,2:end),'un',0);
+end
+
+out = out(~cellfun(@isempty,out(:,1)),:);
+out(1,:) = cellfun(@(x) regexprep(x,'stim1','ratio'),out(1,:),'un',0);
 
 %% Renormalize
 

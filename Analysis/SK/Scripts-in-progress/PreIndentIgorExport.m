@@ -1,6 +1,40 @@
 % PreIndentIgorExport.m
 
+%% Load data
 % load prepulseFatData(180108).mat
+
+% or run this section to re-load the data given ephysData and
+% ephysMetaData.
+strainList = {'TU2769'};
+internalList = {'IC2'};
+resistCutoff = '<210'; % Rs < 210 MOhm
+
+wtCells = FilterRecordings(ephysData, ephysMetaData,...
+    'strain', strainList, 'internal', internalList, 'RsM', resistCutoff);
+
+clear strainList internalList resistCutoff ans;
+
+
+
+protList ={'NoPrePulse'};
+sortSweeps = {'position','position','position','position'};
+matchType = 'full';
+wtNoPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1,...
+    'sortStimBy','time','recParameters',ephysMetaData);
+
+clear protList sortSweeps matchType
+
+protList ={'PrePulse'};
+sortSweeps = {'position','position','position','position'};
+matchType = 'full';
+wtPreMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1,...
+    'sortStimBy','time','recParameters',ephysMetaData);
+
+clear protList sortSweeps matchType
+
+%% Export to Igor
 
 % Get traces and associated recording names
 noPreTraces = vertcat(wtNoPreMRCs{:,2})';
