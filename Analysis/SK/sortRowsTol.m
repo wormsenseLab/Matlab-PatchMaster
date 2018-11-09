@@ -18,8 +18,8 @@ for iCol = 1:length(sortOrder)
     
     %pick out values which have a diff greater than tolerance from their
     %neighbor after sorting. 
-    isUnq(:,iCol) = [1; diff(abs(matA_sorted(:,sortOrder(iCol))))>tol(iCol)];
-    isUnqEnd(:,iCol) = [diff(abs(matA_sorted(:,sortOrder(iCol))))>tol(iCol);1];
+    isUnq(:,iCol) = [1; abs(diff(abs(matA_sorted(:,sortOrder(iCol)))))>tol(iCol)];
+    isUnqEnd(:,iCol) = [abs(diff(abs(matA_sorted(:,sortOrder(iCol)))))>tol(iCol);1];
     
 end
 
