@@ -82,7 +82,7 @@ switch dataType
             % Number the axis for later use, set the button down function (must be
             % done after plotting or at least after 'hold on', because plotting
             % resets the axes properties otherwise).
-            set(gca, 'YLim', [-80 10], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+            set(gca, 'YLim', [-80 10], 'XLim',[0 tVec(end)], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
             
         end
      
@@ -106,7 +106,7 @@ switch dataType
                 % Number the axis for later use, set the button down function (must be
                 % done after plotting or at least after 'hold on', because plotting
                 % resets the axes properties otherwise).
-                set(gca, 'YLim', [-90 40], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+                set(gca, 'YLim', [-90 40], 'XLim',[0 tVec(end)], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
                 
             end
         elseif isempty(strfind(protName,'Calib')) && channel == 3 % for PD signal for non-calib traces
@@ -126,7 +126,7 @@ switch dataType
                 % Number the axis for later use, set the button down function (must be
                 % done after plotting or at least after 'hold on', because plotting
                 % resets the axes properties otherwise).
-                set(gca, 'YLim', [-3 0.5], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+                set(gca, 'YLim', [-3 0.5], 'XLim',[0 tVec(end)], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
                 
             end
         else % for PD calib traces
@@ -141,7 +141,7 @@ switch dataType
                 % Number the axis for later use, set the button down function (must be
                 % done after plotting or at least after 'hold on', because plotting
                 % resets the axes properties otherwise).
-                set(gca, 'YLim',[-5 1], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+                set(gca, 'YLim',[-5 3], 'XLim',[0 tVec(end)], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
                 
             end
         end
@@ -165,7 +165,7 @@ switch dataType
                 % Number the axis for later use, set the button down function (must be
                 % done after plotting or at least after 'hold on', because plotting
                 % resets the axes properties otherwise).
-                set(gca, 'YLim', [-1 5], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
+                set(gca, 'YLim', [-1 5], 'XLim',[0 tVec(end)], 'Tag', num2str(iSweep),'ButtonDownFcn', @toggleBGColor);
                 
             end
         end

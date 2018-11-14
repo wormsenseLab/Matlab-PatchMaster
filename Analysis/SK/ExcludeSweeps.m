@@ -60,7 +60,7 @@ while iCell <= length(allCells)
     
     iSeries = 1;
     while iSeries <= length(protLoc{iCell})
-        if goBack && lastSeries
+        if goBack && lastSeries 
             iSeries = length(protLoc{iCell});
         end
         
@@ -156,7 +156,7 @@ while iCell <= length(allCells)
         keepSweepNums{iCell}{iSeries} = sweeps(keepSweeps{iCell}{iSeries});
 
         if iSeries == 1 && goBack
-            iCell = iCell - 1;
+            iCell = max([iCell - 1, 1]); %either subtract one or stay if this is first series
             lastSeries = 1;
             break
         elseif goBack

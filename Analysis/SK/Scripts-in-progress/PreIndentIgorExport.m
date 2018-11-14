@@ -123,7 +123,7 @@ thisDisp = eachDisp(:,1);
 absPreSummary = [thisDisp thisMean thisSD thisSEM];
 
 % No pre-step
-whichSteps = off_PreSteps(:,[2,3]);
+whichSteps = on_NoPreSteps(:,[2,3]);
 whichSteps(:,1) = -whichSteps(:,1);
 
 [~, sortIdx, eachDisp, dispStartIdx, dispEndIdx] = ...
@@ -136,11 +136,44 @@ thisDisp = eachDisp(:,1);
 noPreSummary = [thisDisp thisMean thisSD thisSEM];
 
 relPreNorm = relPreSummary(:,1);
-relPreNorm(:,2:4) = relPreSummary(:,2:4)/max(noPreSummary(:,2));
+relPreNorm(:,2:4) = relPreSummary(:,2:4)/max(relPreSummary(:,2));
 absPreNorm = absPreSummary(:,1);
-absPreNorm(:,2:4) = absPreSummary(:,2:4)/max(noPreSummary(:,2));
+absPreNorm(:,2:4) = absPreSummary(:,2:4)/max(relPreSummary(:,2));
 noPreNorm = noPreSummary(:,1);
-noPreNorm(:,2:4) = noPreSummary(:,2:4)/max(noPreSummary(:,2));
+noPreNorm(:,2:4) = noPreSummary(:,2:4)/max(relPreSummary(:,2));
+
+
+% And off responses
+% Relative displacement pre-step
+whichSteps = off_PreSteps(:,[2,3]);
+
+[~, sortIdx, eachDisp, dispStartIdx, dispEndIdx] = ...
+    sortRowsTol(whichSteps, 0, 1);
+thisMean = arrayfun(@(x,y) mean(whichSteps(x:y,2)) ,dispStartIdx,dispEndIdx);
+thisSD = arrayfun(@(x,y) std(whichSteps(x:y,2)) ,dispStartIdx,dispEndIdx);
+thisSEM = thisSD./sqrt(dispEndIdx-dispStartIdx+1); 
+thisDisp = eachDisp(:,1);
+
+absOffPreSummary = [thisDisp thisMean thisSD thisSEM];
+
+% No pre-step
+whichSteps = off_NoPreSteps(:,[2,3]);
+whichSteps(:,1) = -whichSteps(:,1);
+
+[~, sortIdx, eachDisp, dispStartIdx, dispEndIdx] = ...
+    sortRowsTol(whichSteps, 0, 1);
+thisMean = arrayfun(@(x,y) mean(whichSteps(x:y,2)) ,dispStartIdx,dispEndIdx);
+thisSD = arrayfun(@(x,y) std(whichSteps(x:y,2)) ,dispStartIdx,dispEndIdx);
+thisSEM = thisSD./sqrt(dispEndIdx-dispStartIdx+1); 
+thisDisp = eachDisp(:,1);
+
+noPreOffSummary = [thisDisp thisMean thisSD thisSEM];
+
+absOffPreNorm = absOffPreSummary(:,1);
+absOffPreNorm(:,2:4) = absOffPreSummary(:,2:4)/max(relPreSummary(:,2));
+noPreOffNorm = noPreOffSummary(:,1);
+noPreOffNorm(:,2:4) = noPreOffSummary(:,2:4)/max(relPreSummary(:,2));
+
 
 
 %% Format tables and export source data and summary stats as text files for 
@@ -157,6 +190,13 @@ out_PreNormRel = array2table(relPreNorm,'Var',{'Pre_Rel_Disp_um','Norm_Current',
 out_PreNormAbs = array2table(absPreNorm,'Var',{'Pre_Abs_Disp_um','Norm_Current','SD','SEM'});
 out_NoPreNorm = array2table(noPreNorm,'Var',{'NoPre_Disp_um','Norm_Current','SD','SEM'});
 
+out_PreOffSummAbs = array2table(absOffPreSummary,'Var',{'Pre_Off_Disp_um','Mean_Current_pA','SD','SEM'});
+out_NoPreOffSumm = array2table(noPreOffSummary,'Var',{'NoPre_Off_Disp_um','Mean_Current_pA','SD','SEM'});
+
+out_PreOffNormAbs = array2table(absOffPreNorm,'Var',{'Pre_Off_Disp_um','Norm_Current','SD','SEM'});
+out_NoPreOffNorm = array2table(noPreOffNorm,'Var',{'NoPre_Off_Disp_um','Norm_Current','SD','SEM'});
+
+
 out_PreStepsOn = array2table(on_PreSteps,'VariableNames',out_Names);
 out_PreStepsOff = array2table(off_PreSteps,'VariableNames',out_Names);
 out_NoPreStepsOn = array2table(on_NoPreSteps,'VariableNames',out_Names);
@@ -172,6 +212,13 @@ writetable(out_NoPreSumm, fullfile(pname,fname),'Sheet','Summary','Range','K2');
 writetable(out_PreNormRel, fullfile(pname,fname),'Sheet','Summary_Normalized','Range','A2');
 writetable(out_PreNormAbs, fullfile(pname,fname),'Sheet','Summary_Normalized','Range','F2');
 writetable(out_NoPreNorm, fullfile(pname,fname),'Sheet','Summary_Normalized','Range','K2');
+
+writetable(out_PreOffSummAbs, fullfile(pname,fname),'Sheet','Summary','Range','A14');
+writetable(out_NoPreOffSumm, fullfile(pname,fname),'Sheet','Summary','Range','F14');
+
+writetable(out_PreOffNormAbs, fullfile(pname,fname),'Sheet','Summary_Normalized','Range','A14');
+writetable(out_NoPreOffNorm, fullfile(pname,fname),'Sheet','Summary_Normalized','Range','F14');
+
 
 writetable(out_PreStepsOn, fullfile(pname,fname),'Sheet','onPreSteps');
 writetable(out_NoPreStepsOn, fullfile(pname,fname),'Sheet','onNoPreSteps');
