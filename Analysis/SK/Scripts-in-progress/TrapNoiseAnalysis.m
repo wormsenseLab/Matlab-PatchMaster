@@ -3,7 +3,7 @@
 
 strainList = {'TU2769'};
 internalList = {'IC6'};
-stimPosition = {'anterior'};
+stimPosition = {'posterior'};
 
 wormPrep = {'dissected'};
 cellDist = [40 100];
@@ -17,7 +17,7 @@ noiseTrapCells = FilterRecordings(ephysData, ephysMetaData,...
     'stimFilterFrequencykHz', extFilterFreq, 'included', 1);
 
 %% Exclusion 
-protList ={'WCProbe1','WCProbe3'};
+protList ={'NoiseTrap','WCProbe8'};
 
 matchType = 'first';
 
@@ -27,25 +27,6 @@ ExcludeSweeps(ephysData, protList, noiseTrapCells,'matchType',matchType);
 %if it's already been vetted. Add new recordings to the end of the list,
 %sortrows (and maybe check unique/warn which rows have multiple) and save
 %as new file.
-
-%% Approving Traces (old version)
-% protList ={'Noise_Trap','WCProbe8'};
-% matchType = 'first';
-% strainList = {'TU2769'};
-% internalList = {'IC6'};
-% stimPosition = {'posterior'};
-% wormPrep = {'dissected'};
-% 
-% % define newCells when importing additional data so you can just add to the
-% % list of approved sweeps
-% 
-% trapCells = FilterRecordings(ephysData, ephysMetaData, newCells, ...
-%     'strain', strainList, 'internal', internalList, ...
-%      'stimLocation', stimPosition, 'wormPrep', wormPrep);
-% 
-% ExcludeSweeps(ephysData, protList, trapCells, 'matchType', matchType);
-% 
-% clear protList strainList internalList cellTypeList stimPosition matchType ans wormPrep;
 
 %% Running analysis
 
@@ -57,7 +38,7 @@ clear protList matchType
 
 %% Turn data into tables for Igor
 
-fname = 'PatchData/noiseTrapAnt(181001).xls';
+fname = 'PatchData/noiseTrapAnt(181116).xls';
 
 %Get protocol name parts and means/variances for each recording
 trapRecs = fieldnames(noiseTrap);

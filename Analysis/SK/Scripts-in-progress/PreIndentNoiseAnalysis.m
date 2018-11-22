@@ -3,11 +3,11 @@
 
 strainList = {'TU2769'};
 internalList = {'IC6'};
-stimPosition = {'posterior'};
+stimPosition = {'anterior'};
 
 wormPrep = {'dissected'};
 cellDist = [40 100];
-resistCutoff = '<251';
+resistCutoff = '<250';
 extFilterFreq = [2.5 5];
 
 noisePreCells = FilterRecordings(ephysData, ephysMetaData,...

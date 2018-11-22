@@ -2,7 +2,7 @@
 % 
 % 
 % parameters in SinePeaks{:,3}:
-% [sineStart sineEnd sineFreq nReps steadyI sqOn1 sqOff1 sqOn2 sqOff2 sqOnRatio sqOffRatio]
+% [sineStart sineEnd sineFreq nReps steadyI rms sqOn1 sqOff1 sqOn2 sqOff2 sqOnRatio sqOffRatio]
 % 
 % normalize flag also normalizes the individual saved sweeps
 
@@ -155,16 +155,16 @@ for iCell = 1:length(allCells)
         
         sineTrace = leakSubtract(sineParams(1):sineParams(2));
         
-        if channel == 1 % to units of pA
+        steadyStateI = mean(sineTrace(end-steadyTime*sf:end));
+        rmsI = rms(sineTrace(end-steadyTime*sf:end)-steadyStateI);
+        if channel == 1 % to units of pA, otherwise leave units
             % Take the average current of the last steadyTime ms of the
             % sine trace, regardless of sine frequency.
-            steadyStateI = -mean(sineTrace(end-steadyTime*sf:end))*1e12;
-            
-        else % original units
-            steadyStateI = mean(sineTrace(end-steadyTime*sf:end));
+            rmsI = rmsI*1e12;
+            steadyStateI = -steadyStateI*1e12;
         end
         
-        theseSines = [sineParams steadyStateI thisSeries];
+        theseSines = [sineParams steadyStateI rmsI thisSeries];
         % Implement later: use fit to calculate time constant of decay from peak
         % response at beginning of sine. Use 5*tau or 3*tau timepoint as the
         % beginning of steady state for taking the mean. Will vary for
@@ -321,6 +321,7 @@ for iCell = 1:length(allCells)
     
     %     meansByStimProfile = NaN(nStimProfiles, length(sortedLeakSub));
     steadyMeans = [];
+    rmsMeans = [];
     squareMeans = [];
     groupIdx = cell(0);
     theseSweeps = cell(0);
@@ -344,6 +345,7 @@ for iCell = 1:length(allCells)
         for iStim = 1:nStim
             
             steadyMeans(iProfile,iStim) = mean(sortedStim{iStim}(groupIdx{iProfile},6));
+            rmsMeans(iProfile,iStim) = mean(sortedStim{iStim}(groupIdx{iProfile},7));
             stimMetaData = NaN(nStimProfiles,4);
             
             stimMetaData(:,1:2) = sortedStim{1,iStim}(profileStartIdx,1:2);
@@ -371,6 +373,7 @@ for iCell = 1:length(allCells)
     
     if normalizeFlag
         steadyMeans = steadyMeans./squareMeans(:,1);
+        rmsMeans = rmsMeans./squareMeans(:,1);
         if channel == 1
             normMeans = num2cell(squareMeans(:,1)*1e-12);
         else
@@ -381,7 +384,7 @@ for iCell = 1:length(allCells)
 
     sinePeaks{iCell,1} = cellName;
     sinePeaks{iCell,2} = theseSweeps';
-    sinePeaks{iCell,3} = [stimMetaData steadyMeans squareMeans];        
+    sinePeaks{iCell,3} = [stimMetaData steadyMeans rmsMeans squareMeans];        
     
 end
 

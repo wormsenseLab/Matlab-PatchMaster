@@ -5,7 +5,7 @@ internalList = {'IC2'};
 stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 cellDist = [40 150];
-extFilterFreq = [2.5 5];
+extFilterFreq = 5;
 includeFlag = 1;
 
 antSineCells = FilterRecordings(ephysData, ephysMetaData,...
@@ -14,7 +14,7 @@ antSineCells = FilterRecordings(ephysData, ephysMetaData,...
      'cellStimDistUm',cellDist,'included', 1, ...
      'stimFilterFrequencykHz', extFilterFreq);
 
-clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep;
+clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep includeFlag extFilterFreq;
 
 %NEXT: check to see if there's a difference in the power spectrum (and
 %amplitude attenuation where applicable) for 2.5 vs. 5kHz photodiode
@@ -54,7 +54,7 @@ b = vertcat(b{:});
 selectIdx = ismember(a,b,'rows');
 
 selectedSweeps = selectedSweeps_I(selectIdx,:);
-selectedSweeps(:,3) = cellfun(@(x) ['' x],selectedSweeps(:,3));
+selectedSweeps(:,3) = cellfun(@(x) ['' x],selectedSweeps(:,3),'un',0);
 
 % save the new selectedSweeps list to file
 [filename, pathname] = uiputfile(...
@@ -78,25 +78,25 @@ sinePeaksPD = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType',
 % ignore the bode plot because I don't know what a "system" object really
 % is in matlab or if my data can be one, or what a linear time-invariant
 % system is or why a Bode plot is useful
-%%
+%% Calculate PSD
 figure();
 eachFreq = [0 10 30 100 200 500 1000];
 sf = 10000; %Hz
 allPSD = [];
 allF = [];
-allSize = [];
+allFreq = [];
 
-whichPeaks = sinePeaksPD;
+whichPeaks = sinePeaksPD; %also change meansByFreqI at bottom
 % ally = []; %for plotting fft magnitude and phase
 % allf_fft = [];
 
 
 for iRec = 1:size(whichPeaks,1)
     theseRecs = whichPeaks{iRec,2};
-    theseSizes = whichPeaks{iRec,3}(:,1:3);
+    theseFreqs = whichPeaks{iRec,3}(:,1:3);
     
     for iFreq = 1:length(theseRecs)
-        try thisRec = theseRecs{iFreq}(theseSizes(iFreq,1):theseSizes(iFreq,2),:);
+        try thisRec = theseRecs{iFreq}(theseFreqs(iFreq,1):theseFreqs(iFreq,2),:);
         %use pwelch instead of periodogram to allow for use of Hamming
         %window (reduces variance but decreases peak resolution/increases peak width)
         %alternatively, periodogram with shorter window (or full-length
@@ -106,7 +106,7 @@ for iRec = 1:size(whichPeaks,1)
 %         f_fft = ((0:1/length(thisRec):1-1/(length(thisRec)))*sf).';
         allF = [allF mean(f,2)];
         allPSD = [allPSD mean(pxx,2)];
-        allSize = [allSize theseSizes(iFreq,3)];
+        allFreq = [allFreq theseFreqs(iFreq,3)];
 %         ally = [ally mean(y,2)];
 %         allf_fft = [allf_fft f_fft];
         catch
@@ -115,21 +115,21 @@ for iRec = 1:size(whichPeaks,1)
     
 end
 
-[sortedSize, sortIdx, eachStimProfile, profileStartIdx, profileEndIdx] = ...
-    sortRowsTol(allSize', 1, 1);
+[sortedFreq, sortIdx, eachStimProfile, profileStartIdx, profileEndIdx] = ...
+    sortRowsTol(allFreq', 1, 1);
 
 sortedPSD = allPSD(:,sortIdx);
 % sortedy = ally(:,sortIdx);
 meanF = allF(:,1);
 % meanf_fft = allf_fft(:,1);
 groupIdx = cell(0);
-meansByFreq = [];
+meanPSDByFreq = [];
 % yMean = [];
 
 for iProfile = 1:length(eachFreq)
     groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
     thesePSD = sortedPSD(:,groupIdx{iProfile});
-    meansByFreq (:,iProfile) = mean(thesePSD,2);
+    meanPSDByFreq (:,iProfile) = mean(thesePSD,2);
 %     yMean(:,iProfile) = mean(sortedy(:,groupIdx{iProfile}),2);
 end
 % 
@@ -137,7 +137,7 @@ end
 % phaseY = unwrap(angle(yMean(:,7)));  % Phase of the FFT
 % helperFrequencyAnalysisPlot1(meanf_fft,magnitudeY,phaseY,size(y,1))
 
-plot(meanF,meansByFreq);
+plot(meanF,meanPSDByFreq);
 set(gca, 'YScale', 'log', 'XScale', 'log');
 
 xlabel('frequency (Hz)');
@@ -148,62 +148,74 @@ chH = get(gca,'children');
 set(gca,'children',flipud(chH));
 plotfixer;
 
-% meansByFreqPD = meansByFreq;
-% meansByFreqI = meansByFreq;
+meanPSDByFreqPD = meanPSDByFreq;
+% meanPSDByFreqI = meanPSDByFreq;
 
 %% Plot stacked power spectra
-figure();
+figure(); clear axh;
 yyh = cell(0);
 
-for i = 1:size(meansByFreq,2)
-    axh(i) = subtightplot(size(meansByFreq,2),1,i,0.02,0.05,0.1);
-    yyh{i} = plotyy(meanF,meansByFreqI(:,i),meanF,meansByFreqPD(:,i));
+for i = 1:size(meanPSDByFreqI,2)
+    axh(i) = subtightplot(size(meanPSDByFreqI,2),1,i,0.02,0.05,0.1);
+    yyh{i} = plotyy(meanF,meanPSDByFreqI(:,i),meanF,meanPSDByFreqPD(:,i));
     set(yyh{i}, 'YScale', 'log', 'XScale', 'log','box','off');
     set(yyh{i}(1),'YLim',[1e-30 1e-20])
     set(yyh{i}(2),'YLim',[1e-10 1e0])
 end
 
-for i = 1:size(meansByFreq,2)-1
+for i = 1:size(meanPSDByFreqI,2)-1
     set(yyh{i},'XTickLabel',[]);
 end
     
 
-%% Plot steady state sine comparison
+%% Calculate steady state mean and rms by frequency
 
-whichPeaks = sinePeaksNorm;
+whichPeaks = sinePeaks;
 
 eachFreq = [0 10 30 100 200 500 1000];
 sf = 10000; %Hz
 allSteady = [];
-allSize = [];
+allRMS = [];
+allFreq = [];
 
 for iRec = 1:size(whichPeaks,1)
-    theseSizes = whichPeaks{iRec,3}(:,[1:3,6]);
+    theseFreqs = whichPeaks{iRec,3}(:,[1:3,6,7]);
     
-    for iFreq = 1:size(theseSizes,1)
-        allSteady = [allSteady; theseSizes(iFreq,4)];
-        allSize = [allSize; theseSizes(iFreq,3)];
-        
-        
+    for iFreq = 1:size(theseFreqs,1)
+        allSteady = [allSteady; theseFreqs(iFreq,4)];
+        allRMS = [allRMS; theseFreqs(iFreq,5)];
+        allFreq = [allFreq; theseFreqs(iFreq,3)];
     end
 end
 
 
-[sortedSize, sortIdx, eachStimProfile, profileStartIdx, profileEndIdx] = ...
-    sortRowsTol(allSize, 1, 1);
+[sortedFreq, sortIdx, eachStimProfile, profileStartIdx, profileEndIdx] = ...
+    sortRowsTol(allFreq, 1, 1);
 
 sortedSteady = allSteady(sortIdx);
+sortedRMS = allRMS(sortIdx);
 groupIdx = cell(0);
-meansByFreq = [];
-sdByFreq = [];
+meanSteadyByFreq = [];
 nByFreq = [];
-semByFreq = [];
+meanRMSByFreq = [];
+
 
 for iProfile = 1:length(eachFreq)
     groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
     theseSteady = sortedSteady(groupIdx{iProfile});
-    meansByFreq (iProfile,1) = mean(theseSteady);
-    sdByFreq (iProfile,1) = std(theseSteady);
+    theseRMS = sortedRMS(groupIdx{iProfile});
+    
+    meanSteadyByFreq (iProfile,1) = mean(theseSteady);
+    meanSteadyByFreq (iProfile,2) = std(theseSteady);
+    meanSteadyByFreq (iProfile,3) = std(theseSteady)/sqrt(length(theseSteady));
+
+    meanRMSByFreq (iProfile,1) = mean(theseRMS);
+    meanRMSByFreq (iProfile,2) = std(theseRMS);
+    meanRMSByFreq (iProfile,3) = std(theseRMS)/sqrt(length(theseRMS));
+
     nByFreq (iProfile,1) = length(theseSteady);
-    semByFreq (iProfile,1) = std(theseSteady)/sqrt(length(theseSteady));
 end
+
+
+%% Export everything for Igor plotting and source data
+

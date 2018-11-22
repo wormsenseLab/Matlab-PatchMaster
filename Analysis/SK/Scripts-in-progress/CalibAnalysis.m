@@ -27,6 +27,9 @@ ExcludeSweeps(ephysData, protList, calib5Cells, 'matchType', matchType, 'channel
 
 clear protList matchType;
 
+% Selected cells:
+% calib_2p5kHz_picks(181113).xls
+% calib_5kHz_picks(181113).xls
 %% Calibration step sizes for reference
 % (FAT Notebook I, pg. 215).
 
@@ -75,8 +78,29 @@ clear protList matchType;
 % flip the PD trace, and normalize both. 
 % Retain the ability to pull out individual traces instead of the mean.
 % NEXT: Q, can I make use of existing functions to do this for other
-% channels?
+% channels? No because they don't have stim output yet.
 
+calibStepCells = {'FAT214','FAT216','FAT219'};
+
+protList = {'TrapRate'};
+sortSweeps = {'velocity','velocity','magnitude','magnitude'};
+matchType = 'first';
+[test, teststim] = IdAnalysis(ephysData,protList,calibStepCells,'num','matchType',matchType, ...
+    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
+    'recParameters', ephysMetaData,'sepByStimDistance',1,'pdCompare',1, ...
+    'saveSweeps',1);
+clear protList sortSweeps matchType
+
+%%
 % Plot: overlay normalized PD/command traces for each speed/freq/size in
 % subplots going down, on left and off right. (single column for sines).
 
+% NEXT: Pick one recording for each type of stimulus and plot.
+
+stimCom = teststim{3,2}./max(max(teststim{3,2}(:,2000:4000)));
+pdResp = -teststim{3,3}./max(max(-teststim{3,3}(:,2000:4000)));
+a(1) = subplot(2,1,1);
+plot(pdResp');hold on;plot(stimCom','k');
+a(2) = subplot(2,1,2);
+plot(test{2,2}');
+linkaxes(a,'x');

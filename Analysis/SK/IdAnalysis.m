@@ -62,22 +62,24 @@
 %                                   8-activation time (ms), 9-decay time (ms) *either t1/2 max or tau
 %                                   10-time to peak (ms), 11-charge (C), 
 %                                   12-stim distance (um), 13-number of sweeps averaged.
+% 
+%   mechStim        cell array      Nested cell array with a row for each
+%                                   recording. CellName, Average stimulus
+%                                   commands, (Average PD response if
+%                                   pdCompare is set to true), (Sweeps of
+%                                   stimulus commands and pd response used
+%                                   for means if saveSweeps is true),
+%                                   sortedStim metadata (not separated).
+% 
 %
 %
 % Created by Sammy Katta on 20-May-2015.
-% Updated most recently by Sammy Katta on 7-Aug-2017.
+% Updated most recently by Sammy Katta on 13-Nov-2018.
 % Documentation not updated yet, but fxn now allows output to be used for
 % many more types of analyses. Will soon rename.
 
-% TODO: Allow output of mean PD or stimcom signal as traces in mechStim
-% (either include as output from newStepFind, or just section it with
-% profileIndex and use series/sweep numbers from stimMetaData to pull it 
-% out for each group).
-% 
 % NEXT: test with stimInterval, break down into intermediate fxns if still
 % necessary.
-% LATER: add in PD step analysis (will need findMRCs modified), output
-% sorted stim command and PD traces with sortedLeakSub
 % LATER: add GUI for selecting sortSweepsBy for each stim segment
 
 function [mechPeaks, mechStim] = IdAnalysis(ephysData, protList, varargin)
@@ -99,6 +101,7 @@ p.addParameter('sepByStimDistance',0);
 p.addParameter('saveSweeps',0);
 p.addParameter('recParameters', cell(0), @(x) iscell(x)); % ephysMetaData cell array
 p.addParameter('limitStim',0, @(x) x>=0);
+p.addParameter('pdCompare',0);
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -114,6 +117,7 @@ distFlag = p.Results.sepByStimDistance;
 sweepFlag = p.Results.saveSweeps; % if 1, save individual sweeps in addition to means
 ephysMetaData = p.Results.recParameters;
 limitStim = p.Results.limitStim;
+pdCompare = p.Results.pdCompare;
 
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
@@ -161,6 +165,8 @@ for iCell = 1:length(allCells)
     
     allStim = cell(0);
     allLeakSub = cell(0);
+    allStimCom = cell(0);
+    allPD = cell(0);
     
     % Double check that the list of series given matches the indices of the
     % protocol names specified in the input.
@@ -190,6 +196,10 @@ for iCell = 1:length(allCells)
         
         probeI = ephysData.(cellName).data{1,thisSeries}(:,pickedTraces);
         stimComI = ephysData.(cellName).data{2,thisSeries}(:,pickedTraces); %in V, not um
+        
+        if pdCompare
+            pdV = ephysData.(cellName).data{3,thisSeries}(:,pickedTraces);
+        end
         % sampling frequency in kHz
         sf = ephysData.(cellName).samplingFreq{thisSeries} ./ 1000;
         dataType = ephysData.(cellName).dataunit{1,thisSeries};
@@ -244,7 +254,15 @@ for iCell = 1:length(allCells)
         
         leakSubtract = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
-        leakSubtractCell = num2cell(leakSubtract',2);
+        leakSubtract = num2cell(leakSubtract',2);
+        if pdCompare
+            zeroStimCom = SubtractLeak(stimComI, sf, 'BaseLength', baseTime);
+            zeroPD = SubtractLeak(pdV, sf, 'BaseLength', baseTime);
+            zeroStimCom = num2cell(zeroStimCom',2);
+            zeroPD = num2cell(zeroPD',2);
+        else
+            zeroStimCom = num2cell(stimComI',2);
+        end
         
         seriesStimuli = ...
             newStepFind(nSweeps, stimComI, sf, 'scaleFactor', stimConversionFactor);
@@ -314,8 +332,11 @@ for iCell = 1:length(allCells)
         
         % Concatenate to the complete list of step sizes and
         % leak-subtracted traces across series for this recording
-        allLeakSub=[allLeakSub; leakSubtractCell];
-        
+        allLeakSub = [allLeakSub; leakSubtract];
+        allStimCom = [allStimCom; zeroStimCom];
+        if pdCompare
+            allPD = [allPD; zeroPD];
+        end
         clear thisDist;
     end
     
@@ -380,9 +401,15 @@ for iCell = 1:length(allCells)
     % ease of manipulation as an array instead of a cell.
     sweepLengths = cellfun('length',allLeakSub);
     maxLength = max(sweepLengths);
-    allLeakSub=cellfun(@(x)cat(2,x,NaN(1,maxLength-length(x))),allLeakSub,'UniformOutput',false);
-    allLeakSub = cell2mat(allLeakSub);
+    allLeakSub = cellfun(@(x)cat(2,x,NaN(1,maxLength-length(x))),allLeakSub,'UniformOutput',false);
+    allLeakSub = cell2mat(allLeakSub);    
+
+    allStimCom = cellfun(@(x)cat(2,x,NaN(1,maxLength-length(x))),allStimCom,'UniformOutput',false);
+    allStimCom = cell2mat(allStimCom);
     
+    allPD = cellfun(@(x)cat(2,x,NaN(1,maxLength-length(x))),allPD,'UniformOutput',false);
+    allPD = cell2mat(allPD);
+
     %FIX: nStim=4 for OnDt because of Patchmaster's 0 padding. Find a way to
     %exclude the last "step".
     if limitStim == 0
@@ -445,6 +472,10 @@ for iCell = 1:length(allCells)
     [~, sortIdx, eachStimProfile, profileStartIdx, profileEndIdx] = ...
         sortRowsTol(sweepsByParams, stimTolVal, stimSortOrder);
     sortedLeakSub = allLeakSub(sortIdx,:);
+    sortedStimCom = allStimCom(sortIdx,:);
+    if pdCompare
+        sortedPD = allPD(sortIdx,:);
+    end
     
     for iStim = 1:nStim
         sortedStim{iStim} = allStim{iStim}(sortIdx,:);
@@ -467,7 +498,14 @@ for iCell = 1:length(allCells)
     % profile. Find peaks in that mean trace.
     
     meansByStimProfile = NaN(nStimProfiles, length(sortedLeakSub));
+    stimComByStimProfile = NaN(nStimProfiles, length(sortedStimCom));
+    if pdCompare
+        pdByStimProfile = NaN(nStimProfiles, length(sortedPD));
+    end
+    
     sweepsByStimProfile = cell(nStimProfiles,1);
+    stimByStimProfile = cell(nStimProfiles,2);
+
     stimMetaData = NaN(nStimProfiles,4,nStim);
     
     %PROBLEM: When using different protocols that have the same value for
@@ -501,15 +539,31 @@ for iCell = 1:length(allCells)
         groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
         
         theseSweeps = sortedLeakSub(groupIdx{iProfile},:);
+        theseStimCom = sortedStimCom(groupIdx{iProfile},:);
+        if pdCompare 
+            thesePD = sortedPD(groupIdx{iProfile},:);
+        end
         
         if length(groupIdx{iProfile})>1
             meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
+            stimComByStimProfile(iProfile,:) = nanmean(theseStimCom,1);
+            if pdCompare
+                pdByStimProfile(iProfile,:) = nanmean(thesePD,1);
+            end
         else
             meansByStimProfile(iProfile,:) = theseSweeps;
+            stimComByStimProfile(iProfile,:) = theseStimCom;
+            if pdCompare 
+                pdByStimProfile(iProfile,:) = thesePD;
+            end
         end
         
         if sweepFlag
             sweepsByStimProfile{iProfile} = theseSweeps;
+            stimByStimProfile{iProfile,1} = theseStimCom;
+            if pdCompare 
+                stimByStimProfile{iProfile,2} = thesePD;
+            end
         end
         
         % Use the first sweep for a given size to pick the stimulus window
@@ -548,8 +602,7 @@ for iCell = 1:length(allCells)
                 'tauType', tauType, 'integrateCurrent',integrateFlag);
         end
     else 
-        mechPeaks{iCell,1} = cellName;
-        
+        mechPeaks{iCell,1} = cellName;        
         mechPeaks{iCell,2} = meansByStimProfile;
         
         for iStim = 1:nStim
@@ -578,8 +631,22 @@ for iCell = 1:length(allCells)
     %group and take means of stim traces and run series stim again on the
     %means and use those timepoints for peak finding so you'd also have a
     %less noisy stim/PD trace.
-    
-    mechStim(iCell,2:length(sortedStim)+1) = sortedStim;
+    if ~sweepFlag
+        mechStim(iCell,1) = mechPeaks(iCell,1);
+        mechStim{iCell,2} = stimComByStimProfile;
+        if pdCompare
+            mechStim{iCell,3} = pdByStimProfile;
+        end
+        mechStim(iCell,4:length(sortedStim)+3) = sortedStim;
+    else
+        mechStim(iCell,1) = mechPeaks(iCell,1);
+        mechStim{iCell,2} = stimComByStimProfile;
+        if pdCompare
+            mechStim{iCell,3} = pdByStimProfile;
+        end
+        mechStim{iCell,4} = stimByStimProfile;
+        mechStim(iCell,5:length(sortedStim)+4) = sortedStim;
+    end
 end
 mechStim = mechStim(~cellfun(@isempty, mechPeaks(:,1)),:);
 mechPeaks = mechPeaks(~cellfun(@isempty, mechPeaks(:,1)),:);
