@@ -1,106 +1,181 @@
 % Calibration Analysis Script
+% For making loaded and unloaded calibration curves
 
-%% Make list of approved traces (by selecting traces to exclude)
+%% Load data
 
-protList ={'ProbeCalib'};
+calibData = ImportPatchData('incl',1);
 
-matchType = 'first';
-strainList = {'TU2769'};
-stimPosition = {'anterior'};
+% Keep only data with given project prefixes/names.
+projects = {'PDC'};
 
-wormPrep = {'dissected'};
-cellDist = [40 100];
-resistCutoff = '<250';
-extFilterFreq = 5;
-includeFlag = 1;
+%get rid of the crap/unrelated recordings
+calibData = FilterProjectData(calibData, projects);
+calibData = rmfield(calibData,{'PDC002_01_Testd','PDC002_05_Crapd'});
 
-calib5Cells = FilterRecordings(ephysData, ephysMetaData,...
-    'strain', strainList, 'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
-     'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
-     'stimFilterFrequencykHz', extFilterFreq, 'included', 1);
+clear projects; fclose('all');
+%% Get scale image and set bead size to find
 
-clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep;
-
-%% Run sweep selection GUI
-
-ExcludeSweeps(ephysData, protList, calib5Cells, 'matchType', matchType, 'channel', 3);
-
-clear protList matchType;
-
-% Selected cells:
-% calib_2p5kHz_picks(181113).xls
-% calib_5kHz_picks(181113).xls
-%% Calibration step sizes for reference
-% (FAT Notebook I, pg. 215).
-
-% ProbeCalibT5:
-% [0, 2.5,  5.0,  7.5, 10.0,  12.5] um
+% [scaleFile, scalePath] = uigetfile();
+% scaleImage = imread(fullfile(scalePath,scaleFile));
+% imtool(scaleImage); % use distance tool to select 50um distance
 % 
-% Axial probe motion (at 18-deg angle):
-% [0, 2.38, 4.76, 7.13, 9.51, 11.89] um
-% 
-% PD motion in Kinesis sequence:
-% [0, .143, .285, .428, .571, .713] mm
-% 
-% ProbeCalibT5 is PD signal during probe motion (Sweep 1). 
-% ProbeCalib reads out signal during PD motion.
-%   Sweep 2 = probe and worm; Sweep 3 = worm only.
-% Recordings in metadata database marked *Calib3Trig* have photodiode motion
-% triggering acquisition, so steps are always at the same timepoint. This
-% code cannot be used on recordings only marked Calib or Calib3.
+% distConvert = 50/dist50um; % um per pixel
+distConvert = 0.094;
 
-% From list of recordings with 2.5kHz filtering and well-separated, 
-% non-noisy calibration.    *calib_2p5kHz_picks(181113).xls*
-% Recordings with sinusoids:
-%   FAT170, FAT171, FAT236
-% Recordings with trapezoids:
-%   FAT236, 238
-% Recordings with steps:
-%   FAT116, FAT143, FAT236
-% Recordings with speed-controlled steps:
-%   FAT236, FAT237, FAT238, FAT239
+beadSize = 22; % diameter in um
+beadSizePx = beadSize/distConvert/2; % radius in pixels
+beadSizeRange = [round(beadSizePx*0.9) round(beadSizePx*1.05)];
 
-% From list of recordings with 5kHz filtering and well-separated,
-% non-noisy calibration.    *calib_5kHz_picks(181113).xls*
-% Recordings with sinusoids:
-%   FAT212, FAT218
-% Recordings with trapezoids:
-%   FAT214, FAT216, FAT217, FAT218, FAT219
-
-
-%% Pull out example traces comparing stimulus command with PD signal 
-
-% Since PD signal is not (yet?) useful for absolute displacement
-% calibration, normalize to 1 based on maximum commanded displacement.
-
-% What I want: for each protocol set, organize sweeps by stim speed/freq/size,
-% take the average of the command trace and the PD trace, zero-subtract, 
-% flip the PD trace, and normalize both. 
-% Retain the ability to pull out individual traces instead of the mean.
-% NEXT: Q, can I make use of existing functions to do this for other
-% channels? No because they don't have stim output yet.
-
-calibStepCells = {'FAT214','FAT216','FAT219'};
-
-protList = {'TrapRate'};
-sortSweeps = {'velocity','velocity','magnitude','magnitude'};
-matchType = 'first';
-[test, teststim] = IdAnalysis(ephysData,protList,calibStepCells,'num','matchType',matchType, ...
-    'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1,'pdCompare',1, ...
-    'saveSweeps',1);
-clear protList sortSweeps matchType
+clear scaleFile scalePath
 
 %%
-% Plot: overlay normalized PD/command traces for each speed/freq/size in
-% subplots going down, on left and off right. (single column for sines).
 
-% NEXT: Pick one recording for each type of stimulus and plot.
+pname = uigetdir();
+calibFiles = dir(fullfile(pname,'*.tiff'));
+calibFilesCell = {calibFiles(:).name}';
+newStyle = 1; % 0 if stills from video, separated into a single set of steps per dat file
+              % 1 if 45 stills for 3*15 steps
 
-stimCom = teststim{3,2}./max(max(teststim{3,2}(:,2000:4000)));
-pdResp = -teststim{3,3}./max(max(-teststim{3,3}(:,2000:4000)));
-a(1) = subplot(2,1,1);
-plot(pdResp');hold on;plot(stimCom','k');
-a(2) = subplot(2,1,2);
-plot(test{2,2}');
-linkaxes(a,'x');
+calibRecs = fieldnames(calibData);
+
+allDists = [];
+allXDists = [];
+
+for iRec = 1:length(calibRecs)
+   
+    thisRec = calibRecs(iRec);  
+    whichFiles = find(strncmpi(thisRec,calibFilesCell,9));
+    
+    if ~isempty(whichFiles)
+        beadMotion = cell(length(whichFiles),1);
+        
+        for iImage = 1:length(whichFiles)
+            thisFile = imread(fullfile(pname,calibFilesCell{whichFiles(iImage)}));
+            [centers, radii] = imfindcircles(thisFile,beadSizeRange,'ObjectPolarity','dark','Sensitivity',0.9,'Method','twostage');
+%             imshow(thisFile);
+%             viscircles(centers,radii,'Enh',0,'LineSty','--','Color','k','LineW',1);
+%             uiwait;
+            centers = centers(1,:); radii = radii(1); % keep only the strongest circle
+            beadMotion{iImage} = [centers radii];
+            
+        end
+        
+        beadMotion2 = [beadMotion(2:end); {nan(1,3)}];
+        stimDist = cellfun(@(x,y) pdist([x(1:2);y(1:2)]),beadMotion,beadMotion2);
+        
+%         distTrace = cellfun(@(x,y) pdist([x(1:2);y(1:2)]),beadMotion,repmat(beadMotion(1),size(beadMotion)));
+        stimLocs = find(stimDist>10);
+        stimStart = [1;find(diff(stimLocs)>2)+1];
+        
+        if newStyle
+            beadZeros = cellfun(@(x) repmat(x,10,1), beadMotion(stimLocs(stimStart)),'un',0);
+            beadZeros = vertcat(beadZeros{:});
+            beadZeros = mat2cell(beadZeros,ones(30,1),3);
+        else
+            beadZeros = repmat(beadMotion(1),length(stimLocs),1);
+        end
+        
+        stimDist = cellfun(@(x,y) pdist([x(1:2);y(1:2)]),beadZeros,beadMotion(stimLocs));
+%         stimDir = nanmean(cellfun(@(x,y) rad2deg(atan((y(2)-x(2))/(y(1)-x(1)))),beadZeros(2:end),beadMotion(stimLocs(2:end))));
+% 
+%         beadEndMotion = cell(0);
+%         for iImage = 1:length(stimLocs)
+%             thisFile = imread(fullfile(pname,calibFilesCell{whichFiles(stimLocs(iImage))}));
+%             thisFileRot = ~im2bw(thisFile,0.2);
+%             thisFileRot = imrotate(thisFileRot,stimDir);
+%             stats = regionprops(thisFileRot,'Centroid','Area','Extrema');
+%             [~, regionIdx] = sort(vertcat(stats(:).Area));
+%             %largest region is white bg, second largest is black bead
+%             beadEndMotion{iImage} = max(stats(regionIdx(end)).Extrema(end-1:end,:),[],1);   
+%         end
+%         
+%         if newStyle
+%             beadEndZeros = cellfun(@(x) repmat(x,10,1), beadEndMotion([1 11 21]),'un',0);
+%             beadEndZeros = vertcat(beadEndZeros{:});
+%             beadEndZeros = mat2cell(beadEndZeros,ones(30,1),2);
+%         else
+%             beadEndZeros = repmat(beadEndMotion(1),length(stimLocs),1);
+%         end
+%         stimDist = cellfun(@(x,y) pdist([x;y]),beadEndZeros,beadEndMotion');
+        stimDist = reshape(stimDist,10,[]);
+        stimDist = mean(stimDist,2);
+        
+        stimDist_um = stimDist*distConvert;
+        stimDist_axial = stimDist_um/cosd(17);
+        
+        allDists = [allDists, stimDist_axial];
+        allXDists = [allXDists, stimDist_um];
+        
+    end
+end
+
+%% Get PD measured stim size to compare with imaged displacement
+% (without calibrating PD)
+
+loadedMean = mean(allDists(:,1:5),2);
+loadedFiles = fieldnames(calibData);
+loadedFiles = loadedFiles(23:28);
+sf = 5000; %Hz
+chan = 3;
+respTime = 0.2; % 200 ms
+startTime = 0.05; %first 50ms
+
+eachPos = [0 2.5 5 7.5 10 12.5 10 7.5 5 2.5 0];
+stimStarts = (0:10)*sf;
+stimEnds = (1:11).*sf;
+stimMeans = [];
+stimStartMeans = [];
+
+for iRec = 1:length(loadedFiles)
+   thisRec = [calibData.(loadedFiles{iRec}).data{chan, 1:3}];
+   meanPD = mean(thisRec,2);
+   meanPD = abs(meanPD-mean(meanPD(1:respTime*sf)));
+   
+   stimMeans(:,iRec) = arrayfun(@(x) mean(meanPD(x-respTime*sf:x)), stimEnds)';
+   stimStartMeans(:,iRec) = arrayfun(@(x) mean(meanPD(x:x+startTime*sf)),stimStarts+1)';
+end
+
+stimMeansNorm = bsxfun(@rdivide,stimMeans,max(stimMeans));
+
+%% Calculate PD vs. motion curve
+
+eachPosPD = eachPos*cosd(18); %the angle is 17, but PD positions were calculated using 18 degrees
+stimStarts = (0:10)*sf+1;
+stimStarts(7:end) = stimStarts(7:end)+(0.3*sf); %middle step is 200ms longer, correct for that
+respTime = 0.15; %150 ms, shorter bc PD takes time to move
+startTime = 0.100; %first 50ms
+
+for iRec = 1:length(loadedFiles)
+    thisRec = [calibData.(loadedFiles{iRec}).data{chan,4:5}];
+    wormSub = thisRec(:,1)-thisRec(:,2);
+    
+    zeroPD = bsxfun(@(x,y) x-y,thisRec, mean(thisRec(1:startTime*sf,:),1));
+    zeroWormSub = zeroPD(:,1)-zeroPD(:,2);
+    
+    pdCalMeans(:,iRec) = arrayfun(@(x) mean(zeroPD(x:x+respTime*sf,1)), stimStarts)';
+    pdCalSubMeans(:,iRec) = arrayfun(@(x) mean(wormSub(x:x+respTime*sf)), stimStarts)';
+    pdCalZeroSubMeans(:,iRec) = arrayfun(@(x) mean(zeroWormSub(x:x+respTime*sf)), stimStarts)';
+end
+
+
+%% plot stuff
+plot(eachPos(1:end-1),allDists(:,1:5),'r');
+hold on;
+plot(eachPos(1:end-1),allDists(:,6),'b');
+xlabel('Commanded Position');
+ylabel('Imaged Position');
+plotfixer;
+fplot(@(x) x,[0 15],'k:');
+
+figure();
+plot(distTrace*distConvert/cosd(17));
+xlabel('Time (au)'); ylabel('Imaged Position (um)');
+
+figure();
+plot(allDists(:,1:5),stimMeansNorm(1:end-1,1:5));
+xlabel('Imaged Displacement (um)');
+ylabel('Normalized Photodiode Signal (V)')
+hold on;
+% plot(allDists(:,6),stimMeansNorm(1:end-1,6),'b');
+plotfixer;
+fplot(@(x) x/12.5,[0 14],'k:')

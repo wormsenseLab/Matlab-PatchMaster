@@ -102,6 +102,8 @@ p.addParameter('saveSweeps',0);
 p.addParameter('recParameters', cell(0), @(x) iscell(x)); % ephysMetaData cell array
 p.addParameter('limitStim',0, @(x) x>=0);
 p.addParameter('pdCompare',0);
+p.addParameter('saveZero',0);
+p.addParameter('dropNeg',0); %
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -118,6 +120,8 @@ sweepFlag = p.Results.saveSweeps; % if 1, save individual sweeps in addition to 
 ephysMetaData = p.Results.recParameters;
 limitStim = p.Results.limitStim;
 pdCompare = p.Results.pdCompare;
+saveLeak = p.Results.saveZero;
+dropNeg = p.Results.dropNeg;
 
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
@@ -167,6 +171,7 @@ for iCell = 1:length(allCells)
     allLeakSub = cell(0);
     allStimCom = cell(0);
     allPD = cell(0);
+    allLeak = [];
     
     % Double check that the list of series given matches the indices of the
     % protocol names specified in the input.
@@ -252,7 +257,7 @@ for iCell = 1:length(allCells)
         %         end
         
         
-        leakSubtract = ...
+        [leakSubtract, leak] = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime);
         leakSubtract = num2cell(leakSubtract',2);
         if pdCompare
@@ -336,6 +341,9 @@ for iCell = 1:length(allCells)
         allStimCom = [allStimCom; zeroStimCom];
         if pdCompare
             allPD = [allPD; zeroPD];
+        end
+        if saveLeak
+            allLeak = [allLeak; leak];
         end
         clear thisDist;
     end
@@ -465,6 +473,19 @@ for iCell = 1:length(allCells)
         stimTolVal(nStim+1) = 0;
     end
     
+    if dropNeg
+        dropRows = sum(~isnan(sweepsByParams(:,1:nStim)),2)<2;
+        sweepsByParams = sweepsByParams(~dropRows,:);
+        allLeakSub = allLeakSub(~dropRows,:);
+        allStimCom = allStimCom(~dropRows,:);
+        if pdCompare
+            allPD = allPD(~dropRows,:);
+        end
+        if saveLeak
+            allLeak = allLeak(~dropRows);
+        end
+    end
+    
     % Sort rows by successively less variable parameters based on
     % stimSortOrder. Use unique to find unique sets of rows/stimulus
     % profiles and separate them into groups.
@@ -475,6 +496,9 @@ for iCell = 1:length(allCells)
     sortedStimCom = allStimCom(sortIdx,:);
     if pdCompare
         sortedPD = allPD(sortIdx,:);
+    end
+    if saveLeak
+        sortedLeak = allLeak(sortIdx,:);
     end
     
     for iStim = 1:nStim
@@ -543,6 +567,9 @@ for iCell = 1:length(allCells)
         if pdCompare 
             thesePD = sortedPD(groupIdx{iProfile},:);
         end
+        if saveLeak
+            theseLeak = sortedLeak(groupIdx{iProfile},:);
+        end
         
         if length(groupIdx{iProfile})>1
             meansByStimProfile(iProfile,:) = nanmean(theseSweeps,1);
@@ -550,12 +577,19 @@ for iCell = 1:length(allCells)
             if pdCompare
                 pdByStimProfile(iProfile,:) = nanmean(thesePD,1);
             end
+            if saveLeak
+                leakByStimProfile(iProfile,:) = nanmean(theseLeak);
+            end
         else
             meansByStimProfile(iProfile,:) = theseSweeps;
             stimComByStimProfile(iProfile,:) = theseStimCom;
             if pdCompare 
                 pdByStimProfile(iProfile,:) = thesePD;
             end
+            if saveLeak
+                leakByStimProfile(iProfile,:) = theseLeak;
+            end
+
         end
         
         if sweepFlag
@@ -611,6 +645,10 @@ for iCell = 1:length(allCells)
             mechPeaks{iCell,2+iStim} = findMRCs(stimMetaData(:,:,iStim), meansByStimProfile, sf, dataType, ...
                 'tauType', tauType, 'integrateCurrent',integrateFlag);
         end
+    end
+    
+    if saveLeak
+        mechPeaks{iCell,nStim+3} = leakByStimProfile;
     end
     % TODO: have column 2  of sortedLeakSub be the stim trace used to find stim, for easy
     % plotting access, and col 3 = PD trace, once you have that set up.

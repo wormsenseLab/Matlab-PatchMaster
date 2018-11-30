@@ -73,6 +73,7 @@ sinePeaksNorm = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType
 sinePeaks = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0);
 
 sinePeaksPD = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0, 'channel',3);
+sinePeaksStim = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0, 'channel',2);
 
 % okay we're just going to plot the power spectrum in the morning and
 % ignore the bode plot because I don't know what a "system" object really
@@ -170,21 +171,32 @@ end
 
 %% Calculate steady state mean and rms by frequency
 
-whichPeaks = sinePeaks;
+whichPeaks = sinePeaksPD;
+normFlag = 1; % 1 to normalize steady-state and RMS to value for square pulse
+extFilter = [2.5 5];
 
 eachFreq = [0 10 30 100 200 500 1000];
 sf = 10000; %Hz
 allSteady = [];
 allRMS = [];
 allFreq = [];
+allExtFilt = [];
+allSquare = [];
 
 for iRec = 1:size(whichPeaks,1)
-    theseFreqs = whichPeaks{iRec,3}(:,[1:3,6,7]);
-    
+    theseFreqs = whichPeaks{iRec,3}(:,[1:4,6,7,8]);
+    if normFlag
+        try theseFreqs(:,[5,6,7]) = bsxfun(@rdivide,theseFreqs(:,[5:7]),theseFreqs(theseFreqs(:,3)==10,[5:7]));
+        catch
+            continue
+        end
+    end
     for iFreq = 1:size(theseFreqs,1)
-        allSteady = [allSteady; theseFreqs(iFreq,4)];
-        allRMS = [allRMS; theseFreqs(iFreq,5)];
+        allSteady = [allSteady; theseFreqs(iFreq,5)];
+        allRMS = [allRMS; theseFreqs(iFreq,6)];
         allFreq = [allFreq; theseFreqs(iFreq,3)];
+        allExtFilt = [allExtFilt; theseFreqs(iFreq,4)];
+        allSquare = [allSquare; theseFreqs(iFreq,7)];
     end
 end
 
@@ -194,6 +206,8 @@ end
 
 sortedSteady = allSteady(sortIdx);
 sortedRMS = allRMS(sortIdx);
+sortedSquare = allSquare(sortIdx);
+sortedExtFilt = allExtFilt(sortIdx);
 groupIdx = cell(0);
 meanSteadyByFreq = [];
 nByFreq = [];
@@ -202,8 +216,14 @@ meanRMSByFreq = [];
 
 for iProfile = 1:length(eachFreq)
     groupIdx{iProfile} = profileStartIdx(iProfile):profileEndIdx(iProfile);
-    theseSteady = sortedSteady(groupIdx{iProfile});
-    theseRMS = sortedRMS(groupIdx{iProfile});
+    whichFilt = ismember(sortedExtFilt(groupIdx{iProfile}),extFilter);
+    if normFlag
+        theseSteady = sortedSteady(groupIdx{iProfile}(whichFilt))./abs(sortedSquare(groupIdx{iProfile}(whichFilt)));
+        theseRMS = sortedRMS(groupIdx{iProfile}(whichFilt))./abs(sortedSquare(groupIdx{iProfile}(whichFilt)));
+    else
+        theseSteady = sortedSteady(groupIdx{iProfile}(whichFilt));
+        theseRMS = sortedRMS(groupIdx{iProfile}(whichFilt));
+    end
     
     meanSteadyByFreq (iProfile,1) = mean(theseSteady);
     meanSteadyByFreq (iProfile,2) = std(theseSteady);

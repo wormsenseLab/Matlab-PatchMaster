@@ -2,7 +2,7 @@
 % 
 % 
 % parameters in SinePeaks{:,3}:
-% [sineStart sineEnd sineFreq nReps steadyI rms sqOn1 sqOff1 sqOn2 sqOff2 sqOnRatio sqOffRatio]
+% [sineStart sineEnd sineFreq extFilterFreq nReps steadyI rms sqOn1 sqOff1 sqOn2 sqOff2 sqOnRatio sqOffRatio]
 % 
 % normalize flag also normalizes the individual saved sweeps
 

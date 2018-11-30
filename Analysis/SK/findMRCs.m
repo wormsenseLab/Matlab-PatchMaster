@@ -66,22 +66,21 @@ cellPeaks = [];
 % Set threshold based on noise of the first 100ms of the trace
 % (i.e., size of signal needed to be seen above that noise)
 
-% NEXT: Find only the stimuli near stimWindow for the given parameter value
-%  (e.g., for this size or velocity).
 for iParam = 1:nParams
-    pkThresh(iParam) = 1.5*thselect(smooMean(iParam,1:threshTime*sf),'rigrsure');
-    
-    % Find MRC peaks if they exist, otherwise set peak amplitude as 0.
-    % Calculate decay constant tau based on single exponent fit.
-    
-    % sf*2.4 factor helps avoid stimulus artifact in peak finding
-    % for sf = 5kHz, skips first 12 timepoints after stim.
-    % NEXT: Redo this look with a cell where stim was 2.5kHz filtered and use
-    % that buffer instead, bc more cells have it. Or set timepoints based on
-    % stim filter freqz
     
     stimStart = stimParams(iParam,1);
     stimEnd = stimParams(iParam,2);
+    
+    % Set threshold for peak-finding. For current traces, use first 100ms
+    % of trace. For voltage, because it's not clamped, baseline can be
+    % bistable - use 50ms immediately before stimStart.
+    if strcmp(dataType,'V')
+        pkThresh(iParam) = 1.5*thselect(smooMean(stimStart-threshTime*sf/2:stimStart-1),'rigrsure');
+    else
+        pkThresh(iParam) = 1.5*thselect(smooMean(iParam,1:threshTime*sf),'rigrsure');
+    end
+    % Find MRC peaks if they exist, otherwise set peak amplitude as 0.
+    % Calculate decay constant tau based on single exponent fit.
     
     % find peaks within stimulus (up to 20ms after end of stimulus)    
     [peaks, peakLocs] = findpeaks(abs(smooMean(iParam,stimStart+artifactOffset:stimEnd+(sf*20))),...
