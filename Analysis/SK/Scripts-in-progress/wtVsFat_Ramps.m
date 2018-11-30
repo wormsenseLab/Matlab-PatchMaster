@@ -63,14 +63,14 @@ ExcludeSweeps(ephysData, protList, wtCells, 'matchType', matchType);
 ExcludeSweeps(ephysData, protList, fatCells, 'matchType', matchType);
 
 
-%% Drop super slow ramps that don't even work
-protList ={'DispRate'};
-matchType = 'first';
-
-ExcludeSweeps(ephysData, protList, wtCells, 'matchType', matchType,'channel',2);
-ExcludeSweeps(ephysData, protList, fatCells, 'matchType', matchType,'channel',2);
-
-
+% %% Drop super slow ramps that don't even work
+% protList ={'DispRate'};
+% matchType = 'first';
+% 
+% ExcludeSweeps(ephysData, protList, wtCells, 'matchType', matchType,'channel',2);
+% ExcludeSweeps(ephysData, protList, fatCells, 'matchType', matchType,'channel',2);
+% 
+% 
 
 
 %% Find MRCs 
@@ -95,20 +95,24 @@ clear protList sortSweeps matchType
 %% Correct all sizes and export for Igor fitting of Boltzmann to each recording
 
 % Set the filename and parameters
-fname = 'PatchData/ramps_wtVsFat_2p5kHz_allDist(181129).xlsx';
+fname = 'PatchData/ramps_wtVsFat_2p5kHz_allDist(181130).xlsx';
 
+tol = 12;
 
-allVels = vertcat(wtMRCs{:,3}(1));
-eachVel = [0.5 1 1.5 3 4 5 6 7 8 9 10 11 12]';
+allVels = vertcat(wtMRCs{:,3});
+allVels = allVels(:,1);
+[~,~,eachVel] = sortRowsTol(allVels,tol,1);
 distLimits = [40 200]; % limit to same average distance for anterior and posterior
 distCol = 12;
 whichStim = 1; %on or off
 Vc = -0.06; %in V
 Ena = 0.094; % in V
+extFiltCorr = 1; % if on, accounts for non-stimCom-filtered recordings with external filter
+                 % by correcting everything above 20mm/s to 20mm/s.
 
 % Step to normalize to
 normFlag = 1; % yes, add normalized sheets
-normVel = 20000; % must be negative for off
+normVel = 19820; % must be negative for off
 corrOn = 0; %no voltage attenuation correction if 0
 
 whichMRCs = wtMRCs;
@@ -128,6 +132,10 @@ end
 if whichStim == 2
     eachVel = -eachVel;
 end
+if extFiltCorr
+    eachVel(eachVel>19820)=19820;
+    eachVel = unique(eachVel);
+end
 
 thisAtt = attenuationData(:,[2 8 10]);
 thisName = cell(0);
@@ -141,11 +149,15 @@ for iCell = 1:size(whichMRCs,1)
         thisName{iCell,2} = thisDist;
         wt_Out{1,iCell} = [dType '_' thisName{iCell,1}];
         hasAtt = strcmp(thisName{iCell,1},thisAtt(:,1));
+        if extFiltCorr
+           whichCorr=thisCell(:,1)>20000;
+           thisCell(whichCorr,1) = 19820;
+        end
         Iact = [];
         
         for iSize = 1:length(eachVel)
             stepSize = eachVel(iSize);
-            whichStep = round(thisCell(:,1)*0.01)/0.01 == stepSize; %round to nearest 100
+            whichStep = abs(roundVel(thisCell(:,1))-stepSize)<tol;
             if any(whichStep)
                 
                 if any(hasAtt) && thisAtt{hasAtt,2} %if attenuation calc exists and not omitCell
@@ -171,13 +183,26 @@ for iCell = 1:size(whichMRCs,1)
 end
 wt_Name = [{'wt', 'wt_Dist'}; thisName];
 wt_Out = wt_Out(:,~cellfun(@isempty, wt_Out(1,:))); % clear out empty waves (where dist didn't match)
+wt_Out = wt_Out(~cellfun(@isempty, wt_Out(:,1)),:);
 wt_Name = wt_Name(~cellfun(@isempty, wt_Name(:,1)),:);
 
-wt_Out = [[{'stepSize'};num2cell(eachVel)] wt_Out]; % append stepSize wave
+wt_Out = [[{'rampVel_wt'};num2cell(eachVel)] wt_Out]; % append stepSize wave
+
 
 thisName = cell(0);
 whichMRCs = fatMRCs;
 fat_Out = cell(length(eachVel)+1,size(whichMRCs,1));
+
+allVels = vertcat(fatMRCs{:,3});
+allVels = allVels(:,1);
+[~,~,eachVel] = sortRowsTol(allVels,tol,1);
+if whichStim == 2
+    eachVel = -eachVel;
+end
+if extFiltCorr
+    eachVel(eachVel>19820)=19820;
+    eachVel = unique(eachVel);
+end
 
 for iCell = 1:size(whichMRCs,1)
     thisCell = whichMRCs{iCell,whichStim+2};
@@ -186,11 +211,16 @@ for iCell = 1:size(whichMRCs,1)
         thisName{iCell,1} = whichMRCs{iCell,1}; %name
         thisName{iCell,2} = thisDist; %distance
         fat_Out{1,iCell} = [dType '_' thisName{iCell,1}];
+        if extFiltCorr
+            whichCorr=thisCell(:,1)>20000;
+            thisCell(whichCorr,1) = 19820;
+        end
+
         Iact = [];
         
         for iSize = 1:length(eachVel)
             stepSize = eachVel(iSize);
-            whichStep = round(thisCell(:,1)*2)/2 == stepSize; %round to nearest 0.5
+            whichStep = abs(roundVel(thisCell(:,1))-stepSize)<tol;
             if any(whichStep)
                 Iact(iSize,1) = thisCell(whichStep,peakCol);
             else
@@ -203,9 +233,10 @@ end
 
 fat_Name = [{'fat', 'fat_Dist'}; thisName];
 fat_Out = fat_Out(:,~cellfun(@isempty, fat_Out(1,:)));
+fat_Out = fat_Out(~cellfun(@isempty, fat_Out(:,1)),:);
 fat_Name = fat_Name(~cellfun(@isempty, fat_Name(:,1)),:);
 
-fat_Out = [[{'stepSize'};num2cell(eachVel)] fat_Out]; % append stepSize wave
+fat_Out = [[{'rampVel_fat'};num2cell(eachVel)] fat_Out]; % append stepSize wave
 
 
 xlswrite(fname,wt_Out,['wt_' dType]);
@@ -224,7 +255,7 @@ if normFlag && strcmp(dType,'curr') || strcmp(dType,'char')
     norm_Out = cell(size(which_Out));
     
     currMat = cell2mat(which_Out(2:end,2:end));
-    whichRow = find(cellfun(@(x) x==normVel, which_Out(2:end,1)));
+    whichRow = find(cellfun(@(x) abs(x-normVel)<tol, which_Out(2:end,1)));
     normRow = currMat(whichRow,:);
     normMat = bsxfun(@rdivide,currMat,normRow);
     norm_Out(2:end,2:end) = num2cell(normMat);
@@ -240,7 +271,7 @@ if normFlag && strcmp(dType,'curr') || strcmp(dType,'char')
     norm_Out = cell(size(which_Out));
     
     currMat = cell2mat(which_Out(2:end,2:end));
-    whichRow = find(cellfun(@(x) x==normVel, which_Out(2:end,1)));
+    whichRow = find(cellfun(@(x) abs(x-normVel)<tol, which_Out(2:end,1)));
     normRow = currMat(whichRow,:);
     normMat = bsxfun(@rdivide,currMat,normRow);
     norm_Out(2:end,2:end) = num2cell(normMat);
