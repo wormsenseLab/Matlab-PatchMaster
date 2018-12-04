@@ -103,7 +103,8 @@ p.addParameter('recParameters', cell(0), @(x) iscell(x)); % ephysMetaData cell a
 p.addParameter('limitStim',0, @(x) x>=0);
 p.addParameter('pdCompare',0);
 p.addParameter('saveZero',0);
-p.addParameter('dropNeg',0); %
+p.addParameter('dropNeg',0); % if post-stimulus shift isn't being excluded as a stimulus, drop those sizes
+p.addParameter('sweepStats',0); % will only work with saveSweeps on.
 
 p.parse(ephysData, protList, varargin{:});
 
@@ -122,6 +123,7 @@ limitStim = p.Results.limitStim;
 pdCompare = p.Results.pdCompare;
 saveLeak = p.Results.saveZero;
 dropNeg = p.Results.dropNeg;
+repsFlag = p.Results.sweepStats;
 
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
@@ -629,11 +631,26 @@ for iCell = 1:length(allCells)
         mechPeaks{iCell,2} = meansByStimProfile;
         mechPeaks{iCell,3} = sweepsByStimProfile;
         
-        for iStim = 1:nStim
-            % Find mechanoreceptor current peaks and append to seriesPeaks for
-            % that stimulus number.
-            mechPeaks{iCell,3+iStim} = findMRCs(stimMetaData(:,:,iStim), meansByStimProfile, sf, dataType, ...
-                'tauType', tauType, 'integrateCurrent',integrateFlag);
+        if repsFlag
+            for iProfile = 1:length(sweepsByStimProfile)
+                for iStim = 1:nStim
+                    thisStim = repmat(stimMetaData(:,:,iStim),size(sweepsByStimProfile{iProfile},1),1);
+                    if length(sweepsByStimProfile) == 1
+                        mechPeaks{iCell,3+iStim} = findMRCs(thisStim, sweepsByStimProfile{iProfile}, sf, dataType, ...
+                            'tauType', tauType, 'integrateCurrent',integrateFlag);
+                    else
+                        mechPeaks{iCell,3+iStim}{iProfile} = findMRCs(thisStim, sweepsByStimProfile{iProfile}, sf, dataType, ...
+                            'tauType', tauType, 'integrateCurrent',integrateFlag);                        
+                    end
+                end
+            end
+        else
+            for iStim = 1:nStim
+                % Find mechanoreceptor current peaks and append to seriesPeaks for
+                % that stimulus number.
+                mechPeaks{iCell,3+iStim} = findMRCs(stimMetaData(:,:,iStim), meansByStimProfile, sf, dataType, ...
+                    'tauType', tauType, 'integrateCurrent',integrateFlag);
+            end
         end
     else 
         mechPeaks{iCell,1} = cellName;        

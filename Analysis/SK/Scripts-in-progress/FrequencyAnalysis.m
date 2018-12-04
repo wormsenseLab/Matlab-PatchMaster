@@ -22,7 +22,9 @@ p.addParameter('integrateCurrent',1);
 p.addParameter('normToOn1',0);
 p.addParameter('matchPhase',0);
 p.addParameter('channel',1, @(x) isnumeric(x) && ismember(x,1:6));
-
+p.addParameter('multiRep',0);
+p.addParameter('steadyTime',100);
+p.addParameter('sortStimBy','time');
 p.parse(ephysData, ephysMetaData, protList, varargin{:});
 
 allCells = p.Results.allCells;
@@ -32,6 +34,9 @@ integrateFlag = p.Results.integrateCurrent;
 normalizeFlag = p.Results.normToOn1;
 phaseFlag = p.Results.matchPhase;
 channel = p.Results.channel;
+multiRep = p.Results.multiRep;
+steadyTime = p.Results.steadyTime; % length of time (ms) to use for calculating steady state mean at end of sine
+sortStimBy = p.Results.sortStimBy;
 
 % Load and format Excel file with lists (col1 = cell name, col2 = series number,
 % col 3 = comma separated list of good traces for analysis)
@@ -47,12 +52,10 @@ end
 sinePeaks = cell(length(allCells),1);
 
 baseTime = 30; % length of time (ms) to use as immediate pre-stimulus baseline for leak subtraction
-steadyTime = 100; % length of time (ms) to use for calculating steady state mean at end of sine
 smoothWindow = 5; % n timepoints for moving average window for findPeaks
 stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
 whichChan = 2; %channel number for stimulus command
-sortStimBy = 'time';
-sortSweepsBy = {'frequency'};
+sortSweepsBy = {'frequency','frequency','frequency','frequency'};
 stimSortOrder = [1 2];
 sqWindow = 5;
 
@@ -118,6 +121,9 @@ for iCell = 1:length(allCells)
         % Subtract the baseline leak current for each series
         leakSubtract = ...
             SubtractLeak(probeI, sf, 'BaseLength', baseTime)';
+        if multiRep %with old-style SineAdapt_num, each series is one freq with multiple reps, not interleaved between frequencies. So take the mean first.
+            leakSubtract = mean(leakSubtract,1);
+        end
         leakSubtractCell = num2cell(leakSubtract,2);
         
         
@@ -227,6 +233,9 @@ for iCell = 1:length(allCells)
         case 'time'
             paramCol = 1; %set which column of allSineSum to look in
             tol = 0; %set tolerance for separating by parameter
+        case 'endTime'
+            paramCol = 2;
+            tol = 0;
         case 'dur'
             paramCol = 3;
             tol = 0;
@@ -297,7 +306,10 @@ for iCell = 1:length(allCells)
     % Sort rows by successively less variable parameters based on
     % stimSortOrder. Use unique to find unique sets of rows/stimulus
     % profiles and separate them into groups.
-    [sweepsByParams, sortIdx] = sortrows(sweepsByParams, stimSortOrder(1:size(sweepsByParams,2)));
+    try [sweepsByParams, sortIdx] = sortrows(sweepsByParams, stimSortOrder(1:size(sweepsByParams,2)));
+    catch
+        [sweepsByParams, sortIdx] = sortrows(sweepsByParams, stimSortOrder(1));
+    end
     sortedLeakSub = allLeakSub(sortIdx);
     sortedSquares = stimSquareSum(sortIdx,:,:);
     

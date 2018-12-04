@@ -39,6 +39,10 @@ sf = 5; %sampling frequency, in kHz
 stepThresh = 0.05; % step detection threshold in um, could be smaller
 ISIPeaks = cell(length(allCells),1);
 smoothWindow = 5;
+stimConversionFactor = 0.408; % convert command V to um, usually at 0.408 V/um
+
+
+ephysMetaData = ImportMetaData();
 
 for iCell = 1:length(allCells)
     cellName = allCells{iCell};
@@ -53,7 +57,7 @@ for iCell = 1:length(allCells)
     for iSeries = 1:nSeries
         probeI = ephysData.(cellName).data{1,allSeries(iSeries)};
         % convert command V to um, at 0.408 V/um for current setup(5-15-15)
-        stimComI = ephysData.(cellName).data{2,allSeries(iSeries)} ./ 0.408;
+        stimComI = ephysData.(cellName).data{2,allSeries(iSeries)} ./ stimConversionFactor;
         tStart(1,iSeries) = ephysData.(cellName).startTimes{allSeries(iSeries)};
         
         nSteps = size(stimComI,2);
