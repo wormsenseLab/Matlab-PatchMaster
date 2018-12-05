@@ -23,7 +23,7 @@ internalList = {'IC2'};
 stimPosition = {'posterior'};
 
 wormPrep = {'dissected'};
-cellDist = [40 90]; % stimulus/cell distance in um
+cellDist = [40 200]; % stimulus/cell distance in um
 resistCutoff = '<250'; % Rs < 250 MOhm
 extFilterFreq = 2.5; % frequency of low-pass filter for stimulus command
 includeFlag = 1; 
@@ -80,9 +80,12 @@ clear protList sortSweeps matchType
 
 %% Correct all sizes and export for Igor fitting of Boltzmann to each recording
 
+% Set the filename
+fname = 'PatchData/antVPost_off_allDist(181204).xls';
+
 
 eachSize = [0.5 1 1.5 3 4 5 6 7 8 9 10 11 12]';
-distLimits = [40 90]; % limit to same average distance for anterior and posterior
+distLimits = [40 200]; % limit to same average distance for anterior and posterior
 distCol = 12;
 whichStim = 1; %on or off
 noCorr = 0; % 1 to skip space clamp voltage attenuation correction
@@ -91,7 +94,7 @@ Ena = 0.094; % in V
 
 
 whichMRCs = anteriorMRCs;
-dType = 'char'; 
+dType = 'curr'; 
 
 switch dType
     case 'curr'
@@ -128,7 +131,7 @@ for iCell = 1:size(whichMRCs,1)
             if any(whichStep)
                 
                 if any(hasAtt) && thisAtt{hasAtt,2} %if attenuation calc exists and not omitCell
-                    if noCorr == 1 || strcmp(dType,'peak') || strcmp(dType,'charge') %attenuation correction for current/charge but not taus
+                    if noCorr == 0 || strcmp(dType,'peak') || strcmp(dType,'charge') %attenuation correction for current/charge but not taus
                         Vm = Vc * thisAtt{hasAtt,3};
                         Im = thisCell(whichStep,peakCol);
                        
@@ -187,8 +190,6 @@ post_Name = post_Name(~cellfun(@isempty, post_Name(:,1)),:);
 post_Out = [[{'stepSize'};num2cell(eachSize)] post_Out]; % append stepSize wave
 
 
-% Set the filename
-fname = 'PatchData/antVPost_off_distLim(181121).xls';
 
 xlswrite(fname,ant_Out,['ant_' dType]);
 xlswrite(fname,post_Out,['post_' dType]);
@@ -240,8 +241,8 @@ clear currMat which Row normRow normMat norm_Out
 
 %% Calculate ratios
 % re-save ant_Out as antOff/antOnCurr for the corresponding cases
-on = antOnCurr;
-off = antOffCurr;
+on = postOnCurr;
+off = postOffCurr;
 out = on(1,:);
 
 onVel = [on{2:end,1}];
@@ -256,7 +257,7 @@ end
 out = out(~cellfun(@isempty,out(:,1)),:);
 out(1,:) = cellfun(@(x) regexprep(x,'stim1','ratio'),out(1,:),'un',0);
 
-xlswrite(fname,out,[dType '_Ratio']);
+xlswrite(fname,out,['post_' dType '_Ratio']);
 
 
 %% Renormalize based on fit

@@ -70,7 +70,9 @@ for iParam = 1:nParams
     
     stimStart = stimParams(iParam,1);
     stimEnd = stimParams(iParam,2);
-    
+    if isnan(stimStart) || isnan(stimEnd)
+       continue 
+    end
     % Set threshold for peak-finding. For current traces, use first 100ms
     % of trace. For voltage, because it's not clamped, baseline can be
     % bistable - use 50ms immediately before stimStart.

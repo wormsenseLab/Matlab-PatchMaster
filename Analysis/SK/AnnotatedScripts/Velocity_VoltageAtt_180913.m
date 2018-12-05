@@ -83,11 +83,11 @@ end
 linkaxes(axh,'xy');
 plotfixer;
 
-%% Get normalized mean traces (normalized to highest velocity)
-% Can then use normVelocityMRCs as input for the final
-normVelocitySweeps = cellfun(@(x,y) x./y(end,6),velocityMRCs(:,2),velocityMRCs(:,3),'un',0);
-normVelocityMRCs = velocityMRCs;
-normVelocityMRCs(:,2) = normVelocitySweeps;
+% %% Get normalized mean traces (normalized to highest velocity)
+% % Can then use normVelocityMRCs as input for the final
+% normVelocitySweeps = cellfun(@(x,y) x./y(end,6),velocityMRCs(:,2),velocityMRCs(:,3),'un',0);
+% normVelocityMRCs = velocityMRCs;
+% normVelocityMRCs(:,2) = normVelocitySweeps;
 %% Quick plot for selecting representative traces
 figure();
 for i = 1:8
@@ -258,34 +258,37 @@ legend({'On current','Off current'});
 %% Correct all velocities and export for Igor fitting of Boltzmann to each recording
 
 % Set the filename
-fname = 'PatchData/attCorrectedVel(181022).xls';
+fname = 'PatchData/attCorrectedVel(181204).xls';
 noCorr = 0;
-normFlag = 0; %normalize to 40mm/s ramp (highest velocity "step")
-peakCol = 11; % 6 for peak current, 11 for integrated current/charge
-             % 8 for tauAct, 9 for tauDecay
+normFlag = 1; %normalize to 40mm/s ramp (highest velocity "step")
+normVel = 39740; % must be negative for off
+tol = 12;
+dType = 'decay';
 
 for i = 1:2
 whichRamp = i; % 1 for on currents, 2 for off currents
-switch peakCol
-    case 6
-        dType = 'peak';
-    case 11
-        dType = 'charge';
-    case 8
-        dType = 'act';
-    case 9
-        dType = 'decay';
+switch dType
+    case 'peak'
+        peakCol = 6;
+    case 'charge'
+        peakCol = 11;
+    case 'act'
+        peakCol = 8;
+    case 'decay'
+        peakCol = 9;
 end
 distCol = 12;
 
 allVel = vertcat(velocityMRCs{:,whichRamp+2});
-eachVel = uniquetol(allVel(:,1),12,'DataScale',1);
+eachVel = uniquetol(allVel(:,1),tol,'DataScale',1);
 % the value of 12 is empirically chosen as being larger than the largest
 % difference between velocities that could be binned (usually 10 after roundVel) and smaller than the
 % difference between velocities that shouldn't (i.e., 64 vs. 80).
 distLimits = [40 200];
 % limit to same average distance for anterior and posterior
-
+if whichRamp == 2
+    normVel = -normVel;
+end
 
 Vc = -0.06; %in V
 Ena = 0.094; % in V
@@ -310,7 +313,7 @@ for iCell = 1:size(whichMRCs,1)
             whichVel = abs(thisCell(:,1) - stepVel) < 12; %find closest velocity
             if any(whichVel)
                 if any(hasAtt) && thisAtt{hasAtt,2} %if attenuation calc exists and not omitCell
-                    if noCorr == 1 || strcmp(dType,'peak') || strcmp(dType,'charge') %attenuation correction for current/charge but not taus
+                    if noCorr == 0 && strcmp(dType,'peak') || strcmp(dType,'charge') %attenuation correction for current/charge but not taus
                         Vm = Vc * thisAtt{hasAtt,3};
                         Im = thisCell(whichVel,peakCol);
                         if length(Im) > 1
@@ -340,9 +343,6 @@ for iCell = 1:size(whichMRCs,1)
         if whichRamp == 2
             Iact = flipud(Iact);
         end
-        if normFlag
-            Iact = Iact./Iact(end);
-        end
         vel_Out(2:length(eachVel)+1,iCell) = num2cell(Iact);
             
     end
@@ -360,8 +360,34 @@ vel_Name = vel_Name(~cellfun(@isempty, vel_Name(:,1)),:);
 vel_Out = [[{sprintf('vel_stim%d',whichRamp)};num2cell(eachVel)] vel_Out]; % append stepSize wave
 
 
+
 xlswrite(fname,vel_Out,sprintf('%s_stim%d',dType,whichRamp));
 xlswrite(fname,vel_Name,sprintf('%sStats_stim%d',dType,whichRamp));
+
+% Normalize based on current/charge at given step size and write to xls
+if normFlag && strcmp(dType,'peak') || strcmp(dType,'charge')
+    %WT
+    which_Out = vel_Out;
+    norm_Out = cell(size(which_Out));
+    
+    currMat = cell2mat(which_Out(2:end,2:end));
+    whichRow = find(cellfun(@(x) abs(x-normVel)<tol, which_Out(2:end,1)));
+    normRow = currMat(whichRow,:);
+    normMat = bsxfun(@rdivide,currMat,normRow);
+    norm_Out(2:end,2:end) = num2cell(normMat);
+    norm_Out(:,1) = which_Out(:,1);
+    norm_Out(1,2:end) = cellfun(@(x) ['norm_' x],which_Out(1,2:end),'un',0);
+    
+    
+    this_Norm = norm_Out;
+    this_Max = normRow';
+    
+    xlswrite(fname,this_Norm,['stim' num2str(whichRamp) '_' dType '_Norm']);
+    xlswrite(fname,this_Max,['stim' num2str(whichRamp) '_' dType '_Max']);
+    
+    clear currMat which Row normRow normMat norm_Out
+end
+
 
 clear iCell thisCell Iact whichMRCs whichStep hasAtt thisAtt Vc Ena thisName
 end
