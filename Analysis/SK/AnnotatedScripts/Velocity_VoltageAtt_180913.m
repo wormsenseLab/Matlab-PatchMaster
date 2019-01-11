@@ -97,11 +97,15 @@ cmapline('ax',gca,'colormap','parula');
 end
 linkaxes(axh,'xy');
 
+figure();
+plot(velocityMRCs{1,2}');
+cmapline('ax',gca,'colormap','copper');
 %% Plot selected representative traces and stimuli
 % FAT214 with on ramps for 106, 785, 1560, 7230, 39740 um/s
+whichTraces = [3 5 6 10 12];
 
 % Grab stimuli based on velocityStim (second output from IdAnalysis)
-% Just example stim from one trace
+% Just example stim from one trace 
 % Should this be photodiode trace? (if so don't forget to zero it)
 stimTrace = cell(0);
 stimTrace{1} = ephysData.FAT214.data{2,18}(:,2);
@@ -120,24 +124,61 @@ stimTrace = stimTrace - repmat(stimZero,[10000 1]);
 stimTrace = stimTrace/0.408;
 tVec = (1:length(velocityMRCs{1,2}))/10; % time in ms
 
-
 figure();
 axh(1)=subplot(2,1,1);
-for i = 1:5
 plot(tVec,stimTrace);
-end
 cmapline('ax',gca,'colormap','copper');
 chH = get(gca,'children');
 set(gca,'children',flipud(chH));
 
 axh(2)=subplot(2,1,2);
-plot(tVec,velocityMRCs{1,2}([2 5 6 10 12],:)');
+plot(tVec,velocityMRCs{1,2}(whichTraces,:)');
 linkaxes(axh,'x');
 cmapline('ax',gca,'colormap','copper');
 chH = get(gca,'children');
 set(gca,'children',flipud(chH));
 ylim([-10e-11 1e-11]);
 plotfixer();
+
+% Ramp start and end times for the given velocities were pulled manually 
+% from the velocityStim parameter tables. (80um/s off start = 5503, 106 = 5253).
+onStart = 1500;
+offStart = [5253; 4601; 4551; 4511; 4501];
+
+boxSize = [-10 50];
+onBox = [onStart onStart]/10 + boxSize;
+offBox = [offStart offStart]/10 + repmat(boxSize,5,1);
+
+% Add lines to demarcate on and off ramp starts
+onH{1} = vline(onBox(1));
+onH{2} = vline(onBox(2));
+offH{1} = vline(offBox(:,1));
+offH{2} = vline(offBox(:,2),'b:');
+cmapline('lines',offH{1}','colormap','bone');
+cmapline('lines',offH{2}','colormap','bone');
+ 
+%% Plot representative trace expansions
+figure();
+axh(1)=subplot(2,1,1);
+plot(tVec,velocityMRCs{1,2}(whichTraces,:)');
+xlim(onBox);ylim([-10e-11 1e-11]);
+cmapline('ax',gca,'colormap','copper');
+chH = get(gca,'children');
+set(gca,'children',flipud(chH));
+
+
+tVec_Off = repmat(tVec,5,1);
+tVec_Off = tVec_Off - repmat(offStart/10,1,10000);
+
+axh(2)=subplot(2,1,2);
+plot(tVec_Off',velocityMRCs{1,2}(whichTraces,:)');
+xlim(boxSize);ylim([-10e-11 1e-11]);
+cmapline('ax',gca,'colormap','copper');
+chH = get(gca,'children');
+set(gca,'children',flipud(chH));
+
+linkaxes(axh,'y');
+plotfixer;
 
 %% Pull out and combine data to plot one particular velocity vs. distance
 
@@ -495,3 +536,4 @@ xlswrite(fname,antHeaders,'antNorm');
 xlswrite(fname,postHeaders,'postNorm');
 xlswrite(fname,antNorm,'antNorm','A2');
 xlswrite(fname,postNorm,'postNorm','A2');
+

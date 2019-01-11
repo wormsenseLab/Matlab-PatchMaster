@@ -23,7 +23,7 @@ internalList = {'IC2'};
 stimPosition = {'posterior'};
 
 wormPrep = {'dissected'};
-cellDist = [40 200]; % stimulus/cell distance in um
+cellDist = [40 90]; % stimulus/cell distance in um
 resistCutoff = '<250'; % Rs < 250 MOhm
 extFilterFreq = 2.5; % frequency of low-pass filter for stimulus command
 includeFlag = 1; 
@@ -338,6 +338,22 @@ xlswrite(fname,postHeaders,'postNorm');
 xlswrite(fname,antNorm,'antNorm','A2');
 xlswrite(fname,postNorm,'postNorm','A2');
 
+
+%% Plot representative traces
+
+figure();
+plot(posteriorMRCs{10,2}');
+title('FAT224 (posterior)');
+ylim([-8e-11 2e-11]);
+cmapline('ax',gca,'colormap','copper');
+
+figure();
+plot(anteriorMRCs{3,2}');
+title('FAT143 (anterior)');
+ylim([-8e-11 2e-11]);
+cmapline('ax',gca,'colormap','copper');
+
+plotfixer
 
 
 %% Old code 
