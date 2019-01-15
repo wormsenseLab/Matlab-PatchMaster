@@ -4,15 +4,16 @@ strainList = {'TU2769'};
 internalList = {'IC2'};
 stimPosition = {'anterior'};
 wormPrep = {'dissected'};
-cellDist = [40 150];
-extFilterFreq = 5;
+cellDist = [40 200];
+extFilterFreq = [2.5 5];
+resistCutoff = '<250'; % Rs < 250 MOhm
 includeFlag = 1;
 
 antSineCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
      'cellStimDistUm',cellDist,'included', 1, ...
-     'stimFilterFrequencykHz', extFilterFreq);
+     'stimFilterFrequencykHz', extFilterFreq,'RsM',resistCutoff);
 
 clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep includeFlag extFilterFreq;
 
@@ -68,12 +69,12 @@ clear fName filename pathname a b selectedSweeps_I selectedSweeps_PD selectedSwe
 
 
 %%
-sinePeaksNorm = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 1);
+% sinePeaksNorm = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 1);
 
-sinePeaks = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0);
+sinePeaks = FrequencyAnalysis(ephysData, ephysMetaData, protList,antSineCells, 'matchType', matchType, 'norm', 0);
 
-sinePeaksPD = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0, 'channel',3);
-sinePeaksStim = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0, 'channel',2);
+sinePeaksPD = FrequencyAnalysis(ephysData, ephysMetaData, protList,antSineCells, 'matchType', matchType, 'norm', 0, 'channel',3);
+% sinePeaksStim = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0, 'channel',2);
 
 % sine_allExt_ant_PDfiltered(180923).xls for all
 
@@ -307,15 +308,23 @@ xlabel('Frequency (Hz)')
 ylabel(yyh(1),'Steady-state RMS (pA)');
 ylabel(yyh(2),'Normalized steady-state RMS');
 
-%% Plot traces (FAT218) at 10, 100, 500 Hz
-% 2,4,6
+%% Plot representative traces (FAT170) at 10, 100, 500 Hz
+% 2,4,6 = 10,100,500Hz
+% originally FAT218 bc it had 1kHz stim, but that only has 2-3 reps and 
+% lower signal-to-noise
 
-respTraces = sinePeaks{9,2}([2 4 6]);
+% check mean nReps for each recording
+sineReps = cell2mat(cellfun(@(x) mean(x(:,5)),sinePeaks(:,3),'un',0));
+% FAT170 has ~5-6 reps
+
+
+% If you change filtering, make sure this still points to the right trace
+respTraces = sinePeaks{3,2}([2 4 6]);
 respTraces = cellfun(@(x) mean(x,2),respTraces,'un',0);
 respTraces = [respTraces{:}];
 respMean = mean(respTraces(16499:17499,:),1);
 
-stimTraces = sinePeaksPD{9,2}([2,4,6]);
+stimTraces = sinePeaksPD{3,2}([2,4,6]);
 stimTraces = cellfun(@(x) mean(x,2),stimTraces,'un',0);
 stimTraces = [stimTraces{:}];
 tVec = ((1:length(stimTraces))/sf)';
@@ -337,8 +346,10 @@ for i = 1:3
     hline(respMean(i),'k:');
     set(yyh{i},'XLim',cycleLims(i,:));
     set(yyh{i}(2),'YLim',[-1 0]);
-    set(yyh{i}(1),'Ylim',[respMean(i)-10e-12 respMean(i)+10e-12]);
+    set(yyh{i}(1),'Ylim',[respMean(i)-15e-12 respMean(i)+15e-12]);
 end
+
+
 %% Use steps to plot resonance in stim
 a = cellfun(@(x) x{:}, sinePeaksPD(:,2),'un',0);
 b = [a{:}];

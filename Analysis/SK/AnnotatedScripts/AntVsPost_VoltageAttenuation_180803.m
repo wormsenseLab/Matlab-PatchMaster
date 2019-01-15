@@ -23,7 +23,7 @@ internalList = {'IC2'};
 stimPosition = {'posterior'};
 
 wormPrep = {'dissected'};
-cellDist = [40 90]; % stimulus/cell distance in um
+cellDist = [40 200]; % stimulus/cell distance in um
 resistCutoff = '<250'; % Rs < 250 MOhm
 extFilterFreq = 2.5; % frequency of low-pass filter for stimulus command
 includeFlag = 1; 
@@ -339,7 +339,11 @@ xlswrite(fname,antNorm,'antNorm','A2');
 xlswrite(fname,postNorm,'postNorm','A2');
 
 
-%% Plot representative traces
+%% Plot representative traces for spatial figure
+
+% check distance and nReps for each recording
+antDists = cell2mat(cellfun(@(x) mean(x(:,12:13)),anteriorMRCs(:,3),'un',0));
+postDists = cell2mat(cellfun(@(x) mean(x(:,12:13)),posteriorMRCs(:,3),'un',0));
 
 figure();
 plot(posteriorMRCs{10,2}');

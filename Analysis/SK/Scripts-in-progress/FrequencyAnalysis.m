@@ -400,4 +400,8 @@ for iCell = 1:length(allCells)
     
 end
 
+sinePeaks = sinePeaks(~cellfun(@isempty,sinePeaks(:,1)),:);
+
+end
+
 
