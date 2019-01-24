@@ -236,6 +236,7 @@ for iCell = 1:length(allCells)
             nonStatOutput.(cellName)(whichRow).sweepsPerWindow = averagingWindow;
             nonStatOutput.(cellName)(whichRow).totalMean = totalMean;
             nonStatOutput.(cellName)(whichRow).totalVar = totalVar;
+            nonStatOutput.(cellName)(whichRow).traces = leakSubtract(responseTime,:);
             nonStatOutput.(cellName)(whichRow).distance = thisDist;
 
             

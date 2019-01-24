@@ -12,7 +12,7 @@ includeFlag = 1;
 antSineCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
      'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
-     'cellStimDistUm',cellDist,'included', 1, ...
+     'cellStimDistUm',cellDist,'included', includeFlag, ...
      'stimFilterFrequencykHz', extFilterFreq,'RsM',resistCutoff);
 
 clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep includeFlag extFilterFreq;
@@ -74,7 +74,7 @@ clear fName filename pathname a b selectedSweeps_I selectedSweeps_PD selectedSwe
 sinePeaks = FrequencyAnalysis(ephysData, ephysMetaData, protList,antSineCells, 'matchType', matchType, 'norm', 0);
 
 sinePeaksPD = FrequencyAnalysis(ephysData, ephysMetaData, protList,antSineCells, 'matchType', matchType, 'norm', 0, 'channel',3);
-% sinePeaksStim = FrequencyAnalysis(ephysData, ephysMetaData, protList, 'matchType', matchType, 'norm', 0, 'channel',2);
+sinePeaksStim = FrequencyAnalysis(ephysData, ephysMetaData, protList,antSineCells, 'matchType', matchType, 'norm', 0, 'channel',2);
 
 % sine_allExt_ant_PDfiltered(180923).xls for all
 
@@ -349,6 +349,23 @@ for i = 1:3
     set(yyh{i}(1),'Ylim',[respMean(i)-15e-12 respMean(i)+15e-12]);
 end
 
+%% Separate and write representative traces for channel-sim-distance figure
+clear reps repStim
+% FAT170 mean traces at 10, 100, 500 Hz 
+% stimEnd = [16013; 17455; 17494];
+stimEnd = [16505; 17404; 17484];
+
+sf = 10; %kHz
+boxTime = 500*sf; %ms
+onBox = [stimEnd-boxTime stimEnd];
+repTrace = cell2mat(cellfun(@(x) mean(x,2),sinePeaks{3,2}([2 4 6]),'un',0)');
+stimTrace = cell2mat(cellfun(@(x) mean(x,2)/0.408,sinePeaksStim{3,2}([2 4 6]),'un',0)');
+for i = 1:3
+    reps(:,i) = repTrace(onBox(i,1):onBox(i,2),i);
+    repStim(:,i) = stimTrace(onBox(i,1):onBox(i,2),i);
+end
+tVec = ((1:length(reps))-boxTime/2-1)'./(sf*1000);
+plot(repStim)
 
 %% Use steps to plot resonance in stim
 a = cellfun(@(x) x{:}, sinePeaksPD(:,2),'un',0);

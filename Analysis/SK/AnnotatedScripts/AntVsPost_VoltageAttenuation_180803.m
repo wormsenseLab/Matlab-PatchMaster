@@ -66,7 +66,7 @@ matchType = 'first';
 
 sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
 
-anteriorMRCs = IdAnalysis(ephysData,protList,anteriorDistCells,'num','matchType',matchType, ...
+[anteriorMRCs, antStim] = IdAnalysis(ephysData,protList,anteriorDistCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
     'recParameters', ephysMetaData,'sepByStimDistance',1);
 
@@ -339,7 +339,7 @@ xlswrite(fname,antNorm,'antNorm','A2');
 xlswrite(fname,postNorm,'postNorm','A2');
 
 
-%% Plot representative traces for spatial figure
+%% Plot representative traces for spatial dynamics figure
 
 % check distance and nReps for each recording
 antDists = cell2mat(cellfun(@(x) mean(x(:,12:13)),anteriorMRCs(:,3),'un',0));
@@ -359,126 +359,17 @@ cmapline('ax',gca,'colormap','copper');
 
 plotfixer
 
+%% Separate and write representative traces for channel-sim-distance figure
 
-%% Old code 
+% anterior trace FAT 105 at 1, 5, 10um mean traces separated by on/off
+% stimulus, from [stimStart-250, stimEnd+250]ms.
+onStim = 751;
+offStim = 2251;
+sf = 5; %kHz
+boxTime = 150*sf; %ms
+tVec = (-150*sf:150*sf)'/sf/1000; %s
 
-% %% Pull out and combine relevant data for plotting single size
-% 
-% % Voltage attenuation data comes from the length constant fitting done in
-% % Igor, which gives a voltage attenuation factor at the location of the
-% % stimulus site for each recording, based on the calculated length
-% % constant.
-% 
-% % Grab the current at the selected step size (e.g., 10um) for each
-% % recording, grab the cell-stimulus distance for that recording, and match
-% % the recording name against the voltage attenuation table to find the
-% % attenuation factor for that recording.
-% whichMRCs = anteriorMRCs;
-% thisAtt = attenuationData(:,[2 8 10]);
-% distCol = 12;
-% peakCol = 6; % 6 for peak current, 11 for integrated current/charge
-% distVPeak = [];
-% stepSize = 10;
-% 
-% for iCell = 1:size(whichMRCs,1)
-%     thisCell = whichMRCs{iCell,3};
-%     whichStep = round(thisCell(:,1)) == stepSize;
-%     if any(whichStep)
-%         thisName = whichMRCs{iCell,1};
-%         hasAtt = strcmp(thisName,thisAtt(:,1));
-%         
-%         if any(hasAtt) && thisAtt{hasAtt,2}
-%             distVPeak(iCell,:) = [thisCell(whichStep,[distCol peakCol]) thisAtt{hasAtt,3}];
-%         else
-%             distVPeak(iCell,:) = [thisCell(whichStep,[distCol peakCol]) nan];
-%         end
-%         
-%     end
-%     
-% end
-% 
-% distVPeak_Ant = distVPeak;
-% 
-% whichMRCs = posteriorMRCs;
-% distVPeak = [];
-% 
-% 
-% for iCell = 1:size(whichMRCs,1)
-%     thisCell = whichMRCs{iCell,3};
-%     whichStep = round(thisCell(:,1)) == stepSize;
-%     if any(whichStep)
-%         thisName = whichMRCs{iCell,1};
-%         hasAtt = strcmp(thisName,thisAtt(:,1));
-%         
-%         if any(hasAtt)
-%             distVPeak(iCell,:) = [thisCell(whichStep,[distCol peakCol]) thisAtt{hasAtt,2}];
-%         else
-%             distVPeak(iCell,:) = [thisCell(whichStep,[distCol peakCol]) nan];
-%         end
-%         
-%     end
-%     
-% end
-% 
-% distVPeak_Post = distVPeak;
-% 
-% clear a iCell thisCell whichMRCs whichStep thisName hasAtt distVPeak
-% 
-% %% Make correction to I for space clamp error
-% % (Note: this is an approximation, assuming that the majority of the
-% % current is happening at the stimulus site, which we know is not entirely
-% % true, and channels at different points along the neurite will experience
-% % different voltages.
-% 
-% % Now calculate what the actual voltage was at the stimulus site based on
-% % the voltage attenuation factor. In this case, command voltage was -60mV
-% % for all steps. 
-% 
-% % attenuation factor = Vm'/Vc so Vm' = Vc * attenuation factor
-%  
-% % Then calculate what current would've been based on sodium reversal
-% % potential. 
-% % For IC2 solution used here, Ena = +94mV.
-%  
-% % Im' = Im * ((Vc-Ena)/(Vm'-Ena))
-%  
-% Vc = -0.06; %in V
-% Ena = 0.094; % in V
-% Im = distVPeak_Ant(:,2);
-% Vatt = distVPeak_Ant(:,3);
-% 
-% Vm = Vc * Vatt;
-% distVPeak_Ant(:,4) = (Im * (Vc-Ena)) ./ (Vm-Ena);
-% 
-% %% Plot anterior and posterior single size on separate plots
-% 
-% figure(); axh(1) = subplot(2,1,1);
-% scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
-% xlabel('Distance from cell body (um)');
-% ylabel(sprintf('Current @%dum (pA)',stepSize))
-% text(100,200,'Anterior');
-% axh(2) = subplot(2,1,2);
-% scatter(distVPeak_Post(:,1),distVPeak_Post(:,2));
-% xlabel('Distance from cell body (um)');
-% ylabel(sprintf('Current @%dum (pA)',stepSize))
-% text(100,200,'Posterior');
-% 
-% for i = 1:length(axh)
-%     xlim(axh(i),[0 200]);
-%     ylim(axh(i),[0 200]);
-% end
-% 
-% %% Plot on one plot
-% 
-% figure();
-% scatter(distVPeak_Ant(:,1),distVPeak_Ant(:,4));
-% hold on;
-% scatter(-distVPeak_Post(:,1),distVPeak_Post(:,2));
-% text(distVPeak_Ant(:,1)+1,distVPeak_Ant(:,4)+1,anteriorMRCs(:,1));
-% text(-distVPeak_Post(:,1)+1,distVPeak_Post(:,2)+1,posteriorMRCs(:,1));
-% xlabel('Distance from cell body (um)');
-% ylabel(sprintf('Current @%dum (pA)',stepSize))
-% xlim([-100 200]);ylim([0 200]);
-% vline(0,'k:');
-% 
-% 
+reps(:,1:3) = anteriorMRCs{4,2}([2 5 9],onStim-boxTime:onStim+boxTime)';
+reps(:,4:6) = anteriorMRCs{4,2}([2 5 9],offStim-boxTime:offStim+boxTime)';
+
+

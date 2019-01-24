@@ -3,7 +3,7 @@
 
 strainList = {'TU2769'};
 internalList = {'IC6'};
-stimPosition = {'anterior'};
+stimPosition = {'posterior'};
 
 wormPrep = {'dissected'};
 cellDist = [40 100];
@@ -20,6 +20,7 @@ noisePreCells = FilterRecordings(ephysData, ephysMetaData,...
 
 %% Exclusion 
 protList ={'NoisePre','WC_Probe8','WC_Probe4','WC_Probe3','WC_Probe12'};
+% protList ={'WC_Probe8','WC_Probe4','WC_Probe3','WC_Probe12'};
 
 matchType = 'first';
 

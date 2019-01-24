@@ -19,9 +19,13 @@ recData = cell(0);
 recFile = 'representative_traces.xlsx';
 [~,~,recInput] = xlsread(fullfile(simPath,recFile));
 
-recData{1} = recInput(:,1:3); % displacement (1um, 5, 10)
-recData{2} = recInput(:,4:6); % speed (106um/s, 320, 3790)
-recData{3} = recInput(:,7:9); % frequency (10Hz, 100, 500)
+recData{1} = recInput(:,1:7); % displacement (1um, 5, 10)
+recData{2} = recInput(:,8:14); % speed (106um/s, 320, 3790)
+recData{3} = recInput(:,15:18); % frequency (10Hz, 100, 500)
+
+for iPanel = 1:3
+    recDataMat{iPanel} = cell2mat(recData{iPanel}(2:end,:))*1e12; %pA
+end
 
 %% Prep figures for plots
 
@@ -29,7 +33,7 @@ recData{3} = recInput(:,7:9); % frequency (10Hz, 100, 500)
 % figure('Position',[200 200 800 600]);
 
 for iPanel = 1:3
-    fh(iPanel,1) = figure('Position',[100 100 600 600]); % stim and macro currents
+    fh(iPanel,1) = figure('Position',[100 100 650 600]); % stim and macro currents
     fh(iPanel,2) = figure('Position',[500 100 800 600]); % channel currents
     
     switch iPanel
@@ -40,9 +44,11 @@ for iPanel = 1:3
         case 3 % frequency
             stType = 'freq';
     end
-    recTraces = recData{iPanel};
     simTime = cell2mat(simData{iPanel}(2:end,1));
     simHeaders = simData{iPanel}(1,:);
+    recTime = cell2mat(recData{iPanel}(2:end,1));
+    recHeaders = recData{iPanel}(1,:);
+
     
     % find all subsets of columns now, use overlap in indices later to pull
     % out more specific subsets
@@ -66,6 +72,17 @@ for iPanel = 1:3
         distCols{kDist} = ~cellfun(@isempty,cellfun(@(x) regexp(x,sprintf('_dist%s_',distTypes{kDist})),simHeaders,'un',0));
     end
     
+    % find subsets in experimental recordings too
+    recIntTypes = cellfun(@(x) regexp(x,sprintf('_%s(\\S{1,5})',stType),'tokens'),recHeaders,'un',0);
+    recIntTypes = [recIntTypes{:}];recIntTypes = [recIntTypes{:}];
+    recIntTypes = unique(recIntTypes,'stable');
+    for jIntensity = 1:length(recIntTypes);
+        recIntCols{jIntensity} = ~cellfun(@isempty,cellfun(@(x) regexp(x,sprintf('_%s%s$',stType,recIntTypes{jIntensity})),recHeaders,'un',0));
+    end    
+
+    recOnCols{1} = ~cellfun(@isempty,cellfun(@(x) regexp(x,'_on'),recHeaders,'un',0));
+    recOnCols{2} = ~cellfun(@isempty,cellfun(@(x) regexp(x,'_off'),recHeaders,'un',0));
+
     % make subplots, match column subsets for each subplot, and plot
     for jIntensity = 1:length(intTypes)
         figure(fh(iPanel,1));
@@ -81,7 +98,11 @@ for iPanel = 1:3
             
             % plot experimental total current
             axh1(jIntensity,2) = subplot(3,3,2+3*(jIntensity-1));
-                % separate exp traces into aligned on and off for plotting
+            thisCol = sum([recIntCols{jIntensity}; recOnCols{1}],1)==2;
+            plot(recTime, recDataMat{iPanel}(:,thisCol),'b'); % on = blue
+            hold on;
+            thisCol = sum([recIntCols{jIntensity}; recOnCols{2}],1)==2;
+            plot(recTime, recDataMat{iPanel}(:,thisCol),'m'); % off = magenta
             
             % plot simulated total current
             axh1(jIntensity,3) = subplot(3,3,3+3*(jIntensity-1));
@@ -90,7 +111,7 @@ for iPanel = 1:3
             hold on;
             thisCol = sum([currTotCols; intCols{jIntensity}; onCols{2}],1)==3;
             plot(simTime, simDataMat{iPanel}(:,thisCol),'m');
-
+            
         elseif strcmp(stType,'freq') % only one current to plot
             % plot stimulus traces
             axh1(jIntensity,1) = subplot(3,3,1+3*(jIntensity-1));
@@ -99,7 +120,8 @@ for iPanel = 1:3
             
             % plot experimental total current
             axh1(jIntensity,2) = subplot(3,3,2+3*(jIntensity-1));
-                % separate exp traces into aligned on and off for plotting
+            thisCol = recIntCols{jIntensity};
+            plot(recTime, recDataMat{iPanel}(:,thisCol),'b'); 
             
             % plot simulated total current
             axh1(jIntensity,3) = subplot(3,3,3+3*(jIntensity-1));
@@ -107,22 +129,68 @@ for iPanel = 1:3
             plot(simTime, simDataMat{iPanel}(:,thisCol),'b');
         end
 
+        % Plot individual channel currents in second window
         for kDist = 1:length(distTypes)
             figure(fh(iPanel,2));
-            plotNo = kDist+4*(jIntensity-1);
-            axh(plotNo) = subplot(3,4,plotNo);
+            axh2(jIntensity,kDist) = subplot(3,4,kDist+4*(jIntensity-1));
             if strcmp(stType,'disp') || strcmp(stType,'speed')
-                %plot on
-                %plot off
+                thisCol = sum([chCurrCols; intCols{jIntensity}; onCols{1}; distCols{kDist}],1)==4;
+                plot(simTime, -simDataMat{iPanel}(:,thisCol),'b'); % on = blue
+                hold on;
+                thisCol = sum([chCurrCols; intCols{jIntensity}; onCols{2}; distCols{kDist}],1)==4;
+                plot(simTime, -simDataMat{iPanel}(:,thisCol),'m'); % off = magenta
             elseif strcmp(stType,'freq')
-                %plot current
+                thisCol = sum([chCurrCols; intCols{jIntensity}; distCols{kDist}],1)==3;
+                plot(simTime, -simDataMat{iPanel}(:,thisCol),'b');
             end
             
         end
         
-        % set xlim and ylim based on iPanel and jIntensity
-        
     end
     
-    clear axh;
+    % set x and y limits for each set of plots
+    switch iPanel
+        case 1
+            set(axh1,'XLim',[-0.02 0.15])
+            set(axh2,'XLim',[-0.02 0.15])
+            set(axh1(:,1),'YLim',[0 10])
+            set(axh1(:,2:3),'YLim',[-100 10])
+%             set(axh1(1,2:3),'YLim',[-15 3])
+%             set(axh1(2,2:3),'YLim',[-60 5])
+%             set(axh1(3,2:3),'YLim',[-150 10])
+            set(axh2,'YLim',[-2 0]);
+        case 2
+            set(axh1,'XLim',[-0.02 0.15])
+            set(axh2,'XLim',[-0.02 0.15])
+            set(axh1(:,1),'YLim',[0 10])
+            set(axh1(:,2:3),'YLim',[-70 10])
+%             set(axh1(1,2:3),'YLim',[-20 3])
+%             set(axh1(2,2:3),'YLim',[-30 5])
+%             set(axh1(3,2:3),'YLim',[-70 10])
+            set(axh2,'YLim',[-2 0]);
+            
+        case 3
+            set(axh1(1,:),'XLim',[-0.05 0.25])
+            set(axh1(2,:),'XLim',[0.22 0.25])
+            set(axh1(3,:),'XLim',[0.244 0.25])
+            set(axh2(1,:),'XLim',[-0.05 0.25])
+            set(axh2(2,:),'XLim',[0.22 0.25])
+            set(axh2(3,:),'XLim',[0.244 0.25])
+            
+            set(axh1(:,1),'YLim',[0 10])
+            set(axh1(:,2:3),'YLim',[-75 0])
+%             set(axh1(1,2),'YLim',[-15 0])
+%             set(axh1(1,3),'YLim',[-20 -10])
+%             set(axh1(2,2),'YLim',[-60 -30])
+%             set(axh1(2,3),'YLim',[-65 -60])
+%             set(axh1(3,2),'YLim',[-75 -65])
+%             set(axh1(3,3),'YLim',[-72.2 -71])
+% 
+            set(axh2,'YLim',[-2 0]);
+            
+    end
+    clear axh1 axh2;
+
 end
+
+plotfixer

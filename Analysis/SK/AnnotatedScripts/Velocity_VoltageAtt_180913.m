@@ -180,6 +180,25 @@ set(gca,'children',flipud(chH));
 linkaxes(axh,'y');
 plotfixer;
 
+%% Separate and write representative traces for channel-sim-distance figure
+
+% FAT218 mean traces at 106um/s, 320, 3790 separated by on/off
+% stimulus, from [stimStart-250, stimEnd+250]ms.
+onStimStart = 1503; onStimEnd = 2250;
+offStimStart = [5253; 4752; 4521]; offStimEnd = offStimStart + 747;
+sf = 10; %kHz
+boxTime = 150*sf; %ms
+onBox = [onStimStart-boxTime onStimEnd+boxTime];
+offBox = [offStimStart-boxTime offStimEnd+boxTime];
+
+
+reps(:,1:3) = velocityMRCs{4,2}([3 4 8],onBox(1):onBox(2))';
+reps(:,4) = velocityMRCs{4,2}(3,offBox(1,1):offBox(1,2))';
+reps(:,5) = velocityMRCs{4,2}(4,offBox(2,1):offBox(2,2))';
+reps(:,6) = velocityMRCs{4,2}(8,offBox(3,1):offBox(3,2))';
+
+tVec = ((1:length(reps))-boxTime-1)'./(sf*1000);
+
 %% Pull out and combine data to plot one particular velocity vs. distance
 
 % Voltage attenuation data comes from the length constant fitting done in
