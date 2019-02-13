@@ -6,7 +6,7 @@ internalList = {'IC6'};
 stimPosition = {'posterior'};
 
 wormPrep = {'dissected'};
-cellDist = [40 100];
+cellDist = [40 90];
 resistCutoff = '<250';
 extFilterFreq = [2.5 5];
 
@@ -32,6 +32,9 @@ ExcludeSweeps(ephysData, protList, noisePreCells,'matchType',matchType);
 %as new file.
 
 %% Running analysis
+protList ={'WC_Probe8','WC_Probe4','WC_Probe3','WC_Probe12'};
+
+matchType = 'first';
 
 noisePre = NonStatNoiseAnalysis(ephysData,protList,noisePreCells,...
     'matchType',matchType,'recParameters',ephysMetaData);

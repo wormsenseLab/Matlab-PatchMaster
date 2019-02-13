@@ -16,7 +16,7 @@ ephysData = FilterProjectData(ephysData, projects);
 clear projects;
 
 ephysMetaData = ImportMetaData();  %Recording Database.xlsx
-attenuationData = ImportMetaData(); %AttenuationCalcs.xlsx
+attenuationData = ImportMetaData(); %AttenuationCalcs_IC2_180810.xlsx
 
 %% Analyze capacity transient for C, Rs, and tau
 
@@ -69,7 +69,7 @@ sortSweeps = {'velocity','velocity','magnitude','magnitude'};
 
 [velocityMRCs, velocityStim] = IdAnalysis(ephysData,protList,velocityCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1);
+    'recParameters', ephysMetaData,'sepByStimDistance',1,'pdCompare',1);
 
 clear protList sortSweeps matchType
 
@@ -100,19 +100,45 @@ linkaxes(axh,'xy');
 figure();
 plot(velocityMRCs{1,2}');
 cmapline('ax',gca,'colormap','copper');
+
 %% Plot selected representative traces and stimuli
 % FAT214 with on ramps for 106, 785, 1560, 7230, 39740 um/s
 whichTraces = [3 5 6 10 12];
 
 % Grab stimuli based on velocityStim (second output from IdAnalysis)
-% Just example stim from one trace 
-% Should this be photodiode trace? (if so don't forget to zero it)
+% Just example stim from one single trace, not averaged
 stimTrace = cell(0);
 stimTrace{1} = ephysData.FAT214.data{2,18}(:,2);
 stimTrace{2} = ephysData.FAT214.data{2,11}(:,2);
 stimTrace{3} = ephysData.FAT214.data{2,12}(:,3);
 stimTrace{4} = ephysData.FAT214.data{2,12}(:,4);
 stimTrace{5} = ephysData.FAT214.data{2,17}(:,5);
+
+% Plot calibrated photodiode trace as alternative
+a = ephysData.FAT214.data{3,24}; % probe steps
+a = a-mean(a(1:3000));
+b = ephysData.FAT214.data{3,25}-ephysData.FAT214.data{3,26}; %pd steps minus worm only pd steps
+b = b-mean(b(1:3000));
+c = [0 2.5 5 7.5 10 12.5];
+
+% calibCells = {'FAT214'};
+% calibData = cell(0);
+% calibData{1} = b;
+% 
+% clear handles;
+% plotData = calibData{:,1};
+% handles = selectCalibSteps(plotData,calibCells{1});
+% stepIdx = handles.cursorPoints(:,1);
+% stepIdx = reshape(stepIdx,2,[])';
+% for j = 1:size(stepIdx,1)
+%     stepValues(1,j) = mean(plotData(stepIdx(j,1):stepIdx(j,2)))';
+% end
+% close;      
+% d = stepValues(1:6);
+d = [0.000254495420305394,-0.0837948030556295,-0.321306248450060,-0.664159366423493,-1.04265743523145,-1.44646508446994];
+e = velocityStim{1,3};
+f = interp1(-d,c,-e,'pchip');
+pdTrace = f(whichTraces,:);
 
 %pad to same length
 sweepLengths = cellfun('length',stimTrace);
@@ -126,7 +152,7 @@ tVec = (1:length(velocityMRCs{1,2}))/10; % time in ms
 
 figure();
 axh(1)=subplot(2,1,1);
-plot(tVec,stimTrace);
+plot(tVec,pdTrace);
 cmapline('ax',gca,'colormap','copper');
 chH = get(gca,'children');
 set(gca,'children',flipud(chH));
@@ -156,7 +182,7 @@ offH{1} = vline(offBox(:,1));
 offH{2} = vline(offBox(:,2),'b:');
 cmapline('lines',offH{1}','colormap','bone');
 cmapline('lines',offH{2}','colormap','bone');
- 
+
 %% Plot representative trace expansions
 figure();
 axh(1)=subplot(2,1,1);

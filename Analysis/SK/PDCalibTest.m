@@ -33,7 +33,7 @@ end
 %% Select ranges from calibration protocol
 for iCell = 1:length(calibCells)
     clear handles;
-    plotData = calibData(:,iCell);
+    plotData = calibData{:,iCell};
     
     % Run GUI for selecting ranges (hit Begin Selection, then place data
     % cursors in pairs around your ranges. shift-Click for each new data
@@ -41,7 +41,7 @@ for iCell = 1:length(calibCells)
     % any cursor at a later time, but be sure to keep them paired with the
     % same start/end cursor).
     %TODO: Fix the datatip labels.
-    handles = selectCalibSteps(plotData);
+    handles = selectCalibSteps(plotData,calibCells{iCell});
     
     % Pull out the mean value of the signal between the indices set by the
     % user's cursor placement. Store in stepValues with [recordings, steps]

@@ -78,10 +78,6 @@ sinePeaksStim = FrequencyAnalysis(ephysData, ephysMetaData, protList,antSineCell
 
 % sine_allExt_ant_PDfiltered(180923).xls for all
 
-% okay we're just going to plot the power spectrum in the morning and
-% ignore the bode plot because I don't know what a "system" object really
-% is in matlab or if my data can be one, or what a linear time-invariant
-% system is or why a Bode plot is useful
 %% Calculate PSD
 figure();
 eachFreq = [0 10 30 100 200 500 1000];
@@ -156,21 +152,31 @@ plotfixer;
 meanPSDByFreqI = meanPSDByFreq;
 
 %% Read in simulated power spectra and steady-state/rms
-sim_path = 'C:\Users\Sammy\Dropbox\Goodman Lab\Posters Papers Proposals\2018-Katta-SpatiotemporalDynamics\source-data\temporal-frequency\figure_4c_stimulus.txt';
+freqSim_path = 'C:\Users\Sammy\Dropbox\Goodman Lab\Posters Papers Proposals\2018-Katta-SpatiotemporalDynamics\source-data\temporal-frequency\';
+
+sim_path = fullfile(freqSim_path,'figure_4c_stimulus.txt');
 sim_stim = dlmread(sim_path,'\t',1,0);
 sim_f = sim_stim(:,1);
 sim_stim = sim_stim(:,2:end);
 
-sim_path = 'C:\Users\Sammy\Dropbox\Goodman Lab\Posters Papers Proposals\2018-Katta-SpatiotemporalDynamics\source-data\temporal-frequency\figure_4c_response.txt';
+sim_path = fullfile(freqSim_path,'figure_4c_response.txt');
 sim_resp = dlmread(sim_path,'\t',1,1);
 
-sim_path = 'C:\Users\Sammy\Dropbox\Goodman Lab\Posters Papers Proposals\2018-Katta-SpatiotemporalDynamics\source-data\temporal-frequency\figure_4d.txt';
-sim_steady = dlmread(sim_path,'\t',1,0);
-sim_sum_f = sim_steady(:,1);
-sim_steady = sim_steady(:,2:end);
+sim_path = fullfile(freqSim_path, 'figure_4d.txt');
+sim_steady_t2p9 = dlmread(sim_path,'\t',1,0);
+sim_sum_f = sim_steady_t2p9(:,1);
+sim_steady_t2p9 = sim_steady_t2p9(:,2:end);
 
-sim_path = 'C:\Users\Sammy\Dropbox\Goodman Lab\Posters Papers Proposals\2018-Katta-SpatiotemporalDynamics\source-data\temporal-frequency\figure_4e.txt';
-sim_rms = dlmread(sim_path,'\t',1,1);
+sim_path = fullfile(freqSim_path, 'figure_4e.txt');
+sim_rms_t2p9 = dlmread(sim_path,'\t',1,1);
+
+sim_path = fullfile(freqSim_path, 'figure_7d.txt');
+sim_steady_t0p6 = dlmread(sim_path,'\t',1,0);
+sim_sum_f_t0p6 = sim_steady_t0p6(:,1);
+sim_steady_t0p6 = sim_steady_t0p6(:,2:end);
+
+sim_path = fullfile(freqSim_path, 'figure_7e.txt');
+sim_rms_t0p6 = dlmread(sim_path,'\t',1,1);
 
 %% Plot stacked power spectra for sim and experimental
 
@@ -287,10 +293,12 @@ end
 figure(); clear axh;
 yyh = cell(0);
 
-yyh = plotyy(eachFreq,meanSteadyByFreq(:,1),sim_sum_f,sim_steady,@semilogx);
+yyh = plotyy(eachFreq,meanSteadyByFreq(:,1),sim_sum_f,sim_steady_t2p9,@semilogx);
 set(yyh(1),'YLim',[0 60],'YTick',(0:20:60));
 hold(yyh(1),'on');
 errorbar(yyh(1),eachFreq,meanSteadyByFreq(:,1),meanSteadyByFreq(:,3),'bo');
+hold(yyh(2),'on');
+plot(yyh(2),sim_sum_f_t0p6,sim_steady_t0p6);
 set(yyh,'box','off');
 xlabel('Frequency (Hz)')
 ylabel(yyh(1),'Steady-state current (pA)');
@@ -299,10 +307,12 @@ ylabel(yyh(2),'Normalized steady-state current');
 figure(); clear axh;
 yyh = cell(0);
 
-yyh = plotyy(eachFreq,meanRMSByFreq(:,1),sim_sum_f,sim_rms,@semilogx);
+yyh = plotyy(eachFreq,meanRMSByFreq(:,1),sim_sum_f,sim_rms_t2p9,@semilogx);
 set(yyh(1),'YLim',[0 8],'YTick',(0:2:8));
 hold(yyh(1),'on');
 errorbar(yyh(1),eachFreq,meanRMSByFreq(:,1),meanRMSByFreq(:,3),'bo');
+hold(yyh(2),'on');
+plot(yyh(2),sim_sum_f_t0p6,sim_rms_t0p6);
 set(yyh, 'box','off');
 xlabel('Frequency (Hz)')
 ylabel(yyh(1),'Steady-state RMS (pA)');
