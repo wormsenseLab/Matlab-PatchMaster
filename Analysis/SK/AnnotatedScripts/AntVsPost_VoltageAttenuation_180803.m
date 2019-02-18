@@ -20,7 +20,7 @@ clear lastfit;
 
 strainList = {'TU2769'};
 internalList = {'IC2'};
-stimPosition = {'posterior'};
+stimPosition = {'anterior'};
 
 wormPrep = {'dissected'};
 cellDist = [40 200]; % stimulus/cell distance in um
@@ -28,20 +28,21 @@ resistCutoff = '<250'; % Rs < 250 MOhm
 extFilterFreq = 2.5; % frequency of low-pass filter for stimulus command
 includeFlag = 1; 
 
-posteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
-    'strain', strainList, 'internal', internalList, ...
-    'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
-    'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
-    'stimFilterFrequencykHz', extFilterFreq, 'included', includeFlag);
-
-stimPosition = {'anterior'};
-
 anteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
     'strain', strainList, 'internal', internalList, ...
     'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
     'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
     'stimFilterFrequencykHz', extFilterFreq, 'included', includeFlag);
 
+
+
+stimPosition = {'posterior'};
+
+posteriorDistCells = FilterRecordings(ephysData, ephysMetaData,...
+    'strain', strainList, 'internal', internalList, ...
+    'stimLocation', stimPosition, 'wormPrep', wormPrep, ...
+    'cellStimDistUm',cellDist, 'RsM', resistCutoff, ...
+    'stimFilterFrequencykHz', extFilterFreq, 'included', includeFlag);
 
 clear cellDist strainList internalList cellTypeList stimPosition resistCutoff ans wormPrep excludeCells;
 
@@ -68,11 +69,11 @@ sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
 
 [anteriorMRCs, antStim] = IdAnalysis(ephysData,protList,anteriorDistCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1);
+    'recParameters', ephysMetaData,'sepByStimDistance',1,'subZeroCharge',1);
 
 posteriorMRCs = IdAnalysis(ephysData,protList,posteriorDistCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1);
+    'recParameters', ephysMetaData,'sepByStimDistance',1,'subZeroCharge',1);
 
 clear protList sortSweeps matchType
 
@@ -81,20 +82,20 @@ clear protList sortSweeps matchType
 %% Correct all sizes and export for Igor fitting of Boltzmann to each recording
 
 % Set the filename
-fname = 'PatchData/antVPost_off_allDist(181204).xls';
+fname = 'PatchData/antVPost_off_allDist_subQ(190215).xls';
 
 
 eachSize = [0.5 1 1.5 3 4 5 6 7 8 9 10 11 12]';
 distLimits = [40 200]; % limit to same average distance for anterior and posterior
 distCol = 12;
-whichStim = 1; %on or off
+whichStim = 2; %on or off
 noCorr = 0; % 1 to skip space clamp voltage attenuation correction
 Vc = -0.06; %in V
 Ena = 0.094; % in V
 
 
 whichMRCs = anteriorMRCs;
-dType = 'curr'; 
+dType = 'char'; 
 
 switch dType
     case 'curr'
@@ -201,8 +202,9 @@ clear iCell thisCell Iact whichMRCs whichStep hasAtt thisAtt Vc Ena thisName
 
 
 %% Normalize based on current/charge at given step size and write to xls
+% Normalizes within each condition
 
-stepSize = 10; % must be negative for off
+stepSize = -10; % must be negative for off
 
 %Anterior
 which_Out = ant_Out;
@@ -241,8 +243,8 @@ clear currMat which Row normRow normMat norm_Out
 
 %% Calculate ratios
 % re-save ant_Out as antOff/antOnCurr for the corresponding cases
-on = postOnCurr;
-off = postOffCurr;
+on = antOnCurr;
+off = antOffCurr;
 out = on(1,:);
 
 onVel = [on{2:end,1}];
@@ -257,7 +259,7 @@ end
 out = out(~cellfun(@isempty,out(:,1)),:);
 out(1,:) = cellfun(@(x) regexprep(x,'stim1','ratio'),out(1,:),'un',0);
 
-xlswrite(fname,out,['post_' dType '_Ratio']);
+xlswrite(fname,out,['ant_' dType '_Ratio']);
 
 
 %% Renormalize based on fit

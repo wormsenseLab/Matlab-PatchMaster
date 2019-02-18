@@ -237,15 +237,17 @@ for iCell = 1:length(allCells)
             nonStatOutput.(cellName)(whichRow).totalMean = totalMean;
             nonStatOutput.(cellName)(whichRow).totalVar = totalVar;
             nonStatOutput.(cellName)(whichRow).traces = leakSubtract(responseTime,:);
+            nonStatOutput.(cellName)(whichRow).stimLoc = [preTime*sf+1 preTime*sf+1+stimLoc(2)-stimLoc(1)];
             nonStatOutput.(cellName)(whichRow).distance = thisDist;
-
-            
         end
-        
+                
         clear thisDist;
     end
     
-    
+    % Clear empty rows
+    nonStatOutput.(cellName) = ...
+        nonStatOutput.(cellName)(~cellfun(@isempty,{nonStatOutput.(cellName).protocol}));
+
 end
 
 end

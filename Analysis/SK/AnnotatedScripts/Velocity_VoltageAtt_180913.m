@@ -69,7 +69,7 @@ sortSweeps = {'velocity','velocity','magnitude','magnitude'};
 
 [velocityMRCs, velocityStim] = IdAnalysis(ephysData,protList,velocityCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1,'pdCompare',1);
+    'recParameters', ephysMetaData,'sepByStimDistance',1,'pdCompare',1,'subZeroCharge',1);
 
 clear protList sortSweeps matchType
 

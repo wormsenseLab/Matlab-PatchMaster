@@ -25,17 +25,22 @@ p.addParameter('combineSweeps',0); %1 to combine sweeps with same sorting parame
 %different stim timepoints or different sampling freqs (for the latter,
 %analysis will be done separately and then stats will be combined as a
 %weighted average based on number of sweeps of each condition
+p.addParameter('threshTime',100,@(x) isnumeric(x) && isscalar(x) && x>0);
+p.addParameter('subZeroCharge',0); % subtract baseline charge level
 
 p.parse(stimParams, meanTraces, sf, dataType, varargin{:});
 
 tauType = p.Results.tauType;
 integrateFlag = p.Results.integrateCurrent;
 combineFlag = p.Results.combineSweeps;
+threshTime = p.Results.threshTime;% use first n ms of trace for setting noise threshold
+zeroChargeFlag = p.Results.subZeroCharge;
 
+intTime = 150; %ms; time window from stimStart over which to integrate for charge
+intBaseTime = 150; %ms; time window during baseline over which to integrate
 smoothWindow = sf; % n timepoints for moving average window for findPeaks, as factor of sampling freq (kHz)
-threshTime = 100; % use first n ms of trace for setting noise threshold
 nParams = size(meanTraces,1);
-
+% endChargeTest = 1;
 % Number of timepoints to skip after stimulus onset to avoid the stimulus
 % artifact in peak-finding (dependent on sampling frequency in kHz).
 % Determined empirically.
@@ -150,13 +155,32 @@ for iParam = 1:nParams
             % trapz uses the trapezoidal method to integrate & calculate area under
             % the curve. But it assumes unit spacing, so divide by the sampling
             % frequency to get units of seconds.            
-            try intPeak = trapz(meanTraces(iParam,stimStart:stimEnd+(150*sf))/(sf*1000));
+            try intPeak = trapz(meanTraces(iParam,stimStart:stimEnd+(intTime*sf))/(sf*1000));
+                intPeakTime = length(stimStart:stimEnd+(intTime*sf))/(sf*1000); 
             catch
                 intPeak = trapz(meanTraces(iParam,stimStart:end)/(sf*1000));
+                intPeakTime = length(meanTraces(stimStart:end))/(sf*1000);
             end
                 
             %intPeakArtifact = trapz(meanTraces(iParam,stimStart+artifactOffset:stimEnd+(sf*1E3/50))/sf);
             %intPeakHalf = trapz(meanTraces(iParam,halfLocs(1)-1:decayHalfLocs(1)-1)/sf);
+            
+            if zeroChargeFlag
+                try baseInt = trapz(meanTraces(iParam,stimStart-intBaseTime*sf+1:stimStart)/(sf*1000));
+                    baseIntPerS = baseInt/(length(stimStart-intBaseTime*sf+1:stimStart)/(sf*1000)); %charge/ms
+                catch
+                    baseInt = trapz(meanTraces(iParam,1:stimStart)/(sf*1000));
+                    baseIntPerS = baseInt/(length(1:stimStart)/(sf*1000)); %charge/s
+                end
+                
+                zeroCharge = baseIntPerS*intPeakTime;
+                intPeak = intPeak - zeroCharge;
+            end
+            
+%             if endChargeTest
+%                 endCharge = trapz(meanTraces(iParam,stimStart+(200*sf)-1:stimStart+(250*sf)-1)/(sf*1000));                
+%                 intPeak = endCharge;
+%             end
             
             cellPeaks(iParam,11) = intPeak;
         end
