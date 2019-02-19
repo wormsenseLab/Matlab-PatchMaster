@@ -69,11 +69,11 @@ sortSweeps = {'magnitude','magnitude','magnitude','magnitude'};
 
 wtMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1);
+    'recParameters', ephysMetaData,'sepByStimDistance',1,'subZeroCharge',1);
 
 fatMRCs = IdAnalysis(ephysData,protList,fatCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1);
+    'recParameters', ephysMetaData,'sepByStimDistance',1,'subZeroCharge',1);
 
 clear protList sortSweeps matchType
 
@@ -82,7 +82,7 @@ clear protList sortSweeps matchType
 %% Correct all sizes and export for Igor fitting of Boltzmann to each recording
 
 % Set the filename and parameters
-fname = 'PatchData/steps_CC_wtVsFat_2p5kHz_allDist(181129).xlsx';
+fname = 'PatchData/steps_wtVsFat_2p5kHz_allDist_subQ(181129).xlsx';
 
 eachSize = [0.5 1 1.5 3 4 5 6 7 8 9 10 11 12]';
 distLimits = [40 200]; % limit to same average distance for anterior and posterior
@@ -94,10 +94,10 @@ Ena = 0.094; % in V
 % Step to normalize to
 normFlag = 1; % yes, add normalized sheets
 normStepSize = 10; % must be negative for off
-corrOn = 1 %no voltage attenuation correction if 0
+corrOn = 0; %no voltage attenuation correction if 0
 
 whichMRCs = wtMRCs;
-dType = 'curr'; 
+dType = 'decay'; 
 
 switch dType
     case 'curr'

@@ -74,7 +74,7 @@ ExcludeSweeps(ephysData, protList, fatCells, 'matchType', matchType);
 
 
 %% Find MRCs 
-% antAllSteps(180810).xlsx and antAllStepsFat(181129).xlsx
+% antAllRampsWT(180810).xlsx and antAllRampsFat(181129).xlsx
 protList ={'DispRate'};
 matchType = 'first';
 
@@ -82,11 +82,11 @@ sortSweeps = {'velocity','velocity','magnitude','magnitude'};
 
 wtMRCs = IdAnalysis(ephysData,protList,wtCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1);
+    'recParameters', ephysMetaData,'sepByStimDistance',1,'subZeroCharge',1);
 
 fatMRCs = IdAnalysis(ephysData,protList,fatCells,'num','matchType',matchType, ...
     'tauType','thalfmax', 'sortSweepsBy', sortSweeps, 'integrateCurrent',1 , ...
-    'recParameters', ephysMetaData,'sepByStimDistance',1);
+    'recParameters', ephysMetaData,'sepByStimDistance',1,'subZeroCharge',1);
 
 clear protList sortSweeps matchType
 
@@ -95,7 +95,7 @@ clear protList sortSweeps matchType
 %% Correct all sizes and export for Igor fitting of Boltzmann to each recording
 
 % Set the filename and parameters
-fname = 'PatchData/ramps_wtVsFat_2p5kHz_allDist(181130).xlsx';
+fname = 'PatchData/ramps_wtVsFat_allFreq_allDist(190218).xlsx';
 
 tol = 12;
 
@@ -116,7 +116,7 @@ normVel = 19820; % must be negative for off
 corrOn = 0; %no voltage attenuation correction if 0
 
 whichMRCs = wtMRCs;
-dType = 'curr'; 
+dType = 'decay'; 
 
 switch dType
     case 'curr'

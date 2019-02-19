@@ -344,12 +344,12 @@ legend({'On current','Off current'});
 %% Correct all velocities and export for Igor fitting of Boltzmann to each recording
 
 % Set the filename
-fname = 'PatchData/attCorrectedVel(181204).xls';
+fname = 'PatchData/attCorrectedVel_subQ(190217).xls';
 noCorr = 0;
 normFlag = 1; %normalize to 40mm/s ramp (highest velocity "step")
 normVel = 39740; % must be negative for off
 tol = 12;
-dType = 'decay';
+dType = 'charge';
 
 for i = 1:2
 whichRamp = i; % 1 for on currents, 2 for off currents
@@ -481,8 +481,8 @@ end
 %% Calculate ratios
 % re-save vel_Out as on/offVelChrg and on/offVelPeak for the corresponding
 % cases
-on = antOnCurr;
-off = antOff_Curr;
+on = antOnChar;
+off = antOffChar;
 out = on(1,:);
 
 onVel = [on{2:end,1}];
