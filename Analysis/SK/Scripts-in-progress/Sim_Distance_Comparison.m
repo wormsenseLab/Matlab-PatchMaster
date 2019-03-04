@@ -32,10 +32,15 @@ end
 % scrsz = get(groot,'ScreenSize');
 % figure('Position',[200 200 800 600]);
 
+% Plot rotated plots for individual channel currents to look at timing
+isRotate = 0;
+
 for iPanel = 1:3
     fh(iPanel,1) = figure('Position',[100 100 650 600]); % stim and macro currents
     fh(iPanel,2) = figure('Position',[500 100 800 600]); % channel currents
-    
+    if isRotate
+        fh(iPanel,3) = figure('Position',[600 0 600 800]); % rotated channel currents
+    end
     switch iPanel
         case 1 % displacement
             stType = 'disp';
@@ -144,6 +149,21 @@ for iPanel = 1:3
                 plot(simTime, -simDataMat{iPanel}(:,thisCol),'b');
             end
             
+            % Alternative plot for looking at timing vs. distance
+            if isRotate == 1
+                figure(fh(iPanel,3));
+                axh3(kDist,jIntensity) = subplot(4,3,kDist+4*(jIntensity-1));
+                if strcmp(stType,'disp') || strcmp(stType,'speed')
+                    thisCol = sum([chCurrCols; intCols{jIntensity}; onCols{1}; distCols{kDist}],1)==4;
+                    plot(simTime, -simDataMat{iPanel}(:,thisCol),'b'); % on = blue
+                    hold on;
+                    thisCol = sum([chCurrCols; intCols{jIntensity}; onCols{2}; distCols{kDist}],1)==4;
+                    plot(simTime, -simDataMat{iPanel}(:,thisCol),'m'); % off = magenta
+                elseif strcmp(stType,'freq')
+                    thisCol = sum([chCurrCols; intCols{jIntensity}; distCols{kDist}],1)==3;
+                    plot(simTime, -simDataMat{iPanel}(:,thisCol),'b');
+                end
+            end
         end
         
     end
@@ -187,9 +207,13 @@ for iPanel = 1:3
 %             set(axh1(3,3),'YLim',[-72.2 -71])
 % 
             set(axh2,'YLim',[-2 0]);
-            
+%             set(axh3(:,1),'XLim',[-0.05 0.25])
+%             set(axh3(:,2),'XLim',[0.22 0.25])
+%             set(axh3(:,3),'XLim',[0.244 0.25])
+%             set(axh3,'YLim',[-2 0]);
+
     end
-    clear axh1 axh2;
+    clear axh1 axh2 axh3;
 
 end
 

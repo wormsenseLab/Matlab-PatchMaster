@@ -218,7 +218,7 @@ for i = 1:size(sim_resp,2)-1
     set(yyh{i},'XTickLabel',[]);
 end
     
-plotfixer
+plotfixer;
 %% Calculate steady state mean and rms by frequency
 
 whichPeaks = sinePeaks;
