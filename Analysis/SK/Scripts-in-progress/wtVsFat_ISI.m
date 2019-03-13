@@ -121,14 +121,28 @@ fatReps = sum(~isnan(allOns),2);
 
 %% Plot them
 
-figure(); hold on; ylim(gca,[0 1.75]);
+fh(1) = figure(); hold on; ylim(gca,[0 1.75]);
 plot(wtOnMean(1:40),'b','LineWidth',2);
 plot(fatOnMean(1:40),'Color',[0 1 0],'LineWidth',2);
+axh(1) = gca;
+fh(2) = figure(); hold on; ylim(gca,[0 1.75]);
+plot(wtOffMean(1:40),'b','LineWidth',2);
+plot(fatOffMean(1:40),'Color',[0 1 0],'LineWidth',2);
+axh(2) = gca;
 plotfixer;
-plot(wtOnNorm(1:40,:),'Color',[.7 .7 1])
-plot(fatOnNorm(1:40,:),'Color',[.2 .7 .2])
-ylabel('Normalized on current');
-xlabel('Stimulus #');
-chH = get(gca,'children');
-set(gca,'children',flipud(chH));
+
+plot(axh(1),wtOnNorm(1:40,:),'Color',[.7 .7 1])
+plot(axh(1),fatOnNorm(1:40,:),'Color',[.2 .7 .2])
+ylabel(axh(1),'Normalized on current');
+xlabel(axh(1),'Stimulus #');
+chH = get(axh(1),'children');
+set(axh(1),'children',flipud(chH));
+
+plot(axh(2),wtOnNorm(1:40,:),'Color',[.7 .7 1])
+plot(axh(2),fatOnNorm(1:40,:),'Color',[.2 .7 .2])
+ylabel(axh(2),'Normalized off current');
+xlabel(axh(2),'Stimulus #');
+chH = get(axh(2),'children');
+set(axh(2),'children',flipud(chH));
+
 

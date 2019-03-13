@@ -339,7 +339,32 @@ stimTraces = cellfun(@(x) mean(x,2),stimTraces,'un',0);
 stimTraces = [stimTraces{:}];
 tVec = ((1:length(stimTraces))/sf)';
 
-yyh = plotyy(tVec,respTraces,tVec,stimTraces);
+% Plot calibrated photodiode trace as alternative
+a = ephysData.FAT170.data{3,52}; % probe steps
+a = a-mean(a(1:1499));
+b = ephysData.FAT170.data{3,53}-ephysData.FAT170.data{3,54}; %pd steps minus worm only pd steps
+b = b-mean(b(1:1499));
+c = [0 2.5 5 7.5 10 12.5];
+
+% calibCells = {'FAT170'};
+% calibData = cell(0);
+% calibData{1} = b;
+% 
+% clear handles;
+% plotData = calibData{:,1};
+% handles = selectCalibSteps(plotData,calibCells{1});
+% stepIdx = handles.cursorPoints(:,1);
+% stepIdx = reshape(stepIdx,2,[])';
+% for j = 1:size(stepIdx,1)
+%     stepValues(1,j) = mean(plotData(stepIdx(j,1):stepIdx(j,2)))';
+% end
+% close;      
+% d = stepValues(1:6);
+d = [0.000719859832312041,-0.196562355775423,-0.460558335247858,-0.755470591227155,-1.11678911522346,-1.51308976348689];
+e = stimTraces;
+pdTraces = interp1(-d,c,-e,'pchip');
+
+yyh = plotyy(tVec,respTraces,tVec,pdTraces);
 hline(respMean(1),'b'); hline(respMean(2),'r'); hline(respMean(3),'m');
 
 %% Plot zoomed traces for 5 cycles
@@ -352,10 +377,10 @@ cycleLims = [1.25 1.7500; 1.7000 1.7500; 1.7400 1.7500];
 yyh = cell(0);
 for i = 1:3
     figure();
-    yyh{i} = plotyy(tVec,respTraces(:,i),tVec,stimTraces(:,i));
+    yyh{i} = plotyy(tVec,respTraces(:,i),tVec,pdTraces(:,i));
     hline(respMean(i),'k:');
     set(yyh{i},'XLim',cycleLims(i,:));
-    set(yyh{i}(2),'YLim',[-1 0]);
+    set(yyh{i}(2),'YLim',[0 10]);
     set(yyh{i}(1),'Ylim',[respMean(i)-15e-12 respMean(i)+15e-12]);
 end
 
