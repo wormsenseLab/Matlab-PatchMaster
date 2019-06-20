@@ -89,12 +89,14 @@ p.addParameter('ignoreSpecial', true); %if false, need to change parameter names
 % TODO: adjust the regexprep (~line 48) on metadata to get rid of special 
 % characters (parentheses, symbols, greek letters) for full ability to
 % match and filter by any column in the database.
+% String Parameters
 p.addParameter('strain', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('externalSolution', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('internalSolution', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('cellType', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('wormPrep', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1}));
 p.addParameter('stimLocation', cell(0), @(x) iscell(x) && ~isempty(x) && ischar(x{1})); % anterior or posterior
+% Numerical Parameters
 p.addParameter('cellStimDistUm',cell(0)); % distance of stim from cell body, um
 p.addParameter('stimFilterFrequencykHz',cell(0)); % external stimulus filter frequency, kHz
 p.addParameter('roomTempC',cell(0)); % room temperature, degC

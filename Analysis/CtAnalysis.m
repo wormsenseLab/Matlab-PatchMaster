@@ -64,7 +64,7 @@ for iCell = 1:length(allCells)
             continue
         end
         
-        
+        % Subtract leak (first 20 timepoints)
         ctNeg = bsxfun(@minus, ctNeg, mean(ctNeg(1:20,:)));
         ctPos = bsxfun(@minus, ctPos, mean(ctPos(1:20,:)));
         
