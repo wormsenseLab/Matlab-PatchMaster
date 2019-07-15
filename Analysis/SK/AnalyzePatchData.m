@@ -16,7 +16,7 @@ ephysData = ImportPatchData('incl',1);
 
 
 % Keep only data with given project prefixes/names.
-projects = {'FAT';'SYM'};
+projects = {'FAT';'SYM';'SPC'};
 % projects = {'SAR','FAT'};
 
 %fix a couple messed up names

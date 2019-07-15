@@ -39,8 +39,8 @@ closed_10_y = ones(length(closed_10),1)*0.8;
 
 figure();hold on;
 scatter(open_5,open_5_y,'MarkerFaceColor','b','MarkerEdgeColor','k')
-scatter(closed_5,closed_5_y,'k')
+scatter(closed_5,closed_5_y,'kx')
 scatter(open_10,open_10_y,'MarkerFaceColor','m','MarkerEdgeColor','k')
-scatter(closed_10,closed_10_y,'k')
+scatter(closed_10,closed_10_y,'kx')
 ylim([-1 3])
-xlim([-100 0])
+xlim([-150 0])

@@ -4,6 +4,13 @@
 %%Import data and metadata
 ephysData = ImportPatchData('incl',1);
 projects = {'FAT';'SYM'};
+
+%fix a couple messed up names
+ephysData.FAT029 = ephysData.FAT029s;
+ephysData.FAT017 = ephysData.FAT017e001;
+ephysData.FAT164 = ephysData.FAT164001;
+ephysData = rmfield(ephysData,{'FAT017e001';'FAT029s';'FAT164001'});
+
 ephysData = FilterProjectData(ephysData, projects);
 clear projects;
 

@@ -17,6 +17,9 @@
 %                                 group. RsSeries gives the series # at
 %                                 which each ct was taken.
 % 
+% DEPENDENCIES: ezyfit toolbox
+% 
+% 
 % Created by Sammy Katta, 15-May-2015.
 
 function ephysData = CtAnalysis(ephysData,varargin)
