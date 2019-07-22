@@ -17,3 +17,5 @@ sigTOOL must be run at least once in a given Matlab session before the function 
 Start with the Import folder, which contains ImportPatchData, which calls on SplitSeries and ImportHEKAtoMat.
 
 AnalyzePatchData and the rest of the functions in the Analysis folder are currently a work in progress for my specific analyses.
+
+Created by: Samata Katta
