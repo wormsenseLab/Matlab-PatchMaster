@@ -15,6 +15,8 @@
 %                                   which keeps all rows.
 %
 % Created by Sammy Katta on 4 December 2015.
+% 
+% Note: for future compatibility, replace xlsread with readcell.
 
 function rawMetaData = ImportMetaData(varargin)
 

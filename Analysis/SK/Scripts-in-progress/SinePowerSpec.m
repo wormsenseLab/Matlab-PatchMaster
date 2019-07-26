@@ -1,3 +1,26 @@
+% SinePowerSpec.m
+% 
+% Analysis of responses to sinusoidal stimuli. Outputs plots of power
+% spectral density for each frequency for both the current response and the
+% stimulus photodiode signal. Calculates mean steady-state current and rms 
+% at the end of the sine and plots against simulated data.
+
+%%Import data and metadata
+ephysData = ImportPatchData('incl',1);
+projects = {'FAT';'SYM'};
+ephysData = FilterProjectData(ephysData, projects);
+%fix a couple messed up names
+ephysData.FAT029 = ephysData.FAT029s;
+ephysData.FAT017 = ephysData.FAT017e001;
+ephysData.FAT164 = ephysData.FAT164001;
+ephysData = rmfield(ephysData,{'FAT017e001';'FAT029s';'FAT164001'});
+
+clear projects;
+
+ephysMetaData = ImportMetaData();  %Recording Database.xlsx
+attenuationData = ImportMetaData(); %AttenuationCalcs_IC2_190620.xlsx
+
+%% Select by recording conditions
 protList ={'_time'};
 matchType = 'last';
 strainList = {'TU2769'};

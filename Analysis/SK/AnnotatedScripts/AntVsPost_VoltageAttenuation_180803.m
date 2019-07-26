@@ -61,6 +61,9 @@ clear cellDist strainList internalList cellTypeList stimPosition resistCutoff an
 % sweeps where the recording was lost partway through or some unexpected
 % source of noise was clearly at play.
 
+% If you have already made a list of sweeps, skip this section and load the
+% list in the next section.
+
 protList ={'WC_Probe';'WC_ProbeSmall';'WC_ProbeLarge';'NoPrePulse'};
 matchType = 'full';
 
@@ -68,7 +71,8 @@ ExcludeSweeps(ephysData, protList, anteriorDistCells, 'matchType', matchType);
 ExcludeSweeps(ephysData, protList, posteriorDistCells, 'matchType', matchType);
 
 %% Find MRCs 
-% antAllSteps.xlsx and postAllSteps.xlsx from 180810
+% Lists: antAllSteps.xlsx and postAllSteps.xlsx from 180810 should contain
+% all relevant steps for anterior and posterior stimulation, respectively.
 protList ={'WC_Probe';'NoPre'};
 matchType = 'first';
 
@@ -87,10 +91,13 @@ clear protList sortSweeps matchType
 
 
 %% Correct all sizes and export for Igor fitting of Boltzmann to each recording
+% Space clamp correction for voltage attenuation is only done for anterior
+% recordings, based on the distance from the center of the stimulus bead to
+% the cell. Posterior recordings are not corrected because active channels
+% are near the cell body.
 
 % Set the filename
 fname = 'PatchData/antVPost_off_allDist_subQ(190215).xls';
-
 
 eachSize = [0.5 1 1.5 3 4 5 6 7 8 9 10 11 12]';
 distLimits = [40 200]; % limit to same average distance for anterior and posterior
@@ -100,7 +107,8 @@ noCorr = 0; % 1 to skip space clamp voltage attenuation correction
 Vc = -0.06; %in V
 Ena = 0.094; % in V
 
-
+% Manually change dType to 'curr', 'char', 'act', or 'decay' depending on
+% which analysis you would like to do.
 whichMRCs = anteriorMRCs;
 dType = 'char'; 
 

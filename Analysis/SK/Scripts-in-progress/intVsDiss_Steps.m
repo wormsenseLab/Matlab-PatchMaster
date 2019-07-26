@@ -34,7 +34,7 @@ stimPosition = {'anterior'};
 wormPrep = {'dissected'};
 cellDist = [40 200]; % stimulus/cell distance in um
 resistCutoff = '<250'; % Rs < 250 MOhm
-extFilterFreq = [2.5 5]; % frequency of low-pass filter for stimulus command
+extFilterFreq = 2.5; % frequency of low-pass filter for stimulus command
 includeFlag = 1; 
 % cultT = 15;
 
@@ -301,38 +301,5 @@ out(1,:) = cellfun(@(x) regexprep(x,'stim1','ratio'),out(1,:),'un',0);
 xlswrite(fname,out,['int_' dType '_Ratio']);
 
 
-
-%% OLD Plot representative traces for spatial dynamics figure
-
-% check distance and nReps for each recording
-antDists = cell2mat(cellfun(@(x) mean(x(:,12:13)),dissectedMRCs(:,3),'un',0));
-postDists = cell2mat(cellfun(@(x) mean(x(:,12:13)),intactMRCs(:,3),'un',0));
-
-figure();
-plot(intactMRCs{10,2}');
-title('FAT224 (posterior)');
-ylim([-8e-11 2e-11]);
-cmapline('ax',gca,'colormap','copper');
-
-figure();
-plot(dissectedMRCs{3,2}');
-title('FAT143 (anterior)');
-ylim([-8e-11 2e-11]);
-cmapline('ax',gca,'colormap','copper');
-
-plotfixer
-
-%% Separate and write representative traces for channel-sim-distance figure
-
-% anterior trace FAT 105 at 1, 5, 10um mean traces separated by on/off
-% stimulus, from [stimStart-250, stimEnd+250]ms.
-onStim = 751;
-offStim = 2251;
-sf = 5; %kHz
-boxTime = 150*sf; %ms
-tVec = (-150*sf:150*sf)'/sf/1000; %s
-
-reps(:,1:3) = dissectedMRCs{4,2}([2 5 9],onStim-boxTime:onStim+boxTime)';
-reps(:,4:6) = dissectedMRCs{4,2}([2 5 9],offStim-boxTime:offStim+boxTime)';
 
 

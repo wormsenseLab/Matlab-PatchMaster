@@ -17,7 +17,7 @@ end
 
 recData = cell(0);
 recFile = 'representative_traces.xlsx';
-[~,~,recInput] = xlsread(fullfile(simPath,recFile));
+[~,~,recInput] = xlsread(fullfile(simPath,recFile),'Traces');
 
 recData{1} = recInput(:,1:7); % displacement (1um, 5, 10)
 recData{2} = recInput(:,8:14); % speed (106um/s, 320, 3790)
