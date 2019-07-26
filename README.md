@@ -18,7 +18,7 @@ Start with the Import folder, which contains ImportPatchData, which calls on Spl
 
 =================
 
-Code for the the Katta et al. (2018) preprint "Progressive recruitment of distal MEC-4 channels determines touch response strength in C. elegans" (https://www.biorxiv.org/content/10.1101/587014v1) and any published articles resulting from this manuscript can be found in the folder Analysis/SK. Useful scripts are listed below. Simulated data were generated separately and loaded into Matlab with this code for making plots.
+Code for the Katta et al. (2018) preprint "Progressive recruitment of distal MEC-4 channels determines touch response strength in C. elegans" (https://www.biorxiv.org/content/10.1101/587014v1) and any published articles resulting from this manuscript can be found in the folder Analysis/SK. Useful scripts are listed below. Simulated data were generated separately and loaded into Matlab with this code for making plots.
 
     AnalyzePatchData.m is a general script with examples for importing data and metadata, checking for bad sweeps, and running various types of analyses.
 
