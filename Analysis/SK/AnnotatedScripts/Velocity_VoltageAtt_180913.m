@@ -402,7 +402,7 @@ for iCell = 1:size(whichMRCs,1)
         
         for iVel = 1:length(eachVel)
             stepVel = eachVel(iVel);
-            whichVel = abs(thisCell(:,1) - stepVel) < 12; %find closest velocity
+            whichVel = abs(thisCell(:,1) - stepVel) < tol; %find closest velocity
             if any(whichVel)
                 if any(hasAtt) && thisAtt{hasAtt,2} %if attenuation calc exists and not omitCell
                     if noCorr == 0 && strcmp(dType,'peak') || strcmp(dType,'charge') %attenuation correction for current/charge but not taus
