@@ -16,9 +16,12 @@ sigTOOL must be run at least once in a given Matlab session before the function 
 
 Start with the Import folder, which contains ImportPatchData, which calls on SplitSeries and ImportHEKAtoMat.
 
+Katta et al. 2018
 =================
 
-Code for the Katta et al. (2018) preprint "Progressive recruitment of distal MEC-4 channels determines touch response strength in C. elegans" (https://www.biorxiv.org/content/10.1101/587014v1) and any published articles resulting from this manuscript can be found in the folder Analysis/SK. Useful scripts are listed below. Simulated data were generated separately and loaded into Matlab with this code for making plots.
+Code for the Katta et al. (2018) preprint "Progressive recruitment of distal MEC-4 channels determines touch response strength in C. elegans" (https://www.biorxiv.org/content/10.1101/587014v1) and any published articles resulting from this manuscript can be found in the folder Analysis/SK. Simulated data were generated separately and loaded into Matlab with this code for making plots.
+
+### Important scripts are listed below:
 
    AnalyzePatchData.m is a general script with examples for importing data and metadata, checking for bad sweeps, and running various types of analyses.
 
@@ -32,7 +35,7 @@ Code for the Katta et al. (2018) preprint "Progressive recruitment of distal MEC
 
    intVsDiss_Steps.m does a pilot comparison of the minimally dissected ("intact") preparation vs. the regular ("dissected") preparation.
 
-Other functions necessary for understanding the details of analysis are listed below.
+### Other functions necessary for understanding the details of analysis are listed below.
 
    IdAnalysis.m takes the mean of technical replicates within a recording by grouping stimuli considered to be the same, calculates the peak current in response to each stimulus (on, off, repeated steps) within each mean sweep, and outputs a cell array with mean traces, stimulus parameters, peak current and kinetics. This function can be used when analyzing by stimulus displacement, position, speed, or inter-stimulus interval. It relies on newStepFind and findMRCs.
 
