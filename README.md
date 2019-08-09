@@ -9,8 +9,10 @@ These functions require sigTOOL for importing Patchmaster .dat files. You can do
 Follow the directions in the included pdf for installing it properly.
 
 IMPORTANT:
-The ImportHEKAtoMat function (a modified version of ImportHEKA) must be placed in the sigTOOL folder (a copy is included in this repo):
+The ImportHEKAtoMat function (a modified version of ImportHEKA) must be placed in the sigTOOL folder:
 'sigTOOL\sigTOOL NeuroscienceToolkit\File\menu_Import\group_NeuroScience File Formats' 
+
+You can find the ImportHEKAtoMat function here: https://gist.github.com/sammykatta/190b38de5b6c8b37fd04ba9365364aea
 
 sigTOOL must be run at least once in a given Matlab session before the function can be used.
 
