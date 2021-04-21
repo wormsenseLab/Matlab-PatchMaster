@@ -1,7 +1,7 @@
 Matlab-PatchMaster
 ==================
 
-Matlab functions for importing and dealing with Patchmaster data for electrophysiology.
+Matlab functions for importing and dealing with Patchmaster data for electrophysiology. Author: Samata Katta, PhD
 
 These functions are known to work for Patchmaster versions 2x73.1 through 2x90.1. They will most likely work on later versions, but I haven't tested that.
 
